@@ -1,6 +1,6 @@
-# name of non-profit
+# Creek Lands Conservation
 
-{One sentence description of the project}
+A web app for event management.
 
 ## Table of Contents
 
@@ -13,16 +13,19 @@
 
 ### Purpose
 
-{Short paragraph description of the non-profit mission and the purpose of this project. Who will this project help, why is it necessary. Impact of the project.}
+Creek Lands Conservation, a 501(c)(3) nonprofit organization registered as Central Coast Salmon Enhancement (F-EIN 77-0079896), is dedicated to conserving and restoring freshwater and nearshore marine ecosystems throughout California's Central Coast. Their mission encompasses scientific studies that inform restoration and conservation solutions for private landowners, public agencies, and allied nonprofits; partnerships that leverage and catalyze effectiveness; and programs that engage students, adults, and stakeholders in conservation and watershed science.
 
 ### Team
 
 The {non-profit name} team consists of {#} Cal Poly students. Over the course of about 9 months, we worked as a team to deploy this web application. The team members are listed below:
 
-- [First Last](https://www.linkedin.com/) - Project Manager
-- [First Last](https://www.linkedin.com/) - Designer
-- [First Last](https://www.linkedin.com/) - Tech Lead
-- [First Last](https://www.linkedin.com/) - Tech Lead
+- [Ansita Agrawal](https://www.linkedin.com/in/ansitaa/) - Project Manager
+- [Abby Yue](https://www.linkedin.com/in/abigailyue/) - Designer
+- [Kaila Aquino](https://www.linkedin.com/in/kaila-aquino/) - Designer
+- [Michael Huang](https://www.linkedin.com/in/michael-huang-6a7a49225/) - Designer
+- [Nate Posner](https://www.linkedin.com/in/nateposner/) - Designer
+- [HanYu Wu](https://www.linkedin.com/in/hanyu-wu04/) - Tech Lead
+- [Ida Voong](https://www.linkedin.com/in/ida-voong-6b87a1201/) - Tech Lead
 - [First Last](https://www.linkedin.com/) - Software Developer
 
 ## Getting Started And Contributing
