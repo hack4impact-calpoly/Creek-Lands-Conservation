@@ -10,6 +10,7 @@
         "jsxSingleQuote": false // Enforce double quotes in JSX
       }
     ],
+    "comma-dangle": ["error", "always-multiline"],
     "quotes": ["error", "double", { "avoidEscape": true }], // Ensure double quotes in JS/TS
     "jsx-quotes": ["error", "prefer-double"], // Ensure double quotes in JSX
     "tailwindcss/classnames-order": "warn",
