@@ -1,8 +1,25 @@
 {
   "parser": "@typescript-eslint/parser",
   "extends": ["next/core-web-vitals", "prettier"],
-  "plugins": ["prettier"],
+  "plugins": ["prettier", "tailwindcss"],
   "rules": {
-    "prettier/prettier": "error"
+    "prettier/prettier": [
+      "error",
+      {
+        "singleQuote": false, // Enforce double quotes
+        "jsxSingleQuote": false // Enforce double quotes in JSX
+      }
+    ],
+    "quotes": ["error", "double", { "avoidEscape": true }], // Ensure double quotes in JS/TS
+    "jsx-quotes": ["error", "prefer-double"], // Ensure double quotes in JSX
+    "tailwindcss/classnames-order": "warn",
+    "tailwindcss/no-custom-classname": "off",
+    "max-len": "off"
+  },
+  "settings": {
+    "tailwindcss": {
+      "callees": ["classnames", "clsx"],
+      "config": "tailwind.config.js"
+    }
   }
 }
