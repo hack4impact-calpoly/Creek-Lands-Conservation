@@ -8,9 +8,9 @@ export default function Home() {
       <Navbar />
       <Button>Home</Button>
       <Link href="/kjdiaz508">
-        <button className="rounded-lg bg-blue-500 px-6 py-2 text-lg font-medium text-white hover:bg-blue-600">
+        <Button className="rounded-lg bg-blue-500 px-6 py-2 text-lg font-medium text-white hover:bg-blue-600">
           Kevin Diaz
-        </button>
+        </Button>
       </Link>
     </main>
   );
