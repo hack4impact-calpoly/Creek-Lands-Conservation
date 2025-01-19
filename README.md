@@ -27,6 +27,7 @@ The {non-profit name} team consists of {#} Cal Poly students. Over the course of
 - [HanYu Wu](https://www.linkedin.com/in/hanyu-wu04/) - Tech Lead
 - [Ida Voong](https://www.linkedin.com/in/ida-voong-6b87a1201/) - Tech Lead
 - [First Last](https://www.linkedin.com/) - Software Developer
+- [Kevin Diaz](https://www.linkedin.com/in/kjdiaz508/) - Software Developer
 
 ## Getting Started And Contributing
 
