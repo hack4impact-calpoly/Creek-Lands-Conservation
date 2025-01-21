@@ -31,13 +31,11 @@ const eventSchema = new Schema(
     },
     registeredUsers: [
       {
-        type: Schema.Types.ObjectId,
-        ref: "User", // Assuming a user model will eventually be used
+        type: Schema.Types.ObjectId, // Assuming that we will eventually have User schema
       },
     ],
     waiverId: {
-      type: Schema.Types.ObjectId,
-      ref: "Waiver", // Assuming we will eventually come up with a waiver schema
+      type: String, // Should probably be an objectID if we have a waiver schema eventually.
     },
     fee: {
       type: Number,
