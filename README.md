@@ -26,7 +26,7 @@ The {non-profit name} team consists of {#} Cal Poly students. Over the course of
 - [Nate Posner](https://www.linkedin.com/in/nateposner/) - Designer
 - [HanYu Wu](https://www.linkedin.com/in/hanyu-wu04/) - Tech Lead
 - [Ida Voong](https://www.linkedin.com/in/ida-voong-6b87a1201/) - Tech Lead
-- [First Last](https://www.linkedin.com/) - Software Developer
+- [Brandon Wong](https://www.linkedin.com/in/wbrandon25/) - Software Developer
 
 ## Getting Started And Contributing
 
