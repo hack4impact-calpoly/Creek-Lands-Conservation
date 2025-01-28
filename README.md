@@ -27,7 +27,9 @@ The {non-profit name} team consists of {#} Cal Poly students. Over the course of
 - [HanYu Wu](https://www.linkedin.com/in/hanyu-wu04/) - Tech Lead
 - [Ida Voong](https://www.linkedin.com/in/ida-voong-6b87a1201/) - Tech Lead
 - [Emanuel Gonzalez](https://www.linkedin.com/in/eman279/) - Software Developer
+- [Sid Meka](https://www.linkedin.com/in/sidmeka/) - Software Developer
 - [First Last](https://www.linkedin.com/) - Software Developer
+
 ## Getting Started And Contributing
 
 Visit [getting-started.md](docs/getting-started.md) on info for how to set up this repo.
