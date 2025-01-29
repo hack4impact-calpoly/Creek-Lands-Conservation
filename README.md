@@ -29,6 +29,7 @@ The {non-profit name} team consists of {#} Cal Poly students. Over the course of
 - [Emanuel Gonzalez](https://www.linkedin.com/in/eman279/) - Software Developer
 - [Sid Meka](https://www.linkedin.com/in/sidmeka/) - Software Developer
 - [Angela Chen](https://www.linkedin.com/in/anvch) - Software Developer
+- [Shuya Yanase](https://www.linkedin.com/in/shuyayanase/) - Software Developer
 - [First Last](https://www.linkedin.com/) - Software Developer
 
 ## Getting Started And Contributing
