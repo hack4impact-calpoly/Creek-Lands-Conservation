@@ -29,14 +29,9 @@ const eventSchema = new Schema(
       type: Number,
       default: 0,
     },
-    registeredUsers: [
-      {
-        type: Schema.Types.ObjectId, // Assuming that we will eventually have User schema
-      },
-    ],
-    waiverId: {
-      type: String, // Should probably be an objectID if we have a waiver schema eventually.
-    },
+    images: [{ type: String, default: [] }],
+    registeredUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    waiverId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Waiver" }],
     fee: {
       type: Number,
       required: true,
@@ -45,6 +40,7 @@ const eventSchema = new Schema(
     stripePaymentId: {
       type: String,
       default: null,
+      sparse: true,
     },
   },
   {
