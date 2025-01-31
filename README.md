@@ -32,7 +32,7 @@ The {non-profit name} team consists of {#} Cal Poly students. Over the course of
 - [Brandon Wong](https://www.linkedin.com/in/wbrandon25/) - Software Developer
 - [Angela Chen](https://www.linkedin.com/in/anvch) - Software Developer
 - [Shuya Yanase](https://www.linkedin.com/in/shuyayanase/) - Software Developer
-- [First Last](https://www.linkedin.com/) - Software Developer
+- [Dhvani Goel](https://www.linkedin.com/in/dhvani-goel/) - Software Developer
 
 ## Getting Started And Contributing
 
