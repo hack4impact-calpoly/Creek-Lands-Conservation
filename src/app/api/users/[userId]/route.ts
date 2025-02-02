@@ -2,10 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import User from "@/database/userSchema";
 import connectDB from "@/database/db";
 
-export async function GET(req: NextRequest, { params }: { params: { userId: string } }) {
+// GET: uses user clerkID to fetch user info from mongodb
+export async function GET(req: NextRequest, { params }: { params: { clerkID: string } }) {
   try {
     await connectDB();
-    const user = await User.findById(params.userId);
+    const user = await User.findOne({ clerkID: params.clerkID });
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
     return NextResponse.json(user, { status: 200 });
   } catch (error) {
     console.error("Error fetching user:", error);
@@ -13,22 +17,25 @@ export async function GET(req: NextRequest, { params }: { params: { userId: stri
   }
 }
 
-// PUT: Overwrite all user data (except Mongo _id) with the request body
-export async function PUT(req: NextRequest, { params }: { params: { userId: string } }) {
+// PUT: update all user data (except Mongo _id) with the request body
+export async function PUT(req: NextRequest, { params }: { params: { clerkID: string } }) {
   try {
     await connectDB();
     // Parse the JSON body sent from the client
     const updatedData = await req.json();
 
-    // Use overwrite: true to replace the entire document with updatedData.
-    // 'new: true' returns the updated user document instead of the old one.
-    const replacedUser = await User.findByIdAndUpdate(params.userId, updatedData, { new: true, overwrite: true });
+    // Update only provided fields
+    const updateUser = await User.findOneAndUpdate(
+      { clerkID: params.clerkID },
+      { $set: updatedData },
+      { new: true, runValidators: true },
+    );
 
-    if (!replacedUser) {
+    if (!updateUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json(replacedUser, { status: 200 });
+    return NextResponse.json(updateUser, { status: 200 });
   } catch (error) {
     console.error("Error updating user:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
