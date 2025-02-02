@@ -4,7 +4,8 @@ export interface IChild {
   childID: mongoose.Types.ObjectId; // Unique identifier for each child
   name: string;
   birthday: Date;
-  gender: "Male" | "Female" | "Non-binary" | "Prefer Not to Say";
+  gender: "Male" | "Female" | "Non-binary" | "Prefer Not to Say" | "";
+  imageUrl: { type: String; default: "" };
   waiversSigned: mongoose.Types.ObjectId[];
   registeredEvents: mongoose.Types.ObjectId[];
 }
@@ -15,8 +16,9 @@ export interface IUser extends Document {
   firstName: string;
   lastName: string;
   email: string;
-  gender: string;
+  gender: "Male" | "Female" | "Non-binary" | "Prefer Not to Say" | "";
   birthday: Date;
+  imageUrl?: string;
   children: IChild[];
   registeredEvents: mongoose.Types.ObjectId[];
   waiversSigned: mongoose.Types.ObjectId[];
@@ -25,9 +27,10 @@ export interface IUser extends Document {
 const childSchema = new Schema<IChild>(
   {
     childID: { type: mongoose.Schema.Types.ObjectId, auto: true },
-    name: { type: String, required: true },
-    birthday: { type: Date, required: true },
-    gender: { type: String, required: true, enum: ["Male", "Female", "Non-binary", "Prefer Not to Say"] },
+    name: { type: String },
+    birthday: { type: Date },
+    gender: { type: String, enum: ["Male", "Female", "Non-binary", "Prefer Not to Say"], default: "" },
+    imageUrl: { type: String, default: "" },
     registeredEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: "Event" }],
     waiversSigned: [{ type: mongoose.Schema.Types.ObjectId, ref: "Waiver" }],
   },
@@ -37,12 +40,13 @@ const childSchema = new Schema<IChild>(
 const userSchema = new Schema<IUser>(
   {
     clerkID: { type: String, required: true, unique: true },
-    userRole: { type: String, required: true, enum: ["user", "admin", "donator"] },
+    userRole: { type: String, enum: ["user", "admin", "donator"] },
     firstName: { type: String, required: true },
     lastName: { type: String, required: true },
     email: { type: String, required: true, unique: true },
-    gender: { type: String, required: true, enum: ["Male", "Female", "Non-binary", "Prefer Not to Say"] },
-    birthday: { type: Date, required: true },
+    gender: { type: String, enum: ["Male", "Female", "Non-binary", "Prefer Not to Say", ""], default: "" },
+    imageUrl: { type: String, default: "" },
+    birthday: { type: Date },
     children: { type: [childSchema], default: [] },
     registeredEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: "Event" }],
     waiversSigned: [{ type: mongoose.Schema.Types.ObjectId, ref: "Waiver" }],
