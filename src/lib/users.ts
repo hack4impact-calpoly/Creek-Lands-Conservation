@@ -99,3 +99,27 @@ export async function updateUser(clerkUserId: string, data: Partial<IUser>) {
     return { error: "Failed to update user" };
   }
 }
+
+/**
+ * Deletes a user from MongoDB using Clerk ID.
+ * @param clerkUserId Clerk User ID
+ */
+export async function deleteUser(clerkUserId: string) {
+  await connectDB();
+
+  try {
+    // Delete the user from MongoDB
+    const deletedUser = await User.findOneAndDelete({ clerkID: clerkUserId });
+
+    if (!deletedUser) {
+      console.warn("User not found in MongoDB:", clerkUserId);
+      return { error: "User not found" };
+    }
+
+    console.log("User deleted from MongoDB:", deletedUser);
+    return { success: "User deleted" };
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return { error: "Failed to delete user" };
+  }
+}
