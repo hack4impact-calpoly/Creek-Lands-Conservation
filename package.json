@@ -13,7 +13,6 @@
     "prepare": "husky"
   },
   "dependencies": {
-    "@clerk/clerk-sdk-node": "^5.1.6",
     "@clerk/nextjs": "^6.9.11",
     "@radix-ui/react-slot": "^1.1.1",
     "autoprefixer": "^10.4.20",
