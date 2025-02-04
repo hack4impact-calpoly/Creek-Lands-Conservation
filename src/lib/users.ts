@@ -125,9 +125,6 @@ export async function deleteUser(clerkUserId: string) {
       console.log(`User ${clerkUserId} deleted from Clerk.`);
     } catch (clerkError: any) {
       console.warn(`User ${clerkUserId} not found in Clerk or already deleted.`);
-      if (clerkError?.message) {
-        console.warn("Clerk API error:", clerkError.message);
-      }
     }
 
     return { success: "User deleted successfully" };
