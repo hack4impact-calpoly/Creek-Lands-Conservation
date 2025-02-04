@@ -1,7 +1,7 @@
 import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
-import { createUser } from "@/lib/users";
+import { createUser, deleteUser } from "@/lib/users";
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -58,6 +58,17 @@ export async function POST(req: Request) {
 
     // Create the user in MongoDB
     await createUser(userData);
+  }
+
+  // Handle user deletion
+  if (eventType === "user.deleted") {
+    const { id } = evt.data;
+
+    if (!id) {
+      return new Response("Error: Missing user ID", { status: 400 });
+    }
+
+    await deleteUser(id);
   }
 
   return new Response("", { status: 200 });

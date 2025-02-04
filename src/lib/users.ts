@@ -1,5 +1,6 @@
 import User, { IUser } from "@/database/userSchema";
 import connectDB from "@/database/db";
+import { clerkClient } from "@clerk/nextjs/server";
 
 /**
  * Creates a new user in MongoDB if they don't already exist.
@@ -97,5 +98,38 @@ export async function updateUser(clerkUserId: string, data: Partial<IUser>) {
   } catch (error) {
     console.error("Error updating user:", error);
     return { error: "Failed to update user" };
+  }
+}
+
+/**
+ * Deletes a user from MongoDB and Clerk using Clerk ID.
+ * @param clerkUserId Clerk User ID
+ */
+export async function deleteUser(clerkUserId: string) {
+  await connectDB();
+
+  try {
+    // Find the user in MongoDB
+    const user = await User.findOne({ clerkID: clerkUserId });
+    if (!user) {
+      return { error: "User not found" };
+    }
+
+    // Delete the user from MongoDB
+    await User.deleteOne({ clerkID: clerkUserId });
+
+    // Attempt to delete user from Clerk
+    try {
+      const client = await clerkClient();
+      await client.users.deleteUser(clerkUserId);
+      console.log(`User ${clerkUserId} deleted from Clerk.`);
+    } catch (clerkError: any) {
+      console.warn(`User ${clerkUserId} not found in Clerk or already deleted.`);
+    }
+
+    return { success: "User deleted successfully" };
+  } catch (error) {
+    console.error("Error deleting user:", error);
+    return { error: "Failed to delete user" };
   }
 }
