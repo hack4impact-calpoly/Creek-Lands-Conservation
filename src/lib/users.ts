@@ -1,5 +1,6 @@
 import User, { IUser } from "@/database/userSchema";
 import connectDB from "@/database/db";
+import { users } from "@clerk/clerk-sdk-node";
 
 /**
  * Creates a new user in MongoDB if they don't already exist.
@@ -101,23 +102,31 @@ export async function updateUser(clerkUserId: string, data: Partial<IUser>) {
 }
 
 /**
- * Deletes a user from MongoDB using Clerk ID.
+ * Deletes a user from MongoDB and Clerk using Clerk ID.
  * @param clerkUserId Clerk User ID
  */
 export async function deleteUser(clerkUserId: string) {
   await connectDB();
 
   try {
-    // Delete the user from MongoDB
-    const deletedUser = await User.findOneAndDelete({ clerkID: clerkUserId });
-
-    if (!deletedUser) {
-      console.warn("User not found in MongoDB:", clerkUserId);
+    // Find the user in MongoDB
+    const user = await User.findOne({ clerkID: clerkUserId });
+    if (!user) {
       return { error: "User not found" };
     }
 
-    console.log("User deleted from MongoDB:", deletedUser);
-    return { success: "User deleted" };
+    // Delete the user from MongoDB
+    await User.deleteOne({ clerkID: clerkUserId });
+
+    // Check if the user exists in Clerk before attempting deletion
+    try {
+      await users.getUser(clerkUserId); // Check if Clerk user exists
+      await users.deleteUser(clerkUserId); // Delete user from Clerk
+    } catch (clerkError) {
+      console.warn(`User ${clerkUserId} not found in Clerk, skipping Clerk deletion.`);
+    }
+
+    return { success: "User deleted successfully" };
   } catch (error) {
     console.error("Error deleting user:", error);
     return { error: "Failed to delete user" };
