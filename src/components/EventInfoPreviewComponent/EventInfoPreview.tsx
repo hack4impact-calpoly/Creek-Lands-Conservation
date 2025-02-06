@@ -1,13 +1,5 @@
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar, Clock, MapPin, Mail, Text, Image } from "lucide-react";
 
 export function EventInfoPreview() {
@@ -28,31 +20,28 @@ export function EventInfoPreview() {
           <DialogTitle className="text-center text-4xl">SLO Wild Hike</DialogTitle>
         </DialogHeader>
         <div className="scrollbar-hidden max-h-[60vh] overflow-y-auto">
-          <div className="grid grid-cols-2 gap-6 py-4">
-            {/* Date and Time */}
-            <div className="flex items-center gap-4">
+          <div className="grid grid-cols-1 gap-6 py-4 sm:grid-cols-2">
+            <div className="grid grid-cols-[auto_1fr] items-center gap-4">
               <Calendar className="h-5 w-5" />
               <h1>Saturday January 18, 2025</h1>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="grid grid-cols-[auto_1fr] items-center gap-4">
               <Clock className="h-5 w-5" />
               <h1>10:00 am - 12:30 pm</h1>
             </div>
 
-            {/* Location and Email */}
-            <div className="flex items-center gap-4">
+            <div className="grid grid-cols-[auto_1fr] items-center gap-4">
               <MapPin className="h-5 w-5" />
               <h1>Stenner Creek Trailhead</h1>
             </div>
-            <div className="flex items-center gap-4">
+            <div className="grid grid-cols-[auto_1fr] items-center gap-4">
               <Mail className="h-5 w-5" />
               <h1>info@creeklands.org</h1>
             </div>
           </div>
 
-          {/* Description */}
-          <div className="flex items-center gap-4">
-            <Text className="h-40 w-40" />
+          <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
+            <Text className="h-5 w-5" />
             <p>
               Join us for a hike led by Tim Delaney, Restoration Hydrologist at Creek Lands Conservation! Delve into the
               wonders of the SLO Creek Watershed, exploring its captivating geology, hydrology, and diverse habitats.
@@ -65,10 +54,10 @@ export function EventInfoPreview() {
             </p>
           </div>
 
-          <br></br>
+          <br />
 
-          <div className="items-top flex gap-8">
-            <Image alt={"Image Icon"} className="h-8 w-8" />
+          <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
+            <Image alt="Image Icon" className="h-5 w-5" />
             <div className="scrollbar-hidden flex gap-4 overflow-x-auto py-4">
               {images.map((src, index) => (
                 <div key={index} className="flex-shrink-0">
