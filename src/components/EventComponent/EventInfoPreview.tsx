@@ -57,11 +57,11 @@ export function EventInfoPreview() {
           <br />
 
           <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
-            <Image alt="Image Icon" className="h-5 w-5" />
+            <Image className="h-5 w-5" />
             <div className="scrollbar-hidden flex gap-4 overflow-x-auto py-4">
               {images.map((src, index) => (
                 <div key={index} className="flex-shrink-0">
-                  <img src={src} alt={`Image ${index + 1}`} className="h-auto w-64 rounded-lg object-cover" />
+                  <img src={src} alt={`Event Image ${index + 1}`} className="h-auto w-64 rounded-lg object-cover" />
                 </div>
               ))}
             </div>
