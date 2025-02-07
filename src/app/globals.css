@@ -64,8 +64,3 @@
     @apply bg-background text-foreground;
   }
 }
-
-/* Hide Scrollbar */
-.scrollbar-hidden::-webkit-scrollbar {
-  display: none;
-}
