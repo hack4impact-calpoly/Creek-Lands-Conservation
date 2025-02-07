@@ -5,9 +5,9 @@ import { Calendar, Clock, MapPin, Mail, Text, Image } from "lucide-react";
 export function EventInfoPreview() {
   const images = [
     "https://cdn.recreation.gov/public/images/66783.jpg",
-    "/images/image2.jpg",
-    "/images/image3.jpg",
-    "/images/image4.jpg",
+    "https://cdn.recreation.gov/public/images/66783.jpg",
+    "https://cdn.recreation.gov/public/images/66783.jpg",
+    "https://cdn.recreation.gov/public/images/66783.jpg",
   ];
 
   return (
@@ -15,11 +15,11 @@ export function EventInfoPreview() {
       <DialogTrigger asChild>
         <Button variant="outline">View Event Details</Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-h-[600px] sm:max-w-[800px]">
+      <DialogContent className="w-[90%] max-w-[90%] rounded-lg md:w-auto md:max-w-[800px]">
         <DialogHeader>
           <DialogTitle className="text-center text-4xl">SLO Wild Hike</DialogTitle>
         </DialogHeader>
-        <div className="scrollbar-hidden max-h-[60vh] overflow-y-auto">
+        <div className="custom-scrollbar max-h-[60vh] overflow-y-auto px-6 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar]:w-2">
           <div className="grid grid-cols-1 gap-6 py-4 sm:grid-cols-2">
             <div className="grid grid-cols-[auto_1fr] items-center gap-4">
               <Calendar className="h-5 w-5" />
