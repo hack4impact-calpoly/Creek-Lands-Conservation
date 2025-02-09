@@ -1,7 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IChild {
-  childID: mongoose.Types.ObjectId; // Unique identifier for each child
+  childID?: mongoose.Types.ObjectId; // Unique identifier for each child
   firstName: string;
   lastName: string;
   birthday: Date;
@@ -12,7 +12,7 @@ export interface IChild {
 }
 
 export interface IUser extends Document {
-  clerkID: string;
+  clerkID?: string;
   userRole: "user" | "admin" | "donator";
   firstName: string;
   lastName: string;

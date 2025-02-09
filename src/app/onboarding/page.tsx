@@ -3,45 +3,68 @@
 import * as React from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
-import { completeOnboarding } from "./_actions";
+import { userOnboarding } from "./_actions";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function OnboardingPage() {
-  const [error, setError] = React.useState("");
-  const [isLoading, setIsLoading] = React.useState(false);
   const { user } = useUser();
   const router = useRouter();
+  const [error, setError] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(false);
 
+  // Initialize form state
+  const [formData, setFormData] = React.useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    gender: "",
+    birthday: "",
+    homeAddress: "",
+    city: "",
+    zipCode: "",
+    cellPhone: "",
+    workPhone: "",
+  });
+
+  // Effect to update state once Clerk user data is available
+  React.useEffect(() => {
+    if (user) {
+      setFormData((prev) => ({
+        ...prev,
+        firstName: user.firstName || "",
+        lastName: user.lastName || "",
+        email: user.primaryEmailAddress?.emailAddress || "",
+      }));
+    }
+  }, [user]); // Runs whenever `user` changes
+
+  // Handle input changes
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  // Form validation
+  const isFormValid =
+    formData.gender &&
+    formData.birthday &&
+    formData.homeAddress.length >= 5 &&
+    /^[a-zA-Z\s]+$/.test(formData.city) &&
+    /^\d{5}(-\d{4})?$/.test(formData.zipCode) &&
+    formData.cellPhone;
+
+  // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    const formData = new FormData(e.currentTarget);
-
-    if (
-      !formData.get("gender") ||
-      !formData.get("birthday") ||
-      !formData.get("homeAddress") ||
-      !formData.get("city") ||
-      !formData.get("zipCode") ||
-      !formData.get("cellPhone")
-    ) {
-      setError("All required fields must be filled out correctly.");
-      setIsLoading(false);
-      return;
-    }
 
     try {
-      const res = await completeOnboarding(formData);
+      const res = await userOnboarding(new FormData(e.currentTarget));
       if (res?.message) {
-        try {
-          await user?.reload();
-        } catch (reloadError) {
-          console.error("User reload failed:", reloadError);
-        }
-        router.push("/");
+        await user?.reload();
+        router.push("/onboarding/children");
       } else if (res?.error) {
         setError(res.error);
       }
@@ -52,52 +75,131 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleSkip = () => {
-    router.push("/");
-  };
+  const handleSkip = () => router.push("/");
 
   return (
-    <Card className="mx-auto max-w-lg rounded-lg p-6 shadow-md">
+    <Card className="mx-auto max-w-lg rounded-lg bg-white p-6 shadow-md">
       <CardContent>
-        <h1 className="mb-4 text-xl font-bold">Complete Your Profile</h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input type="text" name="firstName" readOnly value={user?.firstName || ""} />
-          <Input type="text" name="lastName" readOnly value={user?.lastName || ""} />
-          <Input type="email" name="email" readOnly value={user?.primaryEmailAddress?.emailAddress || ""} />
-          <Select name="gender" required>
-            <SelectTrigger>
-              <SelectValue placeholder="Select Gender" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="Male">Male</SelectItem>
-              <SelectItem value="Female">Female</SelectItem>
-              <SelectItem value="Non-binary">Non-binary</SelectItem>
-              <SelectItem value="Prefer Not to Say">Prefer Not to Say</SelectItem>
-            </SelectContent>
-          </Select>
-          <Input type="date" name="birthday" required />
-          <Input type="text" name="homeAddress" placeholder="Home Address" required />
-          <Input
-            type="text"
-            name="city"
-            placeholder="City"
-            required
-            pattern="^[a-zA-Z\s]+$"
-            title="City must contain only letters and spaces"
-          />
-          <Input
-            type="text"
-            name="zipCode"
-            placeholder="ZIP Code"
-            required
-            pattern="^\d{5}(-\d{4})?$"
-            title="Invalid zip code format"
-          />
-          <Input type="tel" name="cellPhone" placeholder="Cell Phone" required />
-          <Input type="tel" name="workPhone" placeholder="Work Phone (Optional)" />
-          {error && <p className="text-red-600">Error: {error}</p>}
-          <div className="flex justify-between">
-            <Button type="submit" disabled={isLoading}>
+        <h1 className="mb-4 text-center text-xl font-bold">Complete Your Profile</h1>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Personal Information */}
+          <fieldset>
+            <legend className="text-lg font-semibold">Personal Information</legend>
+            <div className="space-y-2">
+              <label htmlFor="firstName">First Name</label>
+              <Input type="text" id="firstName" name="firstName" value={formData.firstName} readOnly />
+
+              <label htmlFor="lastName">Last Name</label>
+              <Input type="text" id="lastName" name="lastName" value={formData.lastName} readOnly />
+
+              <label htmlFor="email">Email</label>
+              <Input type="email" id="email" name="email" value={formData.email} readOnly />
+
+              <label htmlFor="gender">Gender</label>
+              <Select
+                name="gender"
+                value={formData.gender}
+                onValueChange={(value) => setFormData({ ...formData, gender: value })}
+                required
+              >
+                <SelectTrigger id="gender">
+                  <SelectValue placeholder="Select Gender" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Male">Male</SelectItem>
+                  <SelectItem value="Female">Female</SelectItem>
+                  <SelectItem value="Non-binary">Non-binary</SelectItem>
+                  <SelectItem value="Prefer Not to Say">Prefer Not to Say</SelectItem>
+                </SelectContent>
+              </Select>
+
+              <label htmlFor="birthday">Birthday</label>
+              <Input
+                type="date"
+                id="birthday"
+                name="birthday"
+                value={formData.birthday}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </fieldset>
+
+          {/* Address */}
+          <fieldset>
+            <legend className="text-lg font-semibold">Address</legend>
+            <div className="space-y-2">
+              <label htmlFor="homeAddress">Home Address</label>
+              <Input
+                type="text"
+                id="homeAddress"
+                name="homeAddress"
+                placeholder="123 Main St"
+                value={formData.homeAddress}
+                onChange={handleChange}
+                required
+              />
+
+              <label htmlFor="city">City</label>
+              <Input
+                type="text"
+                id="city"
+                name="city"
+                placeholder="Enter city"
+                value={formData.city}
+                onChange={handleChange}
+                required
+                pattern="^[a-zA-Z\s]+$"
+                title="City must contain only letters and spaces"
+              />
+
+              <label htmlFor="zipCode">ZIP Code</label>
+              <Input
+                type="text"
+                id="zipCode"
+                name="zipCode"
+                placeholder="12345 or 12345-6789"
+                value={formData.zipCode}
+                onChange={handleChange}
+                required
+                pattern="^\d{5}(-\d{4})?$"
+                title="Invalid zip code format"
+              />
+            </div>
+          </fieldset>
+
+          {/* Contact Information */}
+          <fieldset>
+            <legend className="text-lg font-semibold">Contact Information</legend>
+            <div className="space-y-2">
+              <label htmlFor="cellPhone">Cell Phone</label>
+              <Input
+                type="tel"
+                id="cellPhone"
+                name="cellPhone"
+                placeholder="(123) 456-7890"
+                value={formData.cellPhone}
+                onChange={handleChange}
+                required
+              />
+
+              <label htmlFor="workPhone">Work Phone (Optional)</label>
+              <Input
+                type="tel"
+                id="workPhone"
+                name="workPhone"
+                placeholder="(Optional)"
+                value={formData.workPhone}
+                onChange={handleChange}
+              />
+            </div>
+          </fieldset>
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
+          {/* Buttons */}
+          <div className="mt-4 flex justify-between">
+            <Button type="submit" disabled={!isFormValid || isLoading}>
               {isLoading ? "Submitting..." : "Save & Continue"}
             </Button>
             <Button type="button" onClick={handleSkip} variant="secondary" disabled={isLoading}>
