@@ -15,7 +15,7 @@ export default function OnboardingPage() {
   const [error, setError] = React.useState("");
   const [isLoading, setIsLoading] = React.useState(false);
 
-  // Initialize form state
+  // Form state
   const [formData, setFormData] = React.useState({
     firstName: "",
     lastName: "",
@@ -29,6 +29,9 @@ export default function OnboardingPage() {
     workPhone: "",
   });
 
+  // Field-specific errors
+  const [fieldErrors, setFieldErrors] = React.useState<{ [key: string]: string }>({});
+
   // Effect to update state once Clerk user data is available
   React.useEffect(() => {
     if (user) {
@@ -39,26 +42,39 @@ export default function OnboardingPage() {
         email: user.primaryEmailAddress?.emailAddress || "",
       }));
     }
-  }, [user]); // Runs whenever `user` changes
+  }, [user]);
 
   // Handle input changes
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    setFieldErrors({ ...fieldErrors, [e.target.name]: "" }); // Clear error when the user starts typing
   };
 
   // Form validation
-  const isFormValid =
-    formData.gender &&
-    formData.birthday &&
-    formData.homeAddress.length >= 5 &&
-    /^[a-zA-Z\s]+$/.test(formData.city) &&
-    /^\d{5}(-\d{4})?$/.test(formData.zipCode) &&
-    formData.cellPhone;
+  const validateForm = () => {
+    const errors: { [key: string]: string } = {};
+
+    if (!formData.gender) errors.gender = "Gender is required.";
+    if (!formData.birthday) errors.birthday = "Birthday is required.";
+    if (formData.homeAddress.length < 5) errors.homeAddress = "Address must be at least 5 characters.";
+    if (!/^[a-zA-Z\s]+$/.test(formData.city)) errors.city = "City must contain only letters and spaces.";
+    if (!/^\d{5}(-\d{4})?$/.test(formData.zipCode)) errors.zipCode = "ZIP Code is invalid.";
+    if (!formData.cellPhone) errors.cellPhone = "Cell phone is required.";
+
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setError("");
     setIsLoading(true);
+
+    if (!validateForm()) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const res = await userOnboarding(new FormData(e.currentTarget));
@@ -112,6 +128,7 @@ export default function OnboardingPage() {
                   <SelectItem value="Prefer Not to Say">Prefer Not to Say</SelectItem>
                 </SelectContent>
               </Select>
+              {fieldErrors.gender && <p className="text-sm text-red-600">{fieldErrors.gender}</p>}
 
               <label htmlFor="birthday">Birthday</label>
               <Input
@@ -122,6 +139,7 @@ export default function OnboardingPage() {
                 onChange={handleChange}
                 required
               />
+              {fieldErrors.birthday && <p className="text-sm text-red-600">{fieldErrors.birthday}</p>}
             </div>
           </fieldset>
 
@@ -139,6 +157,7 @@ export default function OnboardingPage() {
                 onChange={handleChange}
                 required
               />
+              {fieldErrors.homeAddress && <p className="text-sm text-red-600">{fieldErrors.homeAddress}</p>}
 
               <label htmlFor="city">City</label>
               <Input
@@ -149,9 +168,8 @@ export default function OnboardingPage() {
                 value={formData.city}
                 onChange={handleChange}
                 required
-                pattern="^[a-zA-Z\s]+$"
-                title="City must contain only letters and spaces"
               />
+              {fieldErrors.city && <p className="text-sm text-red-600">{fieldErrors.city}</p>}
 
               <label htmlFor="zipCode">ZIP Code</label>
               <Input
@@ -162,9 +180,8 @@ export default function OnboardingPage() {
                 value={formData.zipCode}
                 onChange={handleChange}
                 required
-                pattern="^\d{5}(-\d{4})?$"
-                title="Invalid zip code format"
               />
+              {fieldErrors.zipCode && <p className="text-sm text-red-600">{fieldErrors.zipCode}</p>}
             </div>
           </fieldset>
 
@@ -182,6 +199,7 @@ export default function OnboardingPage() {
                 onChange={handleChange}
                 required
               />
+              {fieldErrors.cellPhone && <p className="text-sm text-red-600">{fieldErrors.cellPhone}</p>}
 
               <label htmlFor="workPhone">Work Phone (Optional)</label>
               <Input
@@ -199,7 +217,7 @@ export default function OnboardingPage() {
 
           {/* Buttons */}
           <div className="mt-4 flex justify-between">
-            <Button type="submit" disabled={!isFormValid || isLoading}>
+            <Button type="submit" disabled={isLoading}>
               {isLoading ? "Submitting..." : "Save & Continue"}
             </Button>
             <Button type="button" onClick={handleSkip} variant="secondary" disabled={isLoading}>
