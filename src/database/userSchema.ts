@@ -15,6 +15,7 @@ export interface IChild {
   birthday: Date;
   gender: "Male" | "Female" | "Non-binary" | "Prefer Not to Say" | "";
   imageUrl?: string;
+  imageKey?: string;
   /**
    * References to signed waiver IDs.
    * If you want to store the entire waiver doc, you can make this `IWaiver[]`.
@@ -45,6 +46,8 @@ export interface IUser extends Document {
     work?: string;
   };
   imageUrl?: string;
+  /** Internal S3 Object Identifier */
+  imageKey?: string;
   /** Embedded subdocuments for children */
   children: IChild[];
   /** Top-level events this user is registered for (e.g., adult events) */
@@ -68,6 +71,8 @@ const childSchema = new Schema<IChild>(
       default: "",
     },
     imageUrl: { type: String, default: "" },
+    // NEW FIELD to hold the S3 key, so we can delete the object if replaced:
+    imageKey: { type: String, default: "" },
     registeredEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: "Event" }],
     waiversSigned: [{ type: mongoose.Schema.Types.ObjectId, ref: "Waiver" }],
   },
@@ -128,6 +133,8 @@ const userSchema = new Schema<IUser>(
       default: {},
     },
     imageUrl: { type: String, default: "" },
+    // NEW FIELD to hold the S3 key, so we can delete the object if replaced:
+    imageKey: { type: String, default: "" },
     birthday: { type: Date, default: null },
 
     // Embedding children here
