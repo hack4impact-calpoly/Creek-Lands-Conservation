@@ -53,7 +53,10 @@ const WaiverSignatureComponent: React.FC<WaiverSignatureProps> = ({
           }`}
         >
           {signed ? (
-            `✅ Signed ${signatureDateString}`
+            <>
+              ✅ Signed
+              <span>{signatureDateString}</span>
+            </>
           ) : (
             <>
               ⚠️ Needs Signature
