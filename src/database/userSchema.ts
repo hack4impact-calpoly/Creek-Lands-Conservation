@@ -12,7 +12,7 @@ export interface IChild {
 }
 
 export interface IUser extends Document {
-  clerkID?: string;
+  clerkID: string;
   userRole: "user" | "admin" | "donator";
   firstName: string;
   lastName: string;
