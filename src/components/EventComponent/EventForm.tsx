@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useForm, Controller } from "react-hook-form";
+import { useToast } from "@/hooks/use-toast";
 
 type EventFormData = {
   title: string;
@@ -19,6 +20,7 @@ type EventFormData = {
 export default function CreateEventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const { toast } = useToast();
   const {
     register,
     handleSubmit,
@@ -31,7 +33,10 @@ export default function CreateEventForm() {
     const startDateTime = new Date(data.startDate + "T" + data.startTime);
     const endDateTime = new Date(data.endDate + "T" + data.endTime);
     if (endDateTime <= startDateTime) {
-      alert("End date/time must be after the start date/time.");
+      toast({
+        variant: "destructive",
+        description: "End date/time must be after the start date/time.",
+      });
       return;
     }
 
@@ -55,11 +60,17 @@ export default function CreateEventForm() {
           setIsSuccess(true);
           reset(); // reset form after successful submission
         } else {
-          alert("Failed to create event");
+          toast({
+            variant: "destructive",
+            description: "Failed to create event.",
+          });
         }
       } catch (error) {
         console.error("Error submitting form:", error);
-        alert("An error occurred while creating the event");
+        toast({
+          variant: "destructive",
+          description: "An error occurred while creating the event.",
+        });
       }
     }
     setIsSubmitting(false);
