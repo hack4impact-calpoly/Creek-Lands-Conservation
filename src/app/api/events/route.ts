@@ -1,9 +1,13 @@
 import connectDB from "@/database/db";
 import Event from "@/database/eventSchema";
 import { NextResponse } from "next/server";
+import { authenticateAdmin } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
+    const authError = authenticateAdmin(request);
+    if (authError) return authError;
+
     const body = await request.json();
 
     // Validate required fields
