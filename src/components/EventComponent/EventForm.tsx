@@ -33,8 +33,9 @@ export default function CreateEventForm() {
     const endDateTime = new Date(data.endDate + "T" + data.endTime);
     if (endDateTime <= startDateTime) {
       toast({
+        title: "Unable to Create Event!",
         variant: "destructive",
-        description: "End date/time must be after the start date/time.",
+        description: "End Time and Date Must Be After Start Time and Date!",
         duration: 5000,
       });
       return;
@@ -58,22 +59,25 @@ export default function CreateEventForm() {
         if (response.ok) {
           reset();
           toast({
-            title: "Success!",
-            description: "Event created successfully.",
+            title: "Event Created Successfully!",
+            description: "Your Event Has Been Published!",
             variant: "success",
+            duration: 5000,
           });
         } else {
           toast({
+            title: "Event Creation Failed!",
             variant: "destructive",
-            description: "Failed to create event.",
+            description: "An Error Occurred While Creating the Event.",
             duration: 5000,
           });
         }
       } catch (error) {
         console.error("Error submitting form:", error);
         toast({
+          title: "Event Creation Failed!",
           variant: "destructive",
-          description: "An error occurred while creating the event.",
+          description: "An Error Occurred While Creating the Event.",
           duration: 5000,
         });
       }
