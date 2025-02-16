@@ -8,7 +8,14 @@ import EventCard from "@/components/EventComponent/EventCard";
 interface IEvent {
   _id: string;
   title: string;
-  startDate: string;
+  startDateTime: Date | null;
+  endDateTime: Date | null;
+  location: string;
+  description: string;
+  images: string[];
+  registrationDeadline: Date | null;
+  capacity: number;
+  registeredUsers: string[];
 }
 
 export default function AdminPage() {
@@ -18,7 +25,22 @@ export default function AdminPage() {
     async function fetchEvents() {
       try {
         const data = await getEvents();
-        setEvents(data as unknown as IEvent[]);
+
+        // Transform MongoDB objects into `IEvent` format
+        const formattedEvents: IEvent[] = data.map((event: any) => ({
+          _id: event._id.toString(),
+          title: event.title || "Untitled Event",
+          startDateTime: event.startDate ? new Date(event.startDate) : null,
+          endDateTime: event.endDate ? new Date(event.endDate) : null,
+          location: event.location || "Location not available",
+          description: event.description || "No description provided",
+          images: Array.isArray(event.images) ? event.images : [],
+          registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline) : null,
+          capacity: event.capacity || 0,
+          registeredUsers: event.registeredUsers ? event.registeredUsers.map((user: any) => user.toString()) : [],
+        }));
+
+        setEvents(formattedEvents);
       } catch (error) {
         console.error("Error fetching events:", error);
       }
@@ -37,9 +59,15 @@ export default function AdminPage() {
         {events.map((event) => (
           <EventCard
             key={event._id}
-            title={event.title}
-            date={new Date(event.startDate).toLocaleDateString()}
-            time={new Date(event.startDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            eventTitle={event.title}
+            startDateTime={event.startDateTime}
+            endDateTime={event.endDateTime}
+            location={event.location}
+            description={event.description}
+            images={event.images}
+            registrationDeadline={event.registrationDeadline}
+            capacity={event.capacity}
+            currentRegistrations={event.registeredUsers.length}
           />
         ))}
       </div>
