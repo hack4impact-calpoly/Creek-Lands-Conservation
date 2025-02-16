@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Calendar, Clock, MapPin, Mail, Text, Image as ImageIcon, Users, CalendarClock } from "lucide-react";
@@ -96,7 +98,13 @@ export function EventInfoPreview({
             <div className="scrollbar-hidden flex gap-4 overflow-x-auto py-4">
               {eventImages.map((src, index) => (
                 <div key={index} className="flex-shrink-0">
-                  <Image src={src} alt={`Event Image ${index + 1}`} className="h-auto w-64 rounded-lg object-cover" />
+                  <Image
+                    src={src}
+                    alt={`Event Image ${index + 1}`}
+                    width={256}
+                    height={180}
+                    className="h-auto w-64 rounded-lg object-cover"
+                  />
                 </div>
               ))}
             </div>
