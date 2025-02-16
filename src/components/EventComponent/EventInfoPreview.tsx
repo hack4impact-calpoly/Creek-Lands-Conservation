@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar, Clock, MapPin, Mail, Text, Image, Users, CalendarClock } from "lucide-react";
+import { Calendar, Clock, MapPin, Mail, Text, Image as ImageIcon, Users, CalendarClock } from "lucide-react";
+import Image from "next/image";
 
 interface EventInfoProps {
   title: string;
@@ -91,11 +92,11 @@ export function EventInfoPreview({
           </div>
 
           <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
-            <Image className="h-5 w-5" />
+            <ImageIcon className="h-5 w-5" />
             <div className="scrollbar-hidden flex gap-4 overflow-x-auto py-4">
               {eventImages.map((src, index) => (
                 <div key={index} className="flex-shrink-0">
-                  <img src={src} alt={`Event Image ${index + 1}`} className="h-auto w-64 rounded-lg object-cover" />
+                  <Image src={src} alt={`Event Image ${index + 1}`} className="h-auto w-64 rounded-lg object-cover" />
                 </div>
               ))}
             </div>
