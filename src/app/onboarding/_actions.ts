@@ -11,6 +11,9 @@ const getDateValue = (value: FormDataEntryValue | null) => {
   return dateString ? new Date(dateString) : undefined;
 };
 
+// US-Only Phone number validation regex
+const usPhoneRegex = /^(?:\(\d{3}\)|\d{3})[-.\s]?\d{3}[-.\s]?\d{4}$/;
+
 // Validation function for user data
 const validateUserData = (data: any) => {
   if (!data.firstName || !data.lastName || !data.email) {
@@ -31,6 +34,14 @@ const validateUserData = (data: any) => {
 
   if (data.address.zipCode && !/^\d{5}(-\d{4})?$/.test(data.address.zipCode)) {
     return "Invalid zip code format.";
+  }
+
+  if (data.phoneNumbers.cell && !usPhoneRegex.test(data.phoneNumbers.cell)) {
+    return "Invalid US cell phone number format.";
+  }
+
+  if (data.phoneNumbers.work && !usPhoneRegex.test(data.phoneNumbers.work)) {
+    return "Invalid US work phone number format.";
   }
 
   return null;
