@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 
 type EventFormData = {
@@ -19,7 +19,6 @@ type EventFormData = {
 
 export default function CreateEventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
   const {
     register,
@@ -36,6 +35,7 @@ export default function CreateEventForm() {
       toast({
         variant: "destructive",
         description: "End date/time must be after the start date/time.",
+        duration: 5000,
       });
       return;
     }
@@ -56,13 +56,17 @@ export default function CreateEventForm() {
         });
 
         if (response.ok) {
-          const result = await response.json();
-          setIsSuccess(true);
-          reset(); // reset form after successful submission
+          reset();
+          toast({
+            title: "Success!",
+            description: "Event created successfully.",
+            variant: "success",
+          });
         } else {
           toast({
             variant: "destructive",
             description: "Failed to create event.",
+            duration: 5000,
           });
         }
       } catch (error) {
@@ -70,14 +74,11 @@ export default function CreateEventForm() {
         toast({
           variant: "destructive",
           description: "An error occurred while creating the event.",
+          duration: 5000,
         });
       }
     }
     setIsSubmitting(false);
-  };
-
-  const closePopup = () => {
-    setIsSuccess(false); // close the 'event created' popup
   };
 
   return (
@@ -240,20 +241,8 @@ export default function CreateEventForm() {
         </button>
       </div>
 
-      {/* popup when event is created successfully */}
-      {isSuccess && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent">
-          <div className="flex flex-col items-center space-y-4 rounded-lg bg-white p-6 shadow-lg">
-            <p className="text-lg font-semibold text-green-600">Event Created Successfully!</p>
-            <button onClick={closePopup} className="rounded bg-blue-500 px-4 py-2 text-white hover:bg-blue-600">
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-
       {/* loading indicator while submitting form */}
-      {isSubmitting && !isSuccess && (
+      {isSubmitting && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent">
           <div className="flex items-center space-x-4 rounded-lg bg-white p-6 shadow-lg">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-t-4 border-solid border-blue-500"></div>
