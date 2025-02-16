@@ -67,10 +67,10 @@ export async function POST(req: Request) {
       });
       // Create the user in MongoDB
       await createUser(userData);
-      return { message: "added role to public metadata." };
+      return { message: "added role to public metadata and created user in mongodb." };
     } catch (err) {
       console.error("Error in adding role to metadata", err);
-      return { error: "Internal error occurred while adding role to metadata." };
+      return { error: "Internal error occurred while adding role to metadata and creating user." };
     }
   }
 
