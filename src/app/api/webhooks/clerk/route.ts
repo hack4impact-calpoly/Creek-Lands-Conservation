@@ -67,10 +67,11 @@ export async function POST(req: Request) {
       });
       // Create the user in MongoDB
       await createUser(userData);
-      return { message: "added role to public metadata and created user in mongodb." };
+      console.log(`Created user ${id} with role '${role}'`);
+      return new Response("User successfully created and role assigned", { status: 201 });
     } catch (err) {
-      console.error("Error in adding role to metadata", err);
-      return { error: "Internal error occurred while adding role to metadata and creating user." };
+      console.error("Error updating metadata or creating user:", err);
+      return new Response("Error: Failed to update metadata and create user", { status: 500 });
     }
   }
 
@@ -82,7 +83,14 @@ export async function POST(req: Request) {
       return new Response("Error: Missing user ID", { status: 400 });
     }
 
-    await deleteUser(id);
+    try {
+      await deleteUser(id);
+      console.log(`Deleted user ${id}`);
+      return new Response("User successfully deleted", { status: 200 });
+    } catch (err) {
+      console.error("Error deleting user:", err);
+      return new Response("Error: Failed to delete user", { status: 500 });
+    }
   }
 
   return new Response("", { status: 200 });

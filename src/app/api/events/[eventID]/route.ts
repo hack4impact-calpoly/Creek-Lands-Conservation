@@ -53,7 +53,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
 
     // If not registering, check if the user is an admin (to update event details)
     const authError = await authenticateAdmin(req);
-    if (authError) return authError;
+    if (authError !== true) return authError;
 
     // Checks if ID exists before attempting to update
     const updatedEvent = await Event.findByIdAndUpdate(eventID, updatedData, {
@@ -80,7 +80,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
   await connectDB();
 
   const authError = await authenticateAdmin(req);
-  if (authError) return authError;
+  if (authError !== true) return authError;
 
   const { eventID } = params;
   if (!mongoose.Types.ObjectId.isValid(eventID)) {

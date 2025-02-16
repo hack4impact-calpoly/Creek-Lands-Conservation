@@ -9,5 +9,5 @@ export async function authenticateAdmin(req: Request) {
     return NextResponse.json({ message: "Access denied. Admins only." }, { status: 403 });
   }
 
-  return null;
+  return true;
 }
