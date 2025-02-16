@@ -2,6 +2,7 @@ import { Webhook } from "svix";
 import { headers } from "next/headers";
 import { WebhookEvent } from "@clerk/nextjs/server";
 import { createUser, deleteUser } from "@/lib/users";
+import { clerkClient } from "@clerk/nextjs/server";
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -56,8 +57,21 @@ export async function POST(req: Request) {
       imageUrl: image_url || "",
     };
 
-    // Create the user in MongoDB
-    await createUser(userData);
+    // Change this to user in production
+    let role = "admin";
+    const client = await clerkClient();
+
+    try {
+      await client.users.updateUserMetadata(id, {
+        publicMetadata: { userRole: role },
+      });
+      // Create the user in MongoDB
+      await createUser(userData);
+      return { message: "added role to public metadata." };
+    } catch (err) {
+      console.error("Error in adding role to metadata", err);
+      return { error: "Internal error occurred while adding role to metadata." };
+    }
   }
 
   // Handle user deletion
