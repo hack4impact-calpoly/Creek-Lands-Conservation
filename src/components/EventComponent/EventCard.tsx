@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { EventInfoPreview } from "./EventInfoPreview";
 import { Calendar, Clock, Users, CalendarClock } from "lucide-react";
+import Image from "next/image";
 
 export interface EventCardProps {
   eventTitle: string;
@@ -27,18 +28,24 @@ export default function EventCard({
   capacity,
   currentRegistrations,
 }: EventCardProps) {
-  const backgroundImage = images.length > 0 ? images[0] : "https://cdn.recreation.gov/public/images/66783.jpg";
+  const backgroundImage =
+    images.length > 0
+      ? images[0]
+      : "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg";
 
   return (
     <Card className="relative w-full max-w-sm overflow-hidden rounded-lg shadow-lg">
       {/* Background Image */}
-      <div
-        className="absolute inset-0 bg-cover bg-center"
-        style={{
-          backgroundImage: `url(${backgroundImage})`,
-          filter: "brightness(1.1)", // Slightly brightens the image
-        }}
-      ></div>
+      <div className="absolute inset-0">
+        <Image
+          src={backgroundImage}
+          alt={eventTitle}
+          layout="fill" // Ensures it covers the container
+          objectFit="cover"
+          className="brightness-110" // Tailwind class for brightness
+          priority // Ensures the image loads fast
+        />
+      </div>
 
       {/* Gradient Overlay for Better Text Readability */}
       <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60"></div>

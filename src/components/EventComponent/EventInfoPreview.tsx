@@ -30,7 +30,12 @@ export function EventInfoPreview({
   capacity,
   currentRegistrations,
 }: EventInfoProps) {
-  const eventImages = images.length > 0 ? images : ["https://cdn.recreation.gov/public/images/66783.jpg"];
+  const eventImages =
+    images.length > 0
+      ? images
+      : [
+          "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg",
+        ];
 
   return (
     <Dialog>
@@ -43,7 +48,13 @@ export function EventInfoPreview({
         <DialogHeader>
           <DialogTitle className="text-center text-4xl">{title}</DialogTitle>
         </DialogHeader>
-        <div className="custom-scrollbar px-6">
+        <div
+          className="max-h-[60vh] overflow-y-auto px-4 md:px-6 
+          [&::-webkit-scrollbar-thumb]:rounded-full 
+          [&::-webkit-scrollbar-thumb]:bg-slate-300 
+          [&::-webkit-scrollbar-track]:bg-slate-100 
+          [&::-webkit-scrollbar]:w-2"
+        >
           <div className="grid grid-cols-1 gap-6 py-4 sm:grid-cols-2">
             <div className="grid grid-cols-[auto_1fr] items-center gap-4">
               <Calendar className="h-5 w-5" />
