@@ -62,16 +62,26 @@ export async function POST(req: Request) {
     const client = await clerkClient();
 
     try {
+      console.log("Starting user creation process for ID:", id);
+
       await client.users.updateUserMetadata(id, {
         publicMetadata: { userRole: role },
       });
+      console.log("Clerk metadata updated successfully");
       // Create the user in MongoDB
       await createUser(userData);
       console.log(`Created user ${id} with role '${role}'`);
       return new Response("User successfully created and role assigned", { status: 201 });
     } catch (err) {
-      console.error("Error updating metadata or creating user:", err);
-      return new Response("Error: Failed to update metadata and create user", { status: 500 });
+      // More detailed error logging
+      const errorMessage = err instanceof Error ? err.message : "Unknown error";
+      const errorDetails = JSON.stringify(err, Object.getOwnPropertyNames(err));
+      console.error("Full error details:", errorDetails);
+      console.error("Error message:", errorMessage);
+
+      return new Response(`Error: Failed to update metadata and create user. Details: ${errorMessage}`, {
+        status: 500,
+      });
     }
   }
 
