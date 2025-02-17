@@ -1,6 +1,7 @@
 import React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { AlertTriangle, CircleCheck } from "lucide-react";
 
 interface WaiverSignatureProps {
   eventName: string;
@@ -49,17 +50,17 @@ const WaiverSignatureComponent: React.FC<WaiverSignatureProps> = ({
           onClick={signed ? onViewWaiver : onSignWaiver}
           variant="default"
           className={`gap-1 rounded-lg px-2 py-3 text-sm font-semibold sm:px-3 sm:py-4 sm:text-base lg:px-4 lg:py-6 lg:text-lg ${
-            signed ? "bg-green-500 text-white" : "bg-red-500 text-white"
+            signed ? "bg-green-500 text-black" : "bg-red-500 text-white"
           }`}
         >
           {signed ? (
             <>
-              ✅ Signed
+              <CircleCheck className="mr-3 h-7 w-7 scale-150" /> Signed
               <span>{signatureDateString}</span>
             </>
           ) : (
             <>
-              ⚠️ Needs Signature
+              <AlertTriangle className="mr-3 h-7 w-7 scale-150" /> Needs Signature
               {singByDateString && <span className="hidden md:inline">by {singByDateString}</span>}
               <span className="inline md:hidden">→</span>
             </>
