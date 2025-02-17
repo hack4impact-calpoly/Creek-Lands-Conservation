@@ -6,6 +6,7 @@ const isPublicRoute = createRouteMatcher(["/", "/api/webhooks/clerk"]);
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
   const { userId, sessionClaims, redirectToSignIn } = await auth();
+  const role = sessionClaims?.metadata?.userRole;
 
   // For users visiting /onboarding, don't try to redirect
   if (userId && isOnboardingRoute(req)) {
@@ -20,6 +21,13 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   if (userId && !sessionClaims?.metadata?.onboardingComplete && !isPublicRoute(req)) {
     const onboardingUrl = new URL("/onboarding", req.url);
     return NextResponse.redirect(onboardingUrl);
+  }
+
+  // Restrict access to `/admin` pages
+  if (req.nextUrl.pathname.startsWith("/admin")) {
+    if (!userId || role !== "admin") {
+      return NextResponse.redirect(new URL("/", req.url)); // Redirect non-admins to homepage
+    }
   }
 
   // If the user is logged in and the route is protected, let them view.

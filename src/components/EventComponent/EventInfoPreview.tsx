@@ -1,67 +1,121 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Calendar, Clock, MapPin, Mail, Text, Image } from "lucide-react";
+import { Calendar, Clock, MapPin, Mail, Text, Image as ImageIcon, Users, CalendarClock } from "lucide-react";
+import Image from "next/image";
 
-export function EventInfoPreview() {
-  const images = [
-    "https://cdn.recreation.gov/public/images/66783.jpg",
-    "https://cdn.recreation.gov/public/images/66783.jpg",
-    "https://cdn.recreation.gov/public/images/66783.jpg",
-    "https://cdn.recreation.gov/public/images/66783.jpg",
-  ];
+interface EventInfoProps {
+  title: string;
+  startDateTime: Date | null;
+  endDateTime: Date | null;
+  location: string;
+  description: string;
+  images: string[];
+  registrationDeadline: Date | null;
+  email?: string;
+  capacity?: number;
+  currentRegistrations?: number;
+}
+
+export function EventInfoPreview({
+  title,
+  startDateTime,
+  endDateTime,
+  location,
+  description,
+  images,
+  registrationDeadline,
+  email = "info@creeklands.org",
+  capacity,
+  currentRegistrations,
+}: EventInfoProps) {
+  const eventImages =
+    images.length > 0
+      ? images
+      : [
+          "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg",
+        ];
 
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline">View Event Details</Button>
+        <Button variant="outline" className="border-gray-400 text-black">
+          View Event Details
+        </Button>
       </DialogTrigger>
-      <DialogContent className="w-[90%] max-w-[90%] rounded-lg md:w-auto md:max-w-[800px]">
+      <DialogContent className="h-auto max-h-[80vh] w-full max-w-[90%] overflow-y-auto rounded-lg md:max-w-[800px] lg:max-w-[1000px]">
         <DialogHeader>
-          <DialogTitle className="text-center text-4xl">SLO Wild Hike</DialogTitle>
+          <DialogTitle className="text-center text-4xl">{title}</DialogTitle>
         </DialogHeader>
-        <div className="custom-scrollbar max-h-[60vh] overflow-y-auto px-6 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar]:w-2">
+        <div
+          className="max-h-[60vh] overflow-y-auto px-4 md:px-6 
+          [&::-webkit-scrollbar-thumb]:rounded-full 
+          [&::-webkit-scrollbar-thumb]:bg-slate-300 
+          [&::-webkit-scrollbar-track]:bg-slate-100 
+          [&::-webkit-scrollbar]:w-2"
+        >
           <div className="grid grid-cols-1 gap-6 py-4 sm:grid-cols-2">
             <div className="grid grid-cols-[auto_1fr] items-center gap-4">
               <Calendar className="h-5 w-5" />
-              <h1>Saturday January 18, 2025</h1>
+              <h1>
+                {startDateTime ? startDateTime.toLocaleDateString() : "TBD"} -{" "}
+                {endDateTime ? endDateTime.toLocaleDateString() : "TBD"}
+              </h1>
             </div>
             <div className="grid grid-cols-[auto_1fr] items-center gap-4">
               <Clock className="h-5 w-5" />
-              <h1>10:00 am - 12:30 pm</h1>
+              <h1>
+                {startDateTime ? startDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD"} -{" "}
+                {endDateTime ? endDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD"}
+              </h1>
             </div>
-
             <div className="grid grid-cols-[auto_1fr] items-center gap-4">
               <MapPin className="h-5 w-5" />
-              <h1>Stenner Creek Trailhead</h1>
+              <h1>{location}</h1>
             </div>
             <div className="grid grid-cols-[auto_1fr] items-center gap-4">
               <Mail className="h-5 w-5" />
-              <h1>info@creeklands.org</h1>
+              <h1>{email}</h1>
+            </div>
+            <div className="grid grid-cols-[auto_1fr] items-center gap-4">
+              <CalendarClock className="h-5 w-5" />
+              <h1>
+                Deadline:{" "}
+                {registrationDeadline
+                  ? registrationDeadline.toLocaleDateString() +
+                    " " +
+                    "-" +
+                    " " +
+                    registrationDeadline.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                  : "TBD"}
+              </h1>
+            </div>
+            <div className="grid grid-cols-[auto_1fr] items-center gap-4">
+              <Users className="h-5 w-5" />
+              <h1>
+                {currentRegistrations} / {capacity} spots filled
+              </h1>
             </div>
           </div>
 
           <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
             <Text className="h-5 w-5" />
-            <p>
-              Join us for a hike led by Tim Delaney, Restoration Hydrologist at Creek Lands Conservation! Delve into the
-              wonders of the SLO Creek Watershed, exploring its captivating geology, hydrology, and diverse habitats.
-              We&apos;ll uncover medicinal and edible plants, examine geological formations, and discover the importance
-              of natural springs in sustaining aquatic life. From streamflow measurements to benthic macroinvertebrate
-              sampling (or &quot;water bug catching&quot; in plain English), there&apos;s something for everyone to
-              explore. This is a kid-friendly event. Meet at the dirt parking lot of Stenner Creek trailhead at 10 am.
-              The hike is approximately 2 miles round trip with about 350 feet of elevation gain at the top. Bring your
-              curiosity and hiking essentials, and let&apos;s dive into the beauty of nature together!
-            </p>
+            <p>{description}</p>
           </div>
 
-          <br />
-
           <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
-            <Image className="h-5 w-5" />
+            <ImageIcon className="h-5 w-5" />
             <div className="scrollbar-hidden flex gap-4 overflow-x-auto py-4">
-              {images.map((src, index) => (
+              {eventImages.map((src, index) => (
                 <div key={index} className="flex-shrink-0">
-                  <img src={src} alt={`Event Image ${index + 1}`} className="h-auto w-64 rounded-lg object-cover" />
+                  <Image
+                    src={src}
+                    alt={`Event Image ${index + 1}`}
+                    width={256}
+                    height={180}
+                    className="h-auto w-64 rounded-lg object-cover"
+                  />
                 </div>
               ))}
             </div>

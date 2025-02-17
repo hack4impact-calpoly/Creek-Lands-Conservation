@@ -1,31 +1,104 @@
 "use client";
 
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { EventInfoPreview } from "./EventInfoPreview";
-import { useState } from "react";
+import { Calendar, Clock, Users, CalendarClock } from "lucide-react";
+import Image from "next/image";
 
 export interface EventCardProps {
-  title: string;
-  date: string;
-  time: string;
+  eventTitle: string;
+  startDateTime: Date | null;
+  endDateTime: Date | null;
+  location: string;
+  description: string;
+  images: string[];
+  registrationDeadline: Date | null;
+  capacity: number;
+  currentRegistrations: number;
 }
 
-export default function EventCard({ title, date, time }: EventCardProps) {
+export default function EventCard({
+  eventTitle,
+  startDateTime,
+  endDateTime,
+  location,
+  description,
+  images,
+  registrationDeadline,
+  capacity,
+  currentRegistrations,
+}: EventCardProps) {
+  const backgroundImage =
+    images.length > 0
+      ? images[0]
+      : "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg";
+
   return (
-    <>
-      <Card className="w-full max-w-sm bg-neutral-200">
-        <CardContent className="flex flex-col gap-6 px-6 pb-6 pt-6">
-          <div className="space-y-4">
-            <h2 className="text-2xl font-medium">{title}</h2>
-            <div className="space-y-1">
-              <p className="text-xl">{date}</p>
-              <p className="text-xl">{time}</p>
-            </div>
+    <Card className="relative w-full max-w-sm overflow-hidden rounded-lg shadow-lg">
+      {/* Background Image */}
+      <div className="absolute inset-0">
+        <Image
+          src={backgroundImage}
+          alt={eventTitle}
+          layout="fill" // Ensures it covers the container
+          objectFit="cover"
+          className="brightness-110" // Tailwind class for brightness
+          priority // Ensures the image loads fast
+        />
+      </div>
+
+      {/* Gradient Overlay for Better Text Readability */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60"></div>
+
+      {/* Card Content */}
+      <CardContent className="relative flex flex-col gap-4 p-6 text-white">
+        <h2 className="text-2xl font-medium">{eventTitle}</h2>
+        <div className="space-y-2 text-lg">
+          {/* Date */}
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5" />
+            <span>
+              {startDateTime ? startDateTime.toLocaleDateString() : "TBD"} -{" "}
+              {endDateTime ? endDateTime.toLocaleDateString() : "TBD"}
+            </span>
           </div>
-          <EventInfoPreview />
-        </CardContent>
-      </Card>
-    </>
+
+          {/* Time */}
+          <div className="flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            <span>
+              {startDateTime ? startDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD"} -{" "}
+              {endDateTime ? endDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD"}
+            </span>
+          </div>
+
+          {/* Registration Deadline */}
+          <div className="flex items-center gap-2">
+            <CalendarClock className="h-5 w-5" />
+            <span>Deadline: {registrationDeadline ? registrationDeadline.toLocaleString() : "TBD"}</span>
+          </div>
+
+          {/* Current Registrations */}
+          <div className="flex items-center gap-2">
+            <Users className="h-5 w-5" />
+            <span>
+              {currentRegistrations} / {capacity} spots filled
+            </span>
+          </div>
+        </div>
+
+        <EventInfoPreview
+          title={eventTitle}
+          startDateTime={startDateTime}
+          endDateTime={endDateTime}
+          location={location}
+          description={description}
+          images={images}
+          registrationDeadline={registrationDeadline}
+          capacity={capacity}
+          currentRegistrations={currentRegistrations}
+        />
+      </CardContent>
+    </Card>
   );
 }

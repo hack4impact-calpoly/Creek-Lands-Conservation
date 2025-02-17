@@ -29,6 +29,10 @@ const eventSchema = new Schema(
       type: Number,
       default: 0,
     },
+    registrationDeadline: {
+      type: Date,
+      required: true,
+    },
     images: [{ type: String, default: [] }],
     registeredUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
     waiverId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Waiver" }],

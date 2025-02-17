@@ -55,7 +55,7 @@ export const completeOnboarding = async () => {
   if (!userId) return { error: "No Logged In User" };
 
   try {
-    await client.users.updateUser(userId, {
+    await client.users.updateUserMetadata(userId, {
       publicMetadata: { onboardingComplete: true },
     });
 
