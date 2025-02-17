@@ -9,7 +9,7 @@ interface WaiverSignatureProps {
   eventTime: string;
   signed: boolean;
   signatureDate?: Date;
-  singByDate?: Date;
+  signByDate?: Date;
   onViewWaiver: () => void;
   onSignWaiver?: () => void;
 }
@@ -24,14 +24,14 @@ const WaiverSignatureComponent: React.FC<WaiverSignatureProps> = ({
   eventTime,
   signed,
   signatureDate,
-  singByDate,
+  signByDate,
   onViewWaiver,
   onSignWaiver,
 }) => {
   const eventDay = getWeekDay(eventDate);
   const eventDateString = getDateString(eventDate);
   const signatureDateString = signatureDate && getDateString(signatureDate);
-  const singByDateString = singByDate && getDateString(singByDate);
+  const signByDateString = signByDate && getDateString(signByDate);
 
   return (
     <Card className="flex w-full items-center justify-between gap-3 rounded-lg bg-gray-100 p-4 shadow-md">
@@ -61,7 +61,7 @@ const WaiverSignatureComponent: React.FC<WaiverSignatureProps> = ({
           ) : (
             <>
               <AlertTriangle className="mr-3 h-7 w-7 scale-150" /> Needs Signature
-              {singByDateString && <span className="hidden md:inline">by {singByDateString}</span>}
+              {signByDateString && <span className="hidden md:inline">by {signByDateString}</span>}
               <span className="inline md:hidden">→</span>
             </>
           )}
