@@ -6,6 +6,7 @@ import { Calendar, Clock, Users, CalendarClock } from "lucide-react";
 import Image from "next/image";
 
 export interface EventCardProps {
+  id: string;
   eventTitle: string;
   startDateTime: Date | null;
   endDateTime: Date | null;
@@ -18,6 +19,7 @@ export interface EventCardProps {
 }
 
 export default function EventCard({
+  id,
   eventTitle,
   startDateTime,
   endDateTime,
@@ -88,6 +90,7 @@ export default function EventCard({
         </div>
 
         <EventInfoPreview
+          id={id}
           title={eventTitle}
           startDateTime={startDateTime}
           endDateTime={endDateTime}

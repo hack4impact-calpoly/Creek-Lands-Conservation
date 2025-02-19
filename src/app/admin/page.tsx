@@ -59,6 +59,7 @@ export default function AdminPage() {
         {events.map((event) => (
           <EventCard
             key={event._id}
+            id={event._id}
             eventTitle={event.title}
             startDateTime={event.startDateTime}
             endDateTime={event.endDateTime}
