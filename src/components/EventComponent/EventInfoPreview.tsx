@@ -1,7 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Calendar, Clock, MapPin, Mail, Text, Image as ImageIcon, Users, CalendarClock } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { useUser } from "@clerk/nextjs";
 
 interface EventInfoProps {
   id: string;
@@ -49,6 +50,8 @@ export function EventInfoPreview({
   const [isDeleting, setIsDeleting] = useState(false);
   const router = useRouter();
   const { toast } = useToast();
+  const { user } = useUser();
+  const isAdmin = user?.publicMetadata?.userRole === "admin";
 
   const eventImages =
     images.length > 0
@@ -173,13 +176,16 @@ export function EventInfoPreview({
                 ))}
               </div>
             </div>
-
-            <div className="flex justify-end">
-              <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} disabled={isDeleting}>
-                {isDeleting ? "Deleting..." : "Delete Event"}
-              </Button>
-            </div>
           </div>
+          <DialogFooter>
+            {isAdmin && (
+              <div className="flex justify-end gap-4">
+                <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} disabled={isDeleting}>
+                  {isDeleting ? "Deleting..." : "Delete Event"}
+                </Button>
+              </div>
+            )}
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
