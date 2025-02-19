@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
+import { useToast } from "@/hooks/use-toast";
 
 type EventFormData = {
   title: string;
@@ -18,15 +19,69 @@ type EventFormData = {
 
 export default function CreateEventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
   const {
     register,
     handleSubmit,
+    reset,
     formState: { errors },
   } = useForm<EventFormData>();
 
   const onSubmit = async (data: EventFormData, isDraft: boolean) => {
+    // start/end date validation
+    const startDateTime = new Date(data.startDate + "T" + data.startTime);
+    const endDateTime = new Date(data.endDate + "T" + data.endTime);
+    if (endDateTime <= startDateTime) {
+      toast({
+        title: "Unable to Create Event!",
+        variant: "destructive",
+        description: "End Time and Date Must Be After Start Time and Date!",
+        duration: 5000,
+      });
+      return;
+    }
+
+    // start loading
     setIsSubmitting(true);
     console.log(data, isDraft ? "Saved as Draft" : "Published");
+
+    // send post request if not draft
+    if (!isDraft) {
+      try {
+        const response = await fetch("/api/events", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ ...data }),
+        });
+
+        if (response.ok) {
+          reset();
+          toast({
+            title: "Event Created Successfully!",
+            description: "Your Event Has Been Published!",
+            variant: "success",
+            duration: 5000,
+          });
+        } else {
+          toast({
+            title: "Event Creation Failed!",
+            variant: "destructive",
+            description: "An Error Occurred While Creating the Event.",
+            duration: 5000,
+          });
+        }
+      } catch (error) {
+        console.error("Error submitting form:", error);
+        toast({
+          title: "Event Creation Failed!",
+          variant: "destructive",
+          description: "An Error Occurred While Creating the Event.",
+          duration: 5000,
+        });
+      }
+    }
     setIsSubmitting(false);
   };
 
@@ -189,6 +244,16 @@ export default function CreateEventForm() {
           Publish Event
         </button>
       </div>
+
+      {/* loading indicator while submitting form */}
+      {isSubmitting && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent">
+          <div className="flex items-center space-x-4 rounded-lg bg-white p-6 shadow-lg">
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-t-4 border-solid border-blue-500"></div>
+            <p className="text-gray-800">Loading...</p>
+          </div>
+        </div>
+      )}
     </form>
   );
 }
