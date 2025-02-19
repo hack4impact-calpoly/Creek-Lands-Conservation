@@ -15,7 +15,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/nextjs";
 
@@ -48,7 +47,6 @@ export function EventInfoPreview({
 }: EventInfoProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const router = useRouter();
   const { toast } = useToast();
   const { user } = useUser();
   const isAdmin = user?.publicMetadata?.userRole === "admin";
@@ -78,7 +76,6 @@ export function EventInfoPreview({
         description: "The event has been removed from the system.",
       });
 
-      router.push("/admin");
       window.location.reload();
     } catch (error) {
       toast({
