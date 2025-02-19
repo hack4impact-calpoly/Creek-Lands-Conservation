@@ -5,7 +5,7 @@ import { authenticateAdmin } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
-    const authError = await authenticateAdmin(request);
+    const authError = await authenticateAdmin();
     if (authError !== true) return authError;
 
     const body = await request.json();

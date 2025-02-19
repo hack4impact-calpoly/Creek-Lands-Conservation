@@ -52,7 +52,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
     }
 
     // If not registering, check if the user is an admin (to update event details)
-    const authError = await authenticateAdmin(req);
+    const authError = await authenticateAdmin();
     if (authError !== true) return authError;
 
     // Checks if ID exists before attempting to update
@@ -79,7 +79,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
 export async function DELETE(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
 
-  const authError = await authenticateAdmin(req);
+  const authError = await authenticateAdmin();
   if (authError !== true) return authError;
 
   const { eventID } = params;
