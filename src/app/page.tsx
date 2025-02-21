@@ -2,56 +2,82 @@
 
 import { useEffect, useState } from "react";
 import EventCard from "@/components/EventComponent/EventCard";
-import { EventInfoPreview } from "@/components/EventComponent/EventInfoPreview";
-import { useUser } from "@clerk/nextjs"; // Clerk authentication
+import { useUser } from "@clerk/nextjs";
+import { getEvents } from "@/app/actions/events/actions";
 
-type EventType = {
+interface IEvent {
   _id: string;
-  eventTitle: string;
-  description: string;
-  startDateTime: string;
-  endDateTime?: string;
+  title: string;
+  startDateTime: Date | null;
+  endDateTime: Date | null;
   location: string;
-  fee?: number;
+  description: string;
   images: string[];
-  registrationDeadline?: string;
+  registrationDeadline: Date | null;
   capacity: number;
-  currentRegistrations: number;
-};
+  registeredUsers: string[];
+}
 
 export default function Home() {
-  const [events, setEvents] = useState<EventType[]>([]);
-  const [registeredEvents, setRegisteredEvents] = useState<EventType[]>([]);
-  const [selectedEvent, setSelectedEvent] = useState<EventType | null>(null);
+  const [events, setEvents] = useState<IEvent[]>([]);
+  const [registeredEvents, setRegisteredEvents] = useState<IEvent[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const { user, isLoaded } = useUser(); // Get logged-in user info
+  const { isLoaded, user } = useUser();
 
   useEffect(() => {
-    const fetchEvents = async () => {
+    async function fetchEvents() {
       try {
-        const res = await fetch("/api/events");
-        const allEventsRaw = await res.json();
-        console.log("Fetched Events:", allEventsRaw); // Log events to check data
+        if (!isLoaded || !user) return;
 
-        if (Array.isArray(allEventsRaw)) {
-          setEvents(allEventsRaw);
+        // Fetch user details from MongoDB
+        const userResponse = await fetch(`/api/users/${user.id}`);
+        if (!userResponse.ok) throw new Error("Failed to fetch user data");
+
+        const userData = await userResponse.json();
+        console.log("MongoDB User Data:", userData);
+
+        if (!userData || !userData._id) {
+          console.warn("User not found in MongoDB");
+          return;
         }
 
-        if (user?.id) {
-          const registeredRes = await fetch(`/api/user-registered-events?userId=${user.id}`);
-          const userRegisteredEventsRaw = await registeredRes.json();
-          setRegisteredEvents(userRegisteredEventsRaw);
-        }
-      } catch (err) {
-        setError("Failed to load events.");
+        const mongoUserId = userData._id; // This is the ObjectId
+
+        // Fetch events
+        const data = await getEvents();
+        const formattedEvents: IEvent[] = data.map((event: any) => ({
+          _id: event._id.toString(),
+          title: event.title || "Untitled Event",
+          startDateTime: event.startDate ? new Date(event.startDate) : null,
+          endDateTime: event.endDate ? new Date(event.endDate) : null,
+          location: event.location || "Location not available",
+          description: event.description || "No description provided",
+          images: Array.isArray(event.images) ? event.images : [],
+          registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline) : null,
+          capacity: event.capacity || 0,
+          registeredUsers: event.registeredUsers ? event.registeredUsers.map((u: any) => u.toString()) : [],
+        }));
+
+        console.log("Formatted Events:", formattedEvents);
+
+        // Filter events where registeredUsers includes the MongoDB user _id
+        const userRegisteredEvents = formattedEvents.filter((event) =>
+          event.registeredUsers.map((id) => id.toString()).includes(mongoUserId.toString()),
+        );
+
+        setEvents(formattedEvents);
+        setRegisteredEvents(userRegisteredEvents);
+      } catch (error) {
+        console.error("Error fetching events:", error);
+        setError("Failed to load events. Please try again later.");
       } finally {
         setLoading(false);
       }
-    };
+    }
 
     fetchEvents();
-  }, [user?.id]);
+  }, [isLoaded, user]);
 
   if (loading) return <p>Loading events...</p>;
   if (error) return <p>{error}</p>;
@@ -68,58 +94,39 @@ export default function Home() {
               <EventCard
                 key={event._id}
                 id={event._id}
-                eventTitle={event.eventTitle}
-                startDateTime={new Date(event.startDateTime)}
-                endDateTime={event.endDateTime ? new Date(event.endDateTime) : null}
+                eventTitle={event.title}
+                startDateTime={event.startDateTime}
+                endDateTime={event.endDateTime}
                 location={event.location}
                 description={event.description}
                 images={event.images}
-                registrationDeadline={event.registrationDeadline ? new Date(event.registrationDeadline) : null}
+                registrationDeadline={event.registrationDeadline}
                 capacity={event.capacity}
-                currentRegistrations={event.currentRegistrations}
-                onClick={() => setSelectedEvent(event)}
+                currentRegistrations={event.registeredUsers.length}
               />
             ))}
           </div>
         </section>
       )}
 
+      <h2 className="mb-4 text-xl font-semibold">All Events</h2>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {events.map((event) => (
           <EventCard
             key={event._id}
             id={event._id}
-            eventTitle={event.eventTitle}
-            startDateTime={new Date(event.startDateTime)}
-            endDateTime={event.endDateTime ? new Date(event.endDateTime) : null}
+            eventTitle={event.title}
+            startDateTime={event.startDateTime}
+            endDateTime={event.endDateTime}
             location={event.location}
             description={event.description}
             images={event.images}
-            registrationDeadline={event.registrationDeadline ? new Date(event.registrationDeadline) : null}
+            registrationDeadline={event.registrationDeadline}
             capacity={event.capacity}
-            currentRegistrations={event.currentRegistrations}
-            onClick={() => setSelectedEvent(event)}
+            currentRegistrations={event.registeredUsers.length}
           />
         ))}
       </div>
-
-      {selectedEvent && (
-        <EventInfoPreview
-          id={selectedEvent._id}
-          title={selectedEvent.eventTitle}
-          startDateTime={new Date(selectedEvent.startDateTime)}
-          endDateTime={selectedEvent.endDateTime ? new Date(selectedEvent.endDateTime) : null}
-          location={selectedEvent.location}
-          description={selectedEvent.description}
-          images={selectedEvent.images}
-          registrationDeadline={
-            selectedEvent.registrationDeadline ? new Date(selectedEvent.registrationDeadline) : null
-          }
-          capacity={selectedEvent.capacity}
-          currentRegistrations={selectedEvent.currentRegistrations}
-          onClose={() => setSelectedEvent(null)}
-        />
-      )}
     </main>
   );
 }
