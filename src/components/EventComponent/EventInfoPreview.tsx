@@ -27,10 +27,9 @@ interface EventInfoProps {
   description: string;
   images: string[];
   registrationDeadline: Date | null;
-  capacity: number;
-  currentRegistrations: number;
   email?: string;
-  onClose: () => void;
+  capacity?: number;
+  currentRegistrations?: number;
 }
 
 export function EventInfoPreview({
