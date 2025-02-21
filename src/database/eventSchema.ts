@@ -34,7 +34,8 @@ const eventSchema = new Schema(
       required: true,
     },
     images: [{ type: String, default: [] }],
-    registeredUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    registeredUsers: [{ type: String, ref: "User" }], // Change ObjectId to String
+
     waiverId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Waiver" }],
     fee: {
       type: Number,

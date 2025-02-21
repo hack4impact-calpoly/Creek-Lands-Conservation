@@ -16,6 +16,7 @@ export interface EventCardProps {
   registrationDeadline: Date | null;
   capacity: number;
   currentRegistrations: number;
+  onClick?: () => void;
 }
 
 export default function EventCard({
@@ -29,6 +30,7 @@ export default function EventCard({
   registrationDeadline,
   capacity,
   currentRegistrations,
+  onClick,
 }: EventCardProps) {
   const backgroundImage =
     images.length > 0
@@ -36,7 +38,10 @@ export default function EventCard({
       : "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg";
 
   return (
-    <Card className="relative w-full max-w-sm overflow-hidden rounded-lg shadow-lg">
+    <Card
+      className="relative w-full max-w-sm cursor-pointer overflow-hidden rounded-lg shadow-lg"
+      onClick={onClick} // Move inside Card component
+    >
       {/* Background Image */}
       <div className="absolute inset-0">
         <Image
@@ -44,8 +49,8 @@ export default function EventCard({
           alt={eventTitle}
           layout="fill" // Ensures it covers the container
           objectFit="cover"
-          className="brightness-110" // Tailwind class for brightness
-          priority // Ensures the image loads fast
+          className="brightness-110"
+          priority
         />
       </div>
 
@@ -100,6 +105,7 @@ export default function EventCard({
           registrationDeadline={registrationDeadline}
           capacity={capacity}
           currentRegistrations={currentRegistrations}
+          onClose={() => {}} // Add this line
         />
       </CardContent>
     </Card>
