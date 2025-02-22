@@ -6,9 +6,7 @@ import connectDB from "@/database/db";
 export async function GET(req: NextRequest, { params }: { params: { clerkID: string } }) {
   try {
     await connectDB();
-    console.log(params);
     const user = await User.findOne({ clerkID: params.clerkID });
-    console.log(user);
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
