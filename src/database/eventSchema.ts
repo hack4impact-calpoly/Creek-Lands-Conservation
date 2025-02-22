@@ -80,6 +80,10 @@ const eventSchema = new Schema<IEvent>(
       type: Number,
       default: 0,
     },
+    registrationDeadline: {
+      type: Date,
+      required: true,
+    },
     images: [{ type: String, default: [] }],
 
     /**
