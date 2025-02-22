@@ -4,25 +4,15 @@ import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { IEvent, IEventUpdate } from "@/database/eventSchema";
-
-interface EventFormData {
-  title: string;
-  startDate: string;
-  startTime: string;
-  endDate: string;
-  endTime: string;
-  location: string;
-  capacity: number;
-  fee: number;
-  description?: string;
-  registrationDeadlineDate: string;
-  registrationDeadlineTime: string;
-}
+import { FormField } from "@/components/Forms/FormField";
+import { DateTimeField } from "@/components/Forms/DateTimeField";
+import { FormActions } from "@/components/Forms/FormActions";
+import { toLocalDateString, toLocalTimeString, parseDateTime } from "@/lib/utils";
+import { EventFormData } from "@/types/events";
+import { validateEventDates } from "@/lib/utils";
+import LoadingSkeleton from "@/components/Forms/LoadingSkeleton";
 
 const EditEventPage = () => {
   const router = useRouter();
@@ -52,24 +42,6 @@ const EditEventPage = () => {
         if (!res.ok) throw new Error("Failed to fetch event");
         const data = await res.json();
 
-        // Convert UTC dates to local time for display
-        const toLocalDateString = (date: Date) => {
-          const localDate = new Date(date);
-          return [
-            localDate.getFullYear(),
-            String(localDate.getMonth() + 1).padStart(2, "0"),
-            String(localDate.getDate()).padStart(2, "0"),
-          ].join("-");
-        };
-
-        const toLocalTimeString = (date: Date) => {
-          const localDate = new Date(date);
-          return [String(localDate.getHours()).padStart(2, "0"), String(localDate.getMinutes()).padStart(2, "0")].join(
-            ":",
-          );
-        };
-
-        // Set form values with local time
         setValue("title", data.title);
         setValue("location", data.location);
         setValue("capacity", data.capacity);
@@ -101,32 +73,14 @@ const EditEventPage = () => {
 
   const onSubmit = async (formData: EventFormData) => {
     try {
-      // Combine date/time fields into Date objects
-      // Local time is automatically used
-      const parseDateTime = (date: string, time: string): Date => {
-        const [year, month, day] = date.split("-").map(Number);
-        const [hours, minutes] = time.split(":").map(Number);
-        const newDate = new Date(year, month - 1, day, hours, minutes);
-        console.log(newDate.toISOString());
-        // No need to convert to UTC, Stringify does it automatically
-        return newDate;
-      };
-
       const startDateTime = parseDateTime(formData.startDate, formData.startTime);
       const endDateTime = parseDateTime(formData.endDate, formData.endTime);
       const registrationDeadline = parseDateTime(formData.registrationDeadlineDate, formData.registrationDeadlineTime);
 
       // Validation checks
-      if (startDateTime >= endDateTime) {
-        throw new Error("Event start must be before end time");
-      }
-
-      if (registrationDeadline > endDateTime) {
-        throw new Error("Registration deadline cannot be after event end");
-      }
-
-      if (formData.capacity < 0) {
-        throw new Error("Capacity must be non-negative");
+      const dateErrors = validateEventDates(startDateTime, endDateTime, registrationDeadline);
+      if (dateErrors) {
+        throw new Error(dateErrors);
       }
 
       // Prepare update payload
@@ -163,17 +117,7 @@ const EditEventPage = () => {
   };
 
   /* cool little animation cuz why not */
-  if (loading)
-    return (
-      <div className="animate-pulse space-y-4 p-4">
-        <div className="mx-auto h-8 w-1/2 rounded bg-gray-200"></div>
-        <div className="space-y-4">
-          {[...Array(6)].map((_, i) => (
-            <div key={i} className="h-10 rounded bg-gray-100"></div>
-          ))}
-        </div>
-      </div>
-    );
+  if (loading) return <LoadingSkeleton />;
 
   return (
     <Card className="mx-auto max-w-2xl rounded-lg p-4 shadow-lg sm:p-6">
@@ -191,187 +135,80 @@ const EditEventPage = () => {
           <fieldset className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
             <legend className="mb-2 text-lg font-semibold md:col-span-2">Event Details</legend>
 
-            {/* Title */}
-            <div className="space-y-1">
-              <label className="text-sm sm:text-base" htmlFor="title">
-                Event Title *
-              </label>
-              <Input
-                id="title"
-                className="text-sm sm:text-base"
-                {...register("title", { required: "Title is required" })}
-              />
-              {errors.title && <p className="text-xs text-red-500 sm:text-sm">{errors.title.message}</p>}
-            </div>
+            <FormField label="Event Title *" name="title" register={register} error={errors.title} />
 
-            {/* Location */}
-            <div className="space-y-1">
-              <label className="text-sm sm:text-base" htmlFor="location">
-                Location *
-              </label>
-              <Input
-                id="location"
-                className="text-sm sm:text-base"
-                {...register("location", { required: "Location is required" })}
-              />
-              {errors.location && <p className="text-xs text-red-500 sm:text-sm">{errors.location.message}</p>}
-            </div>
+            <FormField label="Location *" name="location" register={register} error={errors.location} />
 
-            {/* Capacity */}
-            <div className="space-y-1">
-              <label className="text-sm sm:text-base" htmlFor="capacity">
-                Capacity *
-              </label>
-              <Input
-                id="capacity"
-                type="number"
-                className="text-sm sm:text-base"
-                disabled={hasEventStarted}
-                {...register("capacity", {
-                  required: "Capacity is required",
-                  min: { value: 0, message: "Must be non-negative" },
-                  valueAsNumber: true,
-                })}
-              />
-              {errors.capacity && <p className="text-xs text-red-500 sm:text-sm">{errors.capacity.message}</p>}
-            </div>
+            <FormField
+              label="Capacity *"
+              name="capacity"
+              type="number"
+              register={register}
+              error={errors.capacity}
+              disabled={hasEventStarted}
+              min={0}
+            />
 
-            {/* Fee */}
-            <div className="space-y-1">
-              <label className="text-sm sm:text-base" htmlFor="fee">
-                Fee ($) *
-              </label>
-              <Input
-                id="fee"
-                type="number"
-                step="0.01"
-                className="text-sm sm:text-base"
-                {...register("fee", {
-                  required: "Fee is required",
-                  min: { value: 0, message: "Must be non-negative" },
-                  valueAsNumber: true,
-                })}
-              />
-              {errors.fee && <p className="text-xs text-red-500 sm:text-sm">{errors.fee.message}</p>}
-            </div>
+            <FormField
+              label="Fee ($) *"
+              name="fee"
+              type="number"
+              step="0.01"
+              register={register}
+              error={errors.fee}
+              min={0}
+            />
 
-            {/* Description */}
-            <div className="space-y-1 md:col-span-2">
-              <label className="text-sm sm:text-base" htmlFor="description">
-                Description
-              </label>
-              <Textarea id="description" className="min-h-[100px] text-sm sm:text-base" {...register("description")} />
-            </div>
+            <FormField
+              label="Description"
+              name="description"
+              type="textarea"
+              register={register}
+              className="md:col-span-2"
+            />
           </fieldset>
 
           {/* Date & Time Section */}
           <fieldset className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
             <legend className="mb-2 text-lg font-semibold md:col-span-2">Date & Time</legend>
 
-            {/* Start Date/Time */}
-            <div className="space-y-1">
-              <label className="text-sm sm:text-base">Start Date/Time *</label>
-              <div className="flex flex-row gap-2">
-                <Input
-                  id="startDate"
-                  type="date"
-                  className="flex-1 text-sm sm:text-base"
-                  disabled={hasEventStarted}
-                  {...register("startDate", { required: "Start date is required" })}
-                />
-                <Input
-                  id="startTime"
-                  type="time"
-                  className="flex-1 text-sm sm:text-base"
-                  disabled={hasEventStarted}
-                  {...register("startTime", { required: "Start time is required" })}
-                />
-              </div>
-              {errors.startDate && <p className="text-xs text-red-500 sm:text-sm">{errors.startDate.message}</p>}
-              {errors.startTime && <p className="text-xs text-red-500 sm:text-sm">{errors.startTime.message}</p>}
-            </div>
+            <DateTimeField
+              label="Start Date/Time *"
+              dateName="startDate"
+              timeName="startTime"
+              register={register}
+              errors={{ date: errors.startDate, time: errors.startTime }}
+              disabled={hasEventStarted}
+            />
 
-            {/* End Date/Time */}
-            <div className="space-y-1">
-              <label className="text-sm sm:text-base">End Date/Time *</label>
-              <div className="flex flex-row gap-2">
-                <Input
-                  id="endDate"
-                  type="date"
-                  className="flex-1 text-sm sm:text-base"
-                  disabled={hasEventStarted}
-                  {...register("endDate", { required: "End date is required" })}
-                />
-                <Input
-                  id="endTime"
-                  type="time"
-                  className="flex-1 text-sm sm:text-base"
-                  disabled={hasEventStarted}
-                  {...register("endTime", { required: "End time is required" })}
-                />
-              </div>
-              {errors.endDate && <p className="text-xs text-red-500 sm:text-sm">{errors.endDate.message}</p>}
-              {errors.endTime && <p className="text-xs text-red-500 sm:text-sm">{errors.endTime.message}</p>}
-            </div>
+            <DateTimeField
+              label="End Date/Time *"
+              dateName="endDate"
+              timeName="endTime"
+              register={register}
+              errors={{ date: errors.endDate, time: errors.endTime }}
+              disabled={hasEventStarted}
+            />
 
-            {/* Registration Deadline */}
+            {/* Registration Deadline - Special case */}
             <div className="space-y-1 md:col-span-2">
-              <label className="text-sm sm:text-base">Registration Deadline *</label>
-              <div className="flex flex-row gap-2">
-                <Input
-                  id="registrationDeadlineDate"
-                  type="date"
-                  className="flex-1 text-sm sm:text-base"
-                  min={new Date().toISOString().split("T")[0]}
-                  {...register("registrationDeadlineDate", {
-                    required: "Deadline date is required",
-                    validate: (value) => {
-                      if (!endDate || !endTime) return true;
-                      const deadlineDate = new Date(value + "T" + watch("registrationDeadlineTime"));
-                      const endDateObj = new Date(endDate + "T" + endTime);
-                      // return deadlineDate <= endDateObj || "Cannot be after event end";
-                      return true;
-                    },
-                  })}
-                />
-                <Input
-                  id="registrationDeadlineTime"
-                  type="time"
-                  className="flex-1 text-sm sm:text-base"
-                  {...register("registrationDeadlineTime", { required: "Deadline time is required" })}
-                />
-              </div>
-              {errors.registrationDeadlineDate && (
-                <p className="text-xs text-red-500 sm:text-sm">{errors.registrationDeadlineDate.message}</p>
-              )}
-              {errors.registrationDeadlineTime && (
-                <p className="text-xs text-red-500 sm:text-sm">{errors.registrationDeadlineTime.message}</p>
-              )}
+              <DateTimeField
+                label="Registration Deadline *"
+                dateName="registrationDeadlineDate"
+                timeName="registrationDeadlineTime"
+                register={register}
+                errors={{ date: errors.registrationDeadlineDate, time: errors.registrationDeadlineTime }}
+              />
             </div>
           </fieldset>
 
-          {/* Form Actions (cancel and submit buttons) */}
-          <div className="flex flex-col items-center justify-between gap-3 sm:flex-row sm:gap-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full sm:w-auto"
-              onClick={() => {
-                // Try to go back
-                if (window.history.length > 1) {
-                  router.back();
-                } else {
-                  // If no history, redirect to /admin
-                  router.push("/admin");
-                }
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" className="w-full sm:w-auto" disabled={saving}>
-              {saving ? "Saving..." : "Save Changes"}
-            </Button>
-          </div>
+          <FormActions
+            onCancel={() => {
+              if (window.history.length > 1) router.back();
+              else router.push("/admin");
+            }}
+            isSubmitting={saving}
+          />
         </form>
       </CardContent>
     </Card>

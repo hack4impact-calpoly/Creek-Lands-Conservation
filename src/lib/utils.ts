@@ -26,20 +26,8 @@ export const parseDateTime = (date: string, time: string): Date => {
   return new Date(year, month - 1, day, hours, minutes);
 };
 
-export const validateEventDates = (
-  startDate: string,
-  startTime: string,
-  endDate: string,
-  endTime: string,
-  registrationDeadlineDate: string,
-  registrationDeadlineTime: string,
-): string | null => {
-  const startDateTime = parseDateTime(startDate, startTime);
-  const endDateTime = parseDateTime(endDate, endTime);
-  const registrationDeadline = parseDateTime(registrationDeadlineDate, registrationDeadlineTime);
-
-  if (startDateTime >= endDateTime) return "Event start must be before end time.";
-  if (registrationDeadline > endDateTime) return "Registration deadline cannot be after event end.";
-
+export const validateEventDates = (startDate: Date, endDate: Date, registrationDeadline: Date): string | null => {
+  if (startDate >= endDate) return "Event start must be before end time.";
+  if (registrationDeadline > endDate) return "Registration deadline cannot be after event end.";
   return null;
 };
