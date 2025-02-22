@@ -75,6 +75,34 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
   }
 }
 
+// DELETE: Remove an Event
+export async function DELETE(req: NextRequest, { params }: { params: { eventID: string } }) {
+  await connectDB();
+
+  const authError = await authenticateAdmin();
+  if (authError !== true) return authError;
+
+  const { eventID } = params;
+  if (!mongoose.Types.ObjectId.isValid(eventID)) {
+    return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
+  }
+
+  try {
+    const deletedEvent = await Event.findByIdAndDelete(eventID);
+
+    if (!deletedEvent) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ message: "Event deleted successfully" }, { status: 200 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Error deleting event", details: error instanceof Error ? error.message : error },
+      { status: 500 },
+    );
+  }
+}
+
 // Fetch a single event by ID
 export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
