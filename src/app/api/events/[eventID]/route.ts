@@ -75,12 +75,9 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
   }
 }
 
-// DELETE: Remove an Event
-export async function DELETE(req: NextRequest, { params }: { params: { eventID: string } }) {
+// Fetch a single event by ID
+export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
-
-  const authError = await authenticateAdmin();
-  if (authError !== true) return authError;
 
   const { eventID } = params;
   if (!mongoose.Types.ObjectId.isValid(eventID)) {
@@ -88,16 +85,15 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
   }
 
   try {
-    const deletedEvent = await Event.findByIdAndDelete(eventID);
-
-    if (!deletedEvent) {
+    const event = await Event.findById(eventID);
+    if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ message: "Event deleted successfully" }, { status: 200 });
+    return NextResponse.json(event, { status: 200 });
   } catch (error) {
     return NextResponse.json(
-      { error: "Error deleting event", details: error instanceof Error ? error.message : error },
+      { error: "Error fetching event", details: error instanceof Error ? error.message : error },
       { status: 500 },
     );
   }
