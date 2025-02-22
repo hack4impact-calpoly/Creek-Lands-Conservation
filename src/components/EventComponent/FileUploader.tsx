@@ -101,7 +101,7 @@ export default function FileUpload() {
     <>
       <Card className="mx-auto w-full max-w-3xl">
         <CardHeader>
-          <CardTitle>Upload Images</CardTitle>
+          <CardTitle>Upload Event Images</CardTitle>
           <CardDescription>Drag and drop your images or click the button below to select files.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

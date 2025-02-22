@@ -2,7 +2,7 @@
 
 import * as React from "react";
 import { useState, useRef } from "react";
-import { CloudIcon, FileIcon, X, ExternalLink } from "lucide-react";
+import { CloudUploadIcon, FileIcon, X, ExternalLink } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -97,7 +97,7 @@ export default function PDFUpload() {
     <>
       <Card className="mx-auto w-full max-w-3xl">
         <CardHeader>
-          <CardTitle>Upload PDFs</CardTitle>
+          <CardTitle>Upload Waiver PDFs</CardTitle>
           <CardDescription>Drag and drop your PDF files or click the button below to select files.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -120,7 +120,7 @@ export default function PDFUpload() {
               className="hidden"
               ref={fileInputRef}
             />
-            <CloudIcon className="h-16 w-16 text-zinc-500 dark:text-zinc-400" />
+            <CloudUploadIcon className="h-16 w-16 text-zinc-500 dark:text-zinc-400" />
             <Button variant="outline" className="cursor-pointer" onClick={() => fileInputRef.current?.click()}>
               Select PDFs
             </Button>
