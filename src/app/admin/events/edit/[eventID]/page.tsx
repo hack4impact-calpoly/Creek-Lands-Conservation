@@ -143,41 +143,70 @@ const EditEventPage = () => {
     }
   };
 
-  if (loading) return <p className="p-4 text-center">Loading event data...</p>;
+  /* cool little animation cuz why not */
+  if (loading)
+    return (
+      <div className="animate-pulse space-y-4 p-4">
+        <div className="mx-auto h-8 w-1/2 rounded bg-gray-200"></div>
+        <div className="space-y-4">
+          {[...Array(6)].map((_, i) => (
+            <div key={i} className="h-10 rounded bg-gray-100"></div>
+          ))}
+        </div>
+      </div>
+    );
 
   return (
-    <Card className="mx-auto max-w-3xl rounded-lg p-6 shadow-lg">
+    <Card className="mx-auto max-w-2xl rounded-lg p-4 shadow-lg sm:p-6">
       <CardContent>
-        <h1 className="mb-6 text-center text-3xl font-bold">Edit Event</h1>
+        <h1 className="mb-4 text-center text-2xl font-bold sm:mb-6 sm:text-3xl">Edit Event</h1>
 
         {hasEventStarted && (
-          <div className="mb-4 rounded bg-yellow-100 p-3 text-yellow-800">
-            Event has started - time and capacity editing disabled
+          <div className="mb-4 rounded bg-yellow-100 p-3 text-sm text-yellow-800 sm:text-base">
+            Event has started - date, time, and capacity editing disabled
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
           {/* Event Details Section */}
-          <fieldset className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <legend className="col-span-2 text-lg font-semibold">Event Details</legend>
+          <fieldset className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
+            <legend className="mb-2 text-lg font-semibold md:col-span-2">Event Details</legend>
 
-            <div>
-              <label htmlFor="title">Event Title *</label>
-              <Input id="title" {...register("title", { required: "Title is required" })} />
-              {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
+            {/* Title */}
+            <div className="space-y-1">
+              <label className="text-sm sm:text-base" htmlFor="title">
+                Event Title *
+              </label>
+              <Input
+                id="title"
+                className="text-sm sm:text-base"
+                {...register("title", { required: "Title is required" })}
+              />
+              {errors.title && <p className="text-xs text-red-500 sm:text-sm">{errors.title.message}</p>}
             </div>
 
-            <div>
-              <label htmlFor="location">Location *</label>
-              <Input id="location" {...register("location", { required: "Location is required" })} />
-              {errors.location && <p className="text-sm text-red-500">{errors.location.message}</p>}
+            {/* Location */}
+            <div className="space-y-1">
+              <label className="text-sm sm:text-base" htmlFor="location">
+                Location *
+              </label>
+              <Input
+                id="location"
+                className="text-sm sm:text-base"
+                {...register("location", { required: "Location is required" })}
+              />
+              {errors.location && <p className="text-xs text-red-500 sm:text-sm">{errors.location.message}</p>}
             </div>
 
-            <div>
-              <label htmlFor="capacity">Capacity *</label>
+            {/* Capacity */}
+            <div className="space-y-1">
+              <label className="text-sm sm:text-base" htmlFor="capacity">
+                Capacity *
+              </label>
               <Input
                 id="capacity"
                 type="number"
+                className="text-sm sm:text-base"
                 disabled={hasEventStarted}
                 {...register("capacity", {
                   required: "Capacity is required",
@@ -185,68 +214,95 @@ const EditEventPage = () => {
                   valueAsNumber: true,
                 })}
               />
-              {errors.capacity && <p className="text-sm text-red-500">{errors.capacity.message}</p>}
+              {errors.capacity && <p className="text-xs text-red-500 sm:text-sm">{errors.capacity.message}</p>}
             </div>
 
-            <div>
-              <label htmlFor="fee">Fee ($) *</label>
+            {/* Fee */}
+            <div className="space-y-1">
+              <label className="text-sm sm:text-base" htmlFor="fee">
+                Fee ($) *
+              </label>
               <Input
                 id="fee"
                 type="number"
                 step="0.01"
+                className="text-sm sm:text-base"
                 {...register("fee", {
                   required: "Fee is required",
                   min: { value: 0, message: "Must be non-negative" },
                   valueAsNumber: true,
                 })}
               />
-              {errors.fee && <p className="text-sm text-red-500">{errors.fee.message}</p>}
+              {errors.fee && <p className="text-xs text-red-500 sm:text-sm">{errors.fee.message}</p>}
             </div>
 
-            <div className="col-span-2">
-              <label htmlFor="description">Description</label>
-              <Textarea id="description" {...register("description")} />
+            {/* Description */}
+            <div className="space-y-1 md:col-span-2">
+              <label className="text-sm sm:text-base" htmlFor="description">
+                Description
+              </label>
+              <Textarea id="description" className="min-h-[100px] text-sm sm:text-base" {...register("description")} />
             </div>
           </fieldset>
 
           {/* Date & Time Section */}
-          <fieldset className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            <legend className="col-span-2 text-lg font-semibold">Date & Time</legend>
+          <fieldset className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
+            <legend className="mb-2 text-lg font-semibold md:col-span-2">Date & Time</legend>
 
             {/* Start Date/Time */}
-            <div className="space-y-2">
-              <label>Start Date/Time *</label>
-              <div className="flex gap-2">
-                <Input id="startDate" type="date" {...register("startDate", { required: "Start date is required" })} />
+            <div className="space-y-1">
+              <label className="text-sm sm:text-base">Start Date/Time *</label>
+              <div className="flex flex-row gap-2">
+                <Input
+                  id="startDate"
+                  type="date"
+                  className="flex-1 text-sm sm:text-base"
+                  disabled={hasEventStarted}
+                  {...register("startDate", { required: "Start date is required" })}
+                />
                 <Input
                   id="startTime"
                   type="time"
+                  className="flex-1 text-sm sm:text-base"
                   disabled={hasEventStarted}
                   {...register("startTime", { required: "Start time is required" })}
                 />
               </div>
-              {errors.startDate && <p className="text-sm text-red-500">{errors.startDate.message}</p>}
-              {errors.startTime && <p className="text-sm text-red-500">{errors.startTime.message}</p>}
+              {errors.startDate && <p className="text-xs text-red-500 sm:text-sm">{errors.startDate.message}</p>}
+              {errors.startTime && <p className="text-xs text-red-500 sm:text-sm">{errors.startTime.message}</p>}
             </div>
 
             {/* End Date/Time */}
-            <div className="space-y-2">
-              <label>End Date/Time *</label>
-              <div className="flex gap-2">
-                <Input id="endDate" type="date" {...register("endDate", { required: "End date is required" })} />
-                <Input id="endTime" type="time" {...register("endTime", { required: "End time is required" })} />
+            <div className="space-y-1">
+              <label className="text-sm sm:text-base">End Date/Time *</label>
+              <div className="flex flex-row gap-2">
+                <Input
+                  id="endDate"
+                  type="date"
+                  className="flex-1 text-sm sm:text-base"
+                  disabled={hasEventStarted}
+                  {...register("endDate", { required: "End date is required" })}
+                />
+                <Input
+                  id="endTime"
+                  type="time"
+                  className="flex-1 text-sm sm:text-base"
+                  disabled={hasEventStarted}
+                  {...register("endTime", { required: "End time is required" })}
+                />
               </div>
-              {errors.endDate && <p className="text-sm text-red-500">{errors.endDate.message}</p>}
-              {errors.endTime && <p className="text-sm text-red-500">{errors.endTime.message}</p>}
+              {errors.endDate && <p className="text-xs text-red-500 sm:text-sm">{errors.endDate.message}</p>}
+              {errors.endTime && <p className="text-xs text-red-500 sm:text-sm">{errors.endTime.message}</p>}
             </div>
 
-            {/* Registration Deadline - Improved Layout */}
-            <div className="col-span-2 space-y-2">
-              <label>Registration Deadline *</label>
-              <div className="flex gap-2">
+            {/* Registration Deadline */}
+            <div className="space-y-1 md:col-span-2">
+              <label className="text-sm sm:text-base">Registration Deadline *</label>
+              <div className="flex flex-row gap-2">
                 <Input
                   id="registrationDeadlineDate"
                   type="date"
+                  className="flex-1 text-sm sm:text-base"
                   min={new Date().toISOString().split("T")[0]}
                   {...register("registrationDeadlineDate", {
                     required: "Deadline date is required",
@@ -261,24 +317,25 @@ const EditEventPage = () => {
                 <Input
                   id="registrationDeadlineTime"
                   type="time"
+                  className="flex-1 text-sm sm:text-base"
                   {...register("registrationDeadlineTime", { required: "Deadline time is required" })}
                 />
               </div>
               {errors.registrationDeadlineDate && (
-                <p className="text-sm text-red-500">{errors.registrationDeadlineDate.message}</p>
+                <p className="text-xs text-red-500 sm:text-sm">{errors.registrationDeadlineDate.message}</p>
               )}
               {errors.registrationDeadlineTime && (
-                <p className="text-sm text-red-500">{errors.registrationDeadlineTime.message}</p>
+                <p className="text-xs text-red-500 sm:text-sm">{errors.registrationDeadlineTime.message}</p>
               )}
             </div>
           </fieldset>
 
           {/* Form Actions */}
-          <div className="flex items-center justify-between">
-            <Button type="button" variant="outline" onClick={() => router.back()}>
+          <div className="flex flex-col items-center justify-between gap-3 sm:flex-row sm:gap-4">
+            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
               Cancel
             </Button>
-            <Button type="submit" disabled={saving}>
+            <Button type="submit" className="w-full sm:w-auto" disabled={saving}>
               {saving ? "Saving..." : "Save Changes"}
             </Button>
           </div>
