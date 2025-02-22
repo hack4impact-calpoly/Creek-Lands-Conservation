@@ -3,10 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import Link from "next/link";
 import { useForm } from "react-hook-form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { IEvent, IEventUpdate } from "@/database/eventSchema";
 
-// Define the structure for form data
 interface EventFormData {
   title: string;
   startDate: string;
@@ -15,12 +18,11 @@ interface EventFormData {
   endTime: string;
   location: string;
   capacity: number;
-  fees: number;
+  fee: number;
   description?: string;
-  registrationDeadline: string;
+  registrationDeadlineDate: string;
+  registrationDeadlineTime: string;
 }
-
-interface EventData extends EventFormData {}
 
 const EditEventPage = () => {
   const router = useRouter();
@@ -31,10 +33,15 @@ const EditEventPage = () => {
     handleSubmit,
     setValue,
     formState: { errors },
+    watch,
   } = useForm<EventFormData>();
-  const [eventData, setEventData] = useState<EventData | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [hasEventStarted, setHasEventStarted] = useState(false);
+
+  // Watch end date/time for registration deadline validation
+  const endDate = watch("endDate");
+  const endTime = watch("endTime");
 
   useEffect(() => {
     if (!eventID) return;
@@ -43,102 +50,241 @@ const EditEventPage = () => {
       try {
         const res = await fetch(`/api/events/${eventID}`);
         if (!res.ok) throw new Error("Failed to fetch event");
-        const data: EventData = await res.json();
-        setEventData(data);
+        const data: IEvent = await res.json();
+
+        const eventStartDate = new Date(data.startDate);
+        const now = new Date();
+        setHasEventStarted(eventStartDate < now);
+
+        // Set form values
         setValue("title", data.title);
-        setValue("startDate", data.startDate.split("T")[0]);
-        setValue("startTime", data.startDate.split("T")[1]?.slice(0, 5));
-        setValue("endDate", data.endDate.split("T")[0]);
-        setValue("endTime", data.endDate.split("T")[1]?.slice(0, 5));
         setValue("location", data.location);
         setValue("capacity", data.capacity);
-        setValue("fees", data.fees);
+        setValue("fee", data.fee);
         setValue("description", data.description || "");
-        setValue("registrationDeadline", data.registrationDeadline.split("T")[0]);
+
+        // Helper to split datetime into date/time fields
+        const setDateTimeFields = (field: "start" | "end" | "registrationDeadline", date: Date) => {
+          const isoDate = date.toISOString();
+          setValue(`${field}Date`, isoDate.split("T")[0]);
+          setValue(`${field}Time`, isoDate.split("T")[1].slice(0, 5));
+        };
+
+        setDateTimeFields("start", new Date(data.startDate));
+        setDateTimeFields("end", new Date(data.endDate));
+        setDateTimeFields("registrationDeadline", new Date(data.registrationDeadline));
       } catch (error) {
-        console.error(error);
-        toast({ title: "Error", description: "Error loading event data", variant: "destructive" });
+        toast({ title: "Error", description: "Failed to load event data", variant: "destructive" });
       } finally {
         setLoading(false);
       }
     };
 
     fetchEvent();
-  }, [eventID, setValue]);
+  }, [eventID, setValue, toast]);
 
-  const onSubmit = async (data: EventFormData) => {
-    if (!eventData) {
-      toast({ title: "Error", description: "Event not found", variant: "destructive" });
-      return;
-    }
-
-    if (new Date(data.startDate) > new Date(data.endDate)) {
-      toast({ title: "Warning", description: "Start date must be before end date", variant: "destructive" });
-      return;
-    }
-    if (data.capacity < 0) {
-      toast({ title: "Warning", description: "Capacity must be non-negative", variant: "destructive" });
-      return;
-    }
-
-    setSaving(true);
+  const onSubmit = async (formData: EventFormData) => {
     try {
+      // Combine date/time fields into Date objects
+      const parseDateTime = (date: string, time: string): Date => {
+        const [hours, minutes] = time.split(":").map(Number);
+        const newDate = new Date(date);
+        newDate.setHours(hours, minutes);
+        return newDate;
+      };
+
+      const startDateTime = parseDateTime(formData.startDate, formData.startTime);
+      const endDateTime = parseDateTime(formData.endDate, formData.endTime);
+      const registrationDeadline = parseDateTime(formData.registrationDeadlineDate, formData.registrationDeadlineTime);
+
+      // Validation checks
+      if (startDateTime >= endDateTime) {
+        throw new Error("Event start must be before end time");
+      }
+
+      if (registrationDeadline > endDateTime) {
+        throw new Error("Registration deadline cannot be after event end");
+      }
+
+      if (formData.capacity < 0) {
+        throw new Error("Capacity must be non-negative");
+      }
+
+      // Prepare update payload
+      const payload: IEventUpdate = {
+        title: formData.title,
+        description: formData.description,
+        startDate: startDateTime,
+        endDate: endDateTime,
+        location: formData.location,
+        capacity: formData.capacity,
+        fee: formData.fee,
+        registrationDeadline,
+      };
+
+      setSaving(true);
       const res = await fetch(`/api/events/${eventID}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: data.title,
-          startDate: `${data.startDate}T${data.startTime}:00Z`,
-          endDate: `${data.endDate}T${data.endTime}:00Z`,
-          location: data.location,
-          capacity: data.capacity,
-          fee: data.fees,
-          description: data.description,
-          registrationDeadline: `${data.registrationDeadline}T23:59:59Z`,
-        }),
+        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error("Failed to update event");
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || "Failed to update event");
+      }
+
       toast({ title: "Success", description: "Event updated successfully!", variant: "success" });
       router.push(`/admin/events/${eventID}`);
-    } catch (error) {
-      console.error(error);
-      toast({ title: "Error", description: "Error updating event", variant: "destructive" });
+    } catch (error: any) {
+      toast({ title: "Error", description: error.message || "Failed to update event", variant: "destructive" });
     } finally {
       setSaving(false);
     }
   };
 
-  if (loading) return <p>Loading event data...</p>;
-  if (!eventData) return <p>Event not found</p>;
+  if (loading) return <p className="p-4 text-center">Loading event data...</p>;
 
   return (
-    <div className="container mx-auto p-6">
-      <Link href="/admin">
-        <button className="rounded bg-gray-500 px-4 py-2 text-white">Back</button>
-      </Link>
-      <h1 className="my-4 text-2xl font-bold">Edit Event</h1>
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <input type="text" {...register("title", { required: true })} className="input" placeholder="Event Title" />
-        <textarea {...register("description")} className="input" placeholder="Event Description" />
-        <input type="date" {...register("startDate", { required: true })} className="input" />
-        <input type="time" {...register("startTime", { required: true })} className="input" />
-        <input type="date" {...register("endDate", { required: true })} className="input" />
-        <input type="time" {...register("endTime", { required: true })} className="input" />
-        <input type="text" {...register("location", { required: true })} className="input" placeholder="Location" />
-        <input
-          type="number"
-          {...register("capacity", { required: true, min: 0 })}
-          className="input"
-          placeholder="Capacity"
-        />
-        <input type="number" {...register("fees", { required: true })} className="input" placeholder="Fees" />
-        <input type="date" {...register("registrationDeadline", { required: true })} className="input" />
-        <button type="submit" disabled={saving} className="rounded bg-blue-500 px-4 py-2 text-white">
-          {saving ? "Saving..." : "Save Changes"}
-        </button>
-      </form>
-    </div>
+    <Card className="mx-auto max-w-3xl rounded-lg p-6 shadow-lg">
+      <CardContent>
+        <h1 className="mb-6 text-center text-3xl font-bold">Edit Event</h1>
+
+        {hasEventStarted && (
+          <div className="mb-4 rounded bg-yellow-100 p-3 text-yellow-800">
+            Event has started - time and capacity editing disabled
+          </div>
+        )}
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* Event Details Section */}
+          <fieldset className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <legend className="col-span-2 text-lg font-semibold">Event Details</legend>
+
+            <div>
+              <label htmlFor="title">Event Title *</label>
+              <Input id="title" {...register("title", { required: "Title is required" })} />
+              {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="location">Location *</label>
+              <Input id="location" {...register("location", { required: "Location is required" })} />
+              {errors.location && <p className="text-sm text-red-500">{errors.location.message}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="capacity">Capacity *</label>
+              <Input
+                id="capacity"
+                type="number"
+                disabled={hasEventStarted}
+                {...register("capacity", {
+                  required: "Capacity is required",
+                  min: { value: 0, message: "Must be non-negative" },
+                  valueAsNumber: true,
+                })}
+              />
+              {errors.capacity && <p className="text-sm text-red-500">{errors.capacity.message}</p>}
+            </div>
+
+            <div>
+              <label htmlFor="fee">Fee ($) *</label>
+              <Input
+                id="fee"
+                type="number"
+                step="0.01"
+                {...register("fee", {
+                  required: "Fee is required",
+                  min: { value: 0, message: "Must be non-negative" },
+                  valueAsNumber: true,
+                })}
+              />
+              {errors.fee && <p className="text-sm text-red-500">{errors.fee.message}</p>}
+            </div>
+
+            <div className="col-span-2">
+              <label htmlFor="description">Description</label>
+              <Textarea id="description" {...register("description")} />
+            </div>
+          </fieldset>
+
+          {/* Date & Time Section */}
+          <fieldset className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <legend className="col-span-2 text-lg font-semibold">Date & Time</legend>
+
+            {/* Start Date/Time */}
+            <div className="space-y-2">
+              <label>Start Date/Time *</label>
+              <div className="flex gap-2">
+                <Input id="startDate" type="date" {...register("startDate", { required: "Start date is required" })} />
+                <Input
+                  id="startTime"
+                  type="time"
+                  disabled={hasEventStarted}
+                  {...register("startTime", { required: "Start time is required" })}
+                />
+              </div>
+              {errors.startDate && <p className="text-sm text-red-500">{errors.startDate.message}</p>}
+              {errors.startTime && <p className="text-sm text-red-500">{errors.startTime.message}</p>}
+            </div>
+
+            {/* End Date/Time */}
+            <div className="space-y-2">
+              <label>End Date/Time *</label>
+              <div className="flex gap-2">
+                <Input id="endDate" type="date" {...register("endDate", { required: "End date is required" })} />
+                <Input id="endTime" type="time" {...register("endTime", { required: "End time is required" })} />
+              </div>
+              {errors.endDate && <p className="text-sm text-red-500">{errors.endDate.message}</p>}
+              {errors.endTime && <p className="text-sm text-red-500">{errors.endTime.message}</p>}
+            </div>
+
+            {/* Registration Deadline - Improved Layout */}
+            <div className="col-span-2 space-y-2">
+              <label>Registration Deadline *</label>
+              <div className="flex gap-2">
+                <Input
+                  id="registrationDeadlineDate"
+                  type="date"
+                  min={new Date().toISOString().split("T")[0]}
+                  {...register("registrationDeadlineDate", {
+                    required: "Deadline date is required",
+                    validate: (value) => {
+                      if (!endDate || !endTime) return true;
+                      const deadlineDate = new Date(value + "T" + watch("registrationDeadlineTime"));
+                      const endDateObj = new Date(endDate + "T" + endTime);
+                      return deadlineDate <= endDateObj || "Cannot be after event end";
+                    },
+                  })}
+                />
+                <Input
+                  id="registrationDeadlineTime"
+                  type="time"
+                  {...register("registrationDeadlineTime", { required: "Deadline time is required" })}
+                />
+              </div>
+              {errors.registrationDeadlineDate && (
+                <p className="text-sm text-red-500">{errors.registrationDeadlineDate.message}</p>
+              )}
+              {errors.registrationDeadlineTime && (
+                <p className="text-sm text-red-500">{errors.registrationDeadlineTime.message}</p>
+              )}
+            </div>
+          </fieldset>
+
+          {/* Form Actions */}
+          <div className="flex items-center justify-between">
+            <Button type="button" variant="outline" onClick={() => router.back()}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving ? "Saving..." : "Save Changes"}
+            </Button>
+          </div>
+        </form>
+      </CardContent>
+    </Card>
   );
 };
 
