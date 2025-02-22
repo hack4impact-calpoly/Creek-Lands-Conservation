@@ -9,7 +9,7 @@ import { IEventUpdate } from "@/database/eventSchema";
 import { FormField } from "@/components/Forms/FormField";
 import { DateTimeField } from "@/components/Forms/DateTimeField";
 import { FormActions } from "@/components/Forms/FormActions";
-import { toLocalDateString, toLocalTimeString, parseDateTime } from "@/lib/utils";
+import { parseDateTime } from "@/lib/utils";
 import { EventFormData } from "@/types/events";
 import { validateEventDates } from "@/lib/utils";
 import LoadingSkeleton from "@/components/Forms/LoadingSkeleton";
@@ -23,7 +23,6 @@ const EditEventPage = () => {
     handleSubmit,
     setValue,
     formState: { errors },
-    watch,
   } = useForm<EventFormData>();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -46,8 +45,10 @@ const EditEventPage = () => {
 
         // Set date/time fields in local time
         const setDateTimeFields = (field: "start" | "end" | "registrationDeadline", date: Date) => {
-          setValue(`${field}Date`, toLocalDateString(date));
-          setValue(`${field}Time`, toLocalTimeString(date));
+          /* needs YYYY-MM-DD format... this vexes me */
+          setValue(`${field}Date`, date.toLocaleDateString("en-CA"));
+          /* needs 24 hour format... praise be to Great Britain */
+          setValue(`${field}Time`, date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }));
         };
 
         setDateTimeFields("start", new Date(data.startDate));

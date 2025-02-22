@@ -6,20 +6,6 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export const toLocalDateString = (date: Date): string => {
-  const localDate = new Date(date);
-  return [
-    localDate.getFullYear(),
-    String(localDate.getMonth() + 1).padStart(2, "0"),
-    String(localDate.getDate()).padStart(2, "0"),
-  ].join("-");
-};
-
-export const toLocalTimeString = (date: Date): string => {
-  const localDate = new Date(date);
-  return [String(localDate.getHours()).padStart(2, "0"), String(localDate.getMinutes()).padStart(2, "0")].join(":");
-};
-
 export const parseDateTime = (date: string, time: string): Date => {
   const [year, month, day] = date.split("-").map(Number);
   const [hours, minutes] = time.split(":").map(Number);
