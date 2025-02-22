@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useUser } from "@clerk/nextjs";
 import styles from "./UserComponent.module.css";
 
 interface Child {
@@ -10,53 +11,82 @@ interface Child {
   gender: string;
 }
 
-//needed to object identify each child
 let childIdCounter = 0;
 
-const PersonalInfo = ({ userId }: { userId: string }) => {
-  //personal info data
+export default function PersonalInfo() {
+  const { isLoaded, user } = useUser();
+
+  // Loading & error states
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Personal info data
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [gender, setGender] = useState("");
   const [birthday, setBirthday] = useState("");
   const [children, setChildren] = useState<Child[]>([]);
-
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
-      try {
-        const response = await fetch(`/api/users/${userId}`);
-        if (!response.ok) {
-          throw new Error("Failed to fetch user data");
-        }
-        const userData = await response.json();
+      // If Clerk user isn't loaded or doesn't exist, do nothing yet.
+      if (!isLoaded || !user?.id) {
+        setLoading(false);
+        return;
+      }
 
+      try {
+        setLoading(true);
+
+        // Fetch from your API route: /api/users/[clerkID]
+        const response = await fetch(`/api/users/${user.id}`);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch user data: ${response.status}`);
+        }
+
+        const userData = await response.json();
+        console.log("MongoDB User Data:", userData);
+
+        if (!userData || !userData._id) {
+          console.warn("User not found in MongoDB");
+          setError("User not found in MongoDB.");
+          setLoading(false);
+          return;
+        }
+
+        // Populate state with the data
         setFirstName(userData.firstName || "");
         setLastName(userData.lastName || "");
         setEmail(userData.email || "");
         setGender(userData.gender || "");
         setBirthday(userData.birthday ? new Date(userData.birthday).toISOString().split("T")[0] : "");
 
-        setChildren(
-          userData.children?.map((child: Child) => ({
+        // Convert each child's data into our local Child type
+        const mappedChildren =
+          userData.children?.map((childData: any) => ({
             id: ++childIdCounter,
-            name: child.name || "",
-            birthday: child.birthday ? new Date(child.birthday).toISOString().split("T")[0] : "",
-            gender: child.gender || "",
-          })) || [],
-        );
-      } catch (error) {
-        console.error("Error fetching user data:", error);
+            name: childData.name || "",
+            birthday: childData.birthday ? new Date(childData.birthday).toISOString().split("T")[0] : "",
+            gender: childData.gender || "",
+          })) || [];
+
+        setChildren(mappedChildren);
+      } catch (err) {
+        console.error("Error fetching user data:", err);
+        setError("Failed to load user data. Please try again later.");
+      } finally {
+        setLoading(false);
       }
     };
 
-    if (userId) {
-      fetchUserData();
-    }
-  }, [userId]);
+    fetchUserData();
+  }, [isLoaded, user]);
 
+  // -----------------------
+  // Handlers for editing
+  // -----------------------
   const handleAddChild = () => {
     childIdCounter += 1;
     setChildren((prevChildren) => [...prevChildren, { id: childIdCounter, name: "", birthday: "", gender: "" }]);
@@ -76,19 +106,16 @@ const PersonalInfo = ({ userId }: { userId: string }) => {
     setIsEditing(true);
   };
 
-  /**
-   * Validate fields. If any required field is empty, alert the user and stop.
-   */
   const validateFields = () => {
-    // Trim to ensure we don't treat whitespace as valid input.
+    // Ensure parent fields are filled
     const requiredParentFields = [firstName, lastName, email, gender, birthday];
-    // Check if any parent field is empty.
     const parentIsValid = requiredParentFields.every((field) => field.trim().length > 0);
     if (!parentIsValid) {
       alert("Please fill out all fields for the parent's information.");
       return false;
     }
 
+    // Ensure each child is filled
     for (let i = 0; i < children.length; i++) {
       const child = children[i];
       if (!child.name.trim() || !child.birthday.trim() || !child.gender.trim()) {
@@ -106,12 +133,13 @@ const PersonalInfo = ({ userId }: { userId: string }) => {
     }
 
     try {
+      // Prepare data for PUT
       const payload = {
+        clerkID: user?.id, // Send Clerk ID explicitly
         firstName,
         lastName,
         email,
         gender,
-        // Convert date string to ISO
         birthday: birthday ? new Date(birthday).toISOString() : "",
         children: children.map((child) => ({
           name: child.name,
@@ -119,24 +147,31 @@ const PersonalInfo = ({ userId }: { userId: string }) => {
           gender: child.gender,
         })),
       };
-      //put request
-      const response = await fetch(`/api/users/${userId}`, {
+
+      const response = await fetch("/api/users", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
-        throw new Error("Failed to update user data");
+        throw new Error(`Failed to update user data: ${response.status}`);
       }
 
       const updatedUser = await response.json();
       console.log("User updated successfully:", updatedUser);
       setIsEditing(false);
-    } catch (error) {
-      console.error(error);
+    } catch (err) {
+      console.error("Error updating user data:", err);
+      setError("Failed to update user data. Please try again later.");
     }
   };
+
+  // -----------------------
+  // Render UI
+  // -----------------------
+  if (loading) return <p>Loading user data...</p>;
+  if (error) return <p>{error}</p>;
 
   return (
     <div className={styles.personalInfoContainer}>
@@ -173,7 +208,6 @@ const PersonalInfo = ({ userId }: { userId: string }) => {
             disabled={!isEditing}
           />
         </label>
-
         <label>
           Gender:
           {!isEditing ? (
@@ -188,7 +222,6 @@ const PersonalInfo = ({ userId }: { userId: string }) => {
             </select>
           )}
         </label>
-
         <label>
           Birthday:
           <input
@@ -219,7 +252,6 @@ const PersonalInfo = ({ userId }: { userId: string }) => {
             onChange={(e) => handleEditChild(child.id, "birthday", e.target.value)}
             disabled={!isEditing}
           />
-
           {!isEditing ? (
             <input className={styles.inputField} type="text" value={child.gender} disabled />
           ) : (
@@ -235,7 +267,6 @@ const PersonalInfo = ({ userId }: { userId: string }) => {
               <option value="Prefer not to say">Prefer not to say</option>
             </select>
           )}
-
           {isEditing && (
             <button className={`${styles.button} ${styles.deleteBtn}`} onClick={() => handleDeleteChild(child.id)}>
               Delete
@@ -245,7 +276,7 @@ const PersonalInfo = ({ userId }: { userId: string }) => {
       ))}
 
       {isEditing && (
-        <button className={`${styles.button} ${styles.addChildBtn}`} onClick={handleAddChild}>
+        <button className={styles.button} onClick={handleAddChild}>
           Add Child
         </button>
       )}
@@ -261,6 +292,4 @@ const PersonalInfo = ({ userId }: { userId: string }) => {
       )}
     </div>
   );
-};
-
-export default PersonalInfo;
+}
