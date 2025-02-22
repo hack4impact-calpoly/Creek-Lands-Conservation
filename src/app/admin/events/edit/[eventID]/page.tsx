@@ -50,7 +50,7 @@ const EditEventPage = () => {
       try {
         const res = await fetch(`/api/events/${eventID}`);
         if (!res.ok) throw new Error("Failed to fetch event");
-        const data: IEvent = await res.json();
+        const data = await res.json();
 
         // Convert UTC dates to local time for display
         const toLocalDateString = (date: Date) => {
