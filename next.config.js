@@ -16,9 +16,4 @@ const nextConfig = {
   },
 };
 
-module.exports = {
-  images: {
-    domains: ["creeklandsconservation.s3.us-west-1.amazonaws.com"],
-  },
-  // ...other Next.js config options
-};
+module.exports = nextConfig;
