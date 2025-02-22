@@ -190,7 +190,7 @@ const EditEventPage = () => {
               disabled={hasEventStarted}
             />
 
-            {/* Registration Deadline - Special case */}
+            {/* Registration Deadline - (this one is wider) */}
             <div className="space-y-1 md:col-span-2">
               <DateTimeField
                 label="Registration Deadline *"
