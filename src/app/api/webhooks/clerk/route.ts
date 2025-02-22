@@ -58,7 +58,7 @@ export async function POST(req: Request) {
     };
 
     // Change this to user in production
-    let role = "admin";
+    const role = "admin";
     const client = await clerkClient();
 
     try {
