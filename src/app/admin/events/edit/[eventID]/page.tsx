@@ -29,10 +29,6 @@ const EditEventPage = () => {
   const [saving, setSaving] = useState(false);
   const [hasEventStarted, setHasEventStarted] = useState(false);
 
-  // Watch end date/time for registration deadline validation
-  const endDate = watch("endDate");
-  const endTime = watch("endTime");
-
   useEffect(() => {
     if (!eventID) return;
 
@@ -76,7 +72,7 @@ const EditEventPage = () => {
     };
 
     fetchEvent();
-  }, [eventID, setValue, toast]);
+  }, [eventID, setValue, toast, router]);
 
   const onSubmit = async (formData: EventFormData) => {
     try {
