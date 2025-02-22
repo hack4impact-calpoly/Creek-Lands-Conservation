@@ -58,9 +58,16 @@ const EditEventPage = () => {
         setDateTimeFields("end", new Date(data.endDate));
         setDateTimeFields("registrationDeadline", new Date(data.registrationDeadline));
 
-        // Check if event has started using local time
+        // Check if event has started or ended using local time
         const now = new Date();
+        const eventEnd = new Date(data.endDate);
         setHasEventStarted(new Date(data.startDate) < now);
+
+        if (eventEnd < now) {
+          toast({ title: "Error", description: "This event has ended and cannot be edited.", variant: "destructive" });
+          router.push("/admin");
+          return;
+        }
       } catch (error) {
         toast({ title: "Error", description: "Failed to load event data", variant: "destructive" });
       } finally {
