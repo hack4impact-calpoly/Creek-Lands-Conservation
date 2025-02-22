@@ -52,27 +52,43 @@ const EditEventPage = () => {
         if (!res.ok) throw new Error("Failed to fetch event");
         const data: IEvent = await res.json();
 
-        const eventStartDate = new Date(data.startDate);
-        const now = new Date();
-        setHasEventStarted(eventStartDate < now);
+        // Convert UTC dates to local time for display
+        const toLocalDateString = (date: Date) => {
+          const localDate = new Date(date);
+          return [
+            localDate.getFullYear(),
+            String(localDate.getMonth() + 1).padStart(2, "0"),
+            String(localDate.getDate()).padStart(2, "0"),
+          ].join("-");
+        };
 
-        // Set form values
+        const toLocalTimeString = (date: Date) => {
+          const localDate = new Date(date);
+          return [String(localDate.getHours()).padStart(2, "0"), String(localDate.getMinutes()).padStart(2, "0")].join(
+            ":",
+          );
+        };
+
+        // Set form values with local time
         setValue("title", data.title);
         setValue("location", data.location);
         setValue("capacity", data.capacity);
         setValue("fee", data.fee);
         setValue("description", data.description || "");
 
-        // Helper to split datetime into date/time fields
+        // Set date/time fields in local time
         const setDateTimeFields = (field: "start" | "end" | "registrationDeadline", date: Date) => {
-          const isoDate = date.toISOString();
-          setValue(`${field}Date`, isoDate.split("T")[0]);
-          setValue(`${field}Time`, isoDate.split("T")[1].slice(0, 5));
+          setValue(`${field}Date`, toLocalDateString(date));
+          setValue(`${field}Time`, toLocalTimeString(date));
         };
 
         setDateTimeFields("start", new Date(data.startDate));
         setDateTimeFields("end", new Date(data.endDate));
         setDateTimeFields("registrationDeadline", new Date(data.registrationDeadline));
+
+        // Check if event has started using local time
+        const now = new Date();
+        setHasEventStarted(new Date(data.startDate) < now);
       } catch (error) {
         toast({ title: "Error", description: "Failed to load event data", variant: "destructive" });
       } finally {
@@ -86,10 +102,13 @@ const EditEventPage = () => {
   const onSubmit = async (formData: EventFormData) => {
     try {
       // Combine date/time fields into Date objects
+      // Local time is automatically used
       const parseDateTime = (date: string, time: string): Date => {
+        const [year, month, day] = date.split("-").map(Number);
         const [hours, minutes] = time.split(":").map(Number);
-        const newDate = new Date(date);
-        newDate.setHours(hours, minutes);
+        const newDate = new Date(year, month - 1, day, hours, minutes);
+        console.log(newDate.toISOString());
+        // No need to convert to UTC, Stringify does it automatically
         return newDate;
       };
 
@@ -135,7 +154,7 @@ const EditEventPage = () => {
       }
 
       toast({ title: "Success", description: "Event updated successfully!", variant: "success" });
-      router.push(`/admin/events/${eventID}`);
+      router.push("/admin");
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to update event", variant: "destructive" });
     } finally {
@@ -310,7 +329,8 @@ const EditEventPage = () => {
                       if (!endDate || !endTime) return true;
                       const deadlineDate = new Date(value + "T" + watch("registrationDeadlineTime"));
                       const endDateObj = new Date(endDate + "T" + endTime);
-                      return deadlineDate <= endDateObj || "Cannot be after event end";
+                      // return deadlineDate <= endDateObj || "Cannot be after event end";
+                      return true;
                     },
                   })}
                 />
@@ -330,9 +350,22 @@ const EditEventPage = () => {
             </div>
           </fieldset>
 
-          {/* Form Actions */}
+          {/* Form Actions (cancel and submit buttons) */}
           <div className="flex flex-col items-center justify-between gap-3 sm:flex-row sm:gap-4">
-            <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => router.back()}>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={() => {
+                // Try to go back
+                if (window.history.length > 1) {
+                  router.back();
+                } else {
+                  // If no history, redirect to /admin
+                  router.push("/admin");
+                }
+              }}
+            >
               Cancel
             </Button>
             <Button type="submit" className="w-full sm:w-auto" disabled={saving}>
