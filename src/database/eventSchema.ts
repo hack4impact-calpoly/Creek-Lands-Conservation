@@ -45,6 +45,7 @@ export interface IEvent extends Document {
     required: boolean;
   }[];
   requiresWaiver: boolean;
+  registrationDeadline?: Date;
   waiverId: mongoose.Types.ObjectId[];
   fee: number;
   stripePaymentId?: string | null;
