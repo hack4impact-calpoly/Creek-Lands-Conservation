@@ -5,7 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { Card, CardContent } from "@/components/ui/card";
-import { IEvent, IEventUpdate } from "@/database/eventSchema";
+import { IEventUpdate } from "@/database/eventSchema";
 import { FormField } from "@/components/Forms/FormField";
 import { DateTimeField } from "@/components/Forms/DateTimeField";
 import { FormActions } from "@/components/Forms/FormActions";
