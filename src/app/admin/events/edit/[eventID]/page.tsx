@@ -10,6 +10,7 @@ import { FormField } from "@/components/Forms/FormField";
 import { DateTimeField } from "@/components/Forms/DateTimeField";
 import { FormActions } from "@/components/Forms/FormActions";
 import { parseDateTime } from "@/lib/utils";
+import Link from "next/link";
 import { EventFormData } from "@/types/events";
 import { validateEventDates } from "@/lib/utils";
 import LoadingSkeleton from "@/components/Forms/LoadingSkeleton";
@@ -62,7 +63,7 @@ const EditEventPage = () => {
 
         if (eventEnd < now) {
           toast({ title: "Error", description: "This event has ended and cannot be edited.", variant: "destructive" });
-          router.push("/admin");
+          router.push("/admin/events");
           return;
         }
       } catch (error) {
@@ -112,7 +113,7 @@ const EditEventPage = () => {
       }
 
       toast({ title: "Success", description: "Event updated successfully!", variant: "success" });
-      router.push("/admin");
+      router.push("/admin/events");
     } catch (error: any) {
       toast({ title: "Error", description: error.message || "Failed to update event", variant: "destructive" });
     } finally {
@@ -124,98 +125,103 @@ const EditEventPage = () => {
   if (loading) return <LoadingSkeleton />;
 
   return (
-    <Card className="mx-auto max-w-2xl rounded-lg p-4 shadow-lg sm:p-6">
-      <CardContent>
-        <h1 className="mb-4 text-center text-2xl font-bold sm:mb-6 sm:text-3xl">Edit Event</h1>
+    <div>
+      <Link href="/admin/events" className="mb-4 inline-block text-blue-600 hover:text-blue-800">
+        ← Back to Admin
+      </Link>
+      <Card className="mx-auto max-w-2xl rounded-lg p-4 shadow-lg sm:p-6">
+        <CardContent>
+          <h1 className="mb-4 text-center text-2xl font-bold sm:mb-6 sm:text-3xl">Edit Event</h1>
 
-        {hasEventStarted && (
-          <div className="mb-4 rounded bg-yellow-100 p-3 text-sm text-yellow-800 sm:text-base">
-            Event has started - date, time, and capacity editing disabled
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
-          {/* Event Details Section */}
-          <fieldset className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
-            <legend className="mb-2 text-lg font-semibold md:col-span-2">Event Details</legend>
-
-            <FormField label="Event Title *" name="title" register={register} error={errors.title} />
-
-            <FormField label="Location *" name="location" register={register} error={errors.location} />
-
-            <FormField
-              label="Capacity *"
-              name="capacity"
-              type="number"
-              register={register}
-              error={errors.capacity}
-              disabled={hasEventStarted}
-              min={0}
-            />
-
-            <FormField
-              label="Fee ($) *"
-              name="fee"
-              type="number"
-              step="0.01"
-              register={register}
-              error={errors.fee}
-              min={0}
-            />
-
-            <FormField
-              label="Description"
-              name="description"
-              type="textarea"
-              register={register}
-              className="md:col-span-2"
-            />
-          </fieldset>
-
-          {/* Date & Time Section */}
-          <fieldset className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
-            <legend className="mb-2 text-lg font-semibold md:col-span-2">Date & Time</legend>
-
-            <DateTimeField
-              label="Start Date/Time *"
-              dateName="startDate"
-              timeName="startTime"
-              register={register}
-              errors={{ date: errors.startDate, time: errors.startTime }}
-              disabled={hasEventStarted}
-            />
-
-            <DateTimeField
-              label="End Date/Time *"
-              dateName="endDate"
-              timeName="endTime"
-              register={register}
-              errors={{ date: errors.endDate, time: errors.endTime }}
-              disabled={hasEventStarted}
-            />
-
-            {/* Registration Deadline - (this one is wider) */}
-            <div className="space-y-1 md:col-span-2">
-              <DateTimeField
-                label="Registration Deadline *"
-                dateName="registrationDeadlineDate"
-                timeName="registrationDeadlineTime"
-                register={register}
-                errors={{ date: errors.registrationDeadlineDate, time: errors.registrationDeadlineTime }}
-              />
+          {hasEventStarted && (
+            <div className="mb-4 rounded bg-yellow-100 p-3 text-sm text-yellow-800 sm:text-base">
+              Event has started - date, time, and capacity editing disabled
             </div>
-          </fieldset>
+          )}
 
-          <FormActions
-            onCancel={() => {
-              if (window.history.length > 1) router.back();
-              else router.push("/admin");
-            }}
-            isSubmitting={saving}
-          />
-        </form>
-      </CardContent>
-    </Card>
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+            {/* Event Details Section */}
+            <fieldset className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
+              <legend className="mb-2 text-lg font-semibold md:col-span-2">Event Details</legend>
+
+              <FormField label="Event Title *" name="title" register={register} error={errors.title} />
+
+              <FormField label="Location *" name="location" register={register} error={errors.location} />
+
+              <FormField
+                label="Capacity *"
+                name="capacity"
+                type="number"
+                register={register}
+                error={errors.capacity}
+                disabled={hasEventStarted}
+                min={0}
+              />
+
+              <FormField
+                label="Fee ($) *"
+                name="fee"
+                type="number"
+                step="0.01"
+                register={register}
+                error={errors.fee}
+                min={0}
+              />
+
+              <FormField
+                label="Description"
+                name="description"
+                type="textarea"
+                register={register}
+                className="md:col-span-2"
+              />
+            </fieldset>
+
+            {/* Date & Time Section */}
+            <fieldset className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
+              <legend className="mb-2 text-lg font-semibold md:col-span-2">Date & Time</legend>
+
+              <DateTimeField
+                label="Start Date/Time *"
+                dateName="startDate"
+                timeName="startTime"
+                register={register}
+                errors={{ date: errors.startDate, time: errors.startTime }}
+                disabled={hasEventStarted}
+              />
+
+              <DateTimeField
+                label="End Date/Time *"
+                dateName="endDate"
+                timeName="endTime"
+                register={register}
+                errors={{ date: errors.endDate, time: errors.endTime }}
+                disabled={hasEventStarted}
+              />
+
+              {/* Registration Deadline - (this one is wider) */}
+              <div className="space-y-1 md:col-span-2">
+                <DateTimeField
+                  label="Registration Deadline *"
+                  dateName="registrationDeadlineDate"
+                  timeName="registrationDeadlineTime"
+                  register={register}
+                  errors={{ date: errors.registrationDeadlineDate, time: errors.registrationDeadlineTime }}
+                />
+              </div>
+            </fieldset>
+
+            <FormActions
+              onCancel={() => {
+                if (window.history.length > 1) router.back();
+                else router.push("/admin/events");
+              }}
+              isSubmitting={saving}
+            />
+          </form>
+        </CardContent>
+      </Card>
+    </div>
   );
 };
 
