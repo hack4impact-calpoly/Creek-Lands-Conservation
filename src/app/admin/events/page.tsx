@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { getEvents } from "../actions/events/actions";
+import { getEvents } from "@/app/actions/events/actions";
 import EventCard from "@/components/EventComponent/EventCard";
 
 interface IEvent {
