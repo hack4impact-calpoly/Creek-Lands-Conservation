@@ -49,10 +49,15 @@ export default function AdminPage() {
 
     const interval = setInterval(() => {
       fetchEvents();
-    }, 30000);
+    }, 300000);
 
     return () => clearInterval(interval);
   }, []);
+
+  // Function to remove deleted event from state
+  const handleDeleteEvent = (eventId: string) => {
+    setEvents((prevEvents) => prevEvents.filter((event) => event._id !== eventId));
+  };
 
   return (
     <div>
@@ -74,6 +79,7 @@ export default function AdminPage() {
             registrationDeadline={event.registrationDeadline}
             capacity={event.capacity}
             currentRegistrations={event.registeredUsers.length}
+            onDelete={handleDeleteEvent}
           />
         ))}
       </div>
