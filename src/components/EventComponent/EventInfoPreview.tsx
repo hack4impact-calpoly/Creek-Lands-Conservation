@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 
 interface EventInfoProps {
   id: string;
@@ -49,6 +50,7 @@ export function EventInfoPreview({
   const [isDeleting, setIsDeleting] = useState(false);
   const { toast } = useToast();
   const { user } = useUser();
+  const router = useRouter();
   const isAdmin = user?.publicMetadata?.userRole === "admin";
 
   const eventImages =
@@ -89,11 +91,15 @@ export function EventInfoPreview({
     }
   };
 
+  const handleEditEvent = () => {
+    router.push(`/admin/events/edit/${id}`); // Redirect user to the edit page
+  };
+
   return (
     <>
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="outline" className="border-gray-400 text-black">
+          <Button variant="outline" className="border-gray-400 bg-[#488644] text-white">
             View Event Details
           </Button>
         </DialogTrigger>
@@ -177,6 +183,9 @@ export function EventInfoPreview({
           <DialogFooter>
             {isAdmin && (
               <div className="flex justify-end gap-4">
+                <Button variant="outline" onClick={() => handleEditEvent()}>
+                  Edit Event
+                </Button>
                 <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} disabled={isDeleting}>
                   {isDeleting ? "Deleting..." : "Delete Event"}
                 </Button>
