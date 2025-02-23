@@ -28,16 +28,11 @@ export async function getEvents() {
         _id: event._id.toString(),
         title: event.title,
         description: event.description,
-        startDate: event.startDate
-          ? new Date(event.startDate).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
-          : null,
-        endDate: event.endDate
-          ? new Date(event.endDate).toLocaleString("en-US", { timeZone: "America/Los_Angeles" })
-          : null,
-
+        startDate: event.startDate ? new Date(event.startDate).toLocaleString() : null,
+        endDate: event.endDate ? new Date(event.endDate).toLocaleString() : null,
         location: event.location,
         capacity: event.capacity,
-        registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline).toISOString() : null,
+        registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline).toLocaleString() : null,
         images: event.images || [],
         currentRegistrations: event.registeredUsers?.length || 0,
         registeredUsers: event.registeredUsers ? event.registeredUsers.map((user: any) => user.toString()) : [],

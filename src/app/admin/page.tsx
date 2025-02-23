@@ -36,9 +36,8 @@ export default function AdminPage() {
         images: Array.isArray(event.images) ? event.images : [],
         registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline) : null,
         capacity: event.capacity || 0,
-        registeredUsers: event.registeredUsers ? event.registeredUsers.map((user: any) => user.toString()) : [],
+        registeredUsers: event.registeredUsers,
       }));
-
       setEvents(formattedEvents);
     } catch (error) {
       console.error("Error fetching events:", error);
