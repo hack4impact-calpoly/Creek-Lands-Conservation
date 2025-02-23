@@ -29,8 +29,8 @@ export default function CreateEventForm() {
 
   const onSubmit = async (data: EventFormData, isDraft: boolean) => {
     // Combine date and time into ISO 8601 format for MongoDB
-    const startDateTime = new Date(`${data.startDate}T${data.startTime}:00Z`).toISOString();
-    const endDateTime = new Date(`${data.endDate}T${data.endTime}:00Z`).toISOString();
+    const startDateTime = new Date(`${data.startDate}T${data.startTime}:00`).toISOString();
+    const endDateTime = new Date(`${data.endDate}T${data.endTime}:00`).toISOString();
     const registrationDeadline = new Date(data.registrationDeadline).toISOString();
 
     // Validate start and end times
