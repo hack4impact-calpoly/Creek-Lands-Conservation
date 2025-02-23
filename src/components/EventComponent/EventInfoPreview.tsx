@@ -31,6 +31,7 @@ interface EventInfoProps {
   email?: string;
   capacity?: number;
   currentRegistrations?: number;
+  onDelete: (eventId: string) => void;
 }
 
 export function EventInfoPreview({
@@ -45,6 +46,7 @@ export function EventInfoPreview({
   email = "info@creeklands.org",
   capacity,
   currentRegistrations,
+  onDelete,
 }: EventInfoProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -78,7 +80,8 @@ export function EventInfoPreview({
         description: "The event has been removed from the system.",
       });
 
-      window.location.reload();
+      // Calls onDelete to remove deleted events from events instead of full reload
+      onDelete(id);
     } catch (error) {
       toast({
         title: "Error",

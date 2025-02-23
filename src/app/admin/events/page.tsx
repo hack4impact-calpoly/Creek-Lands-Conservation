@@ -21,33 +21,43 @@ interface IEvent {
 export default function AdminPage() {
   const [events, setEvents] = useState<IEvent[]>([]);
 
-  useEffect(() => {
-    async function fetchEvents() {
-      try {
-        const data = await getEvents();
+  const fetchEvents = async () => {
+    try {
+      const data = await getEvents();
 
-        // Transform MongoDB objects into `IEvent` format
-        const formattedEvents: IEvent[] = data.map((event: any) => ({
-          _id: event._id.toString(),
-          title: event.title || "Untitled Event",
-          startDateTime: event.startDate ? new Date(event.startDate) : null,
-          endDateTime: event.endDate ? new Date(event.endDate) : null,
-          location: event.location || "Location not available",
-          description: event.description || "No description provided",
-          images: Array.isArray(event.images) ? event.images : [],
-          registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline) : null,
-          capacity: event.capacity || 0,
-          registeredUsers: event.registeredUsers ? event.registeredUsers.map((user: any) => user.toString()) : [],
-        }));
-
-        setEvents(formattedEvents);
-      } catch (error) {
-        console.error("Error fetching events:", error);
-      }
+      // Transform MongoDB objects into `IEvent` format
+      const formattedEvents: IEvent[] = data.map((event: any) => ({
+        _id: event._id.toString(),
+        title: event.title || "Untitled Event",
+        startDateTime: event.startDate ? new Date(event.startDate) : null,
+        endDateTime: event.endDate ? new Date(event.endDate) : null,
+        location: event.location || "Location not available",
+        description: event.description || "No description provided",
+        images: Array.isArray(event.images) ? event.images : [],
+        registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline) : null,
+        capacity: event.capacity || 0,
+        registeredUsers: event.registeredUsers,
+      }));
+      setEvents(formattedEvents);
+    } catch (error) {
+      console.error("Error fetching events:", error);
     }
+  };
 
+  useEffect(() => {
     fetchEvents();
+
+    const interval = setInterval(() => {
+      fetchEvents();
+    }, 300000);
+
+    return () => clearInterval(interval);
   }, []);
+
+  // Function to remove deleted event from state
+  const handleDeleteEvent = (eventId: string) => {
+    setEvents((prevEvents) => prevEvents.filter((event) => event._id !== eventId));
+  };
 
   return (
     <div>
@@ -69,6 +79,7 @@ export default function AdminPage() {
             registrationDeadline={event.registrationDeadline}
             capacity={event.capacity}
             currentRegistrations={event.registeredUsers.length}
+            onDelete={handleDeleteEvent}
           />
         ))}
       </div>
