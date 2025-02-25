@@ -2,7 +2,7 @@
 
 import PersonalInfo from "@/components/UserComponent/UserComponent";
 
-export default async function UserProfile() {
+export default function UserProfile() {
   return (
     <main>
       <PersonalInfo></PersonalInfo>
