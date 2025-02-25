@@ -4,14 +4,18 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import styles from "./UserComponent.module.css";
 
+// Define the shape of the child object in the frontend
 interface Child {
-  id: number;
-  name: string;
-  birthday: string;
+  // "localId" is just for React state tracking (not stored in DB).
+  localId: number;
+  childID?: string; // optional if new children haven't been assigned an ID by MongoDB
+  firstName: string;
+  lastName: string;
+  birthday: string; // store as YYYY-MM-DD in the UI
   gender: string;
 }
 
-let childIdCounter = 0;
+let localChildCounter = 0;
 
 export default function PersonalInfo() {
   const { isLoaded, user } = useUser();
@@ -27,11 +31,12 @@ export default function PersonalInfo() {
   const [gender, setGender] = useState("");
   const [birthday, setBirthday] = useState("");
   const [children, setChildren] = useState<Child[]>([]);
+
+  // Editing mode
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const fetchUserData = async () => {
-      // If Clerk user isn't loaded or doesn't exist, do nothing yet.
       if (!isLoaded || !user?.id) {
         setLoading(false);
         return;
@@ -40,7 +45,7 @@ export default function PersonalInfo() {
       try {
         setLoading(true);
 
-        // Fetch from your API route: /api/users/[clerkID]
+        // GET from /api/users/[clerkID]
         const response = await fetch(`/api/users/${user.id}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch user data: ${response.status}`);
@@ -56,21 +61,26 @@ export default function PersonalInfo() {
           return;
         }
 
-        // Populate state with the data
+        // Populate parent's info
         setFirstName(userData.firstName || "");
         setLastName(userData.lastName || "");
         setEmail(userData.email || "");
         setGender(userData.gender || "");
         setBirthday(userData.birthday ? new Date(userData.birthday).toISOString().split("T")[0] : "");
 
-        // Convert each child's data into our local Child type
-        const mappedChildren =
-          userData.children?.map((childData: any) => ({
-            id: ++childIdCounter,
-            name: childData.name || "",
-            birthday: childData.birthday ? new Date(childData.birthday).toISOString().split("T")[0] : "",
-            gender: childData.gender || "",
-          })) || [];
+        // Map DB children into local state
+        const mappedChildren: Child[] =
+          userData.children?.map((childData: any) => {
+            localChildCounter += 1;
+            return {
+              localId: localChildCounter,
+              childID: childData.childID ?? "",
+              firstName: childData.firstName ?? "",
+              lastName: childData.lastName ?? "",
+              birthday: childData.birthday ? new Date(childData.birthday).toISOString().split("T")[0] : "",
+              gender: childData.gender ?? "",
+            };
+          }) || [];
 
         setChildren(mappedChildren);
       } catch (err) {
@@ -85,25 +95,33 @@ export default function PersonalInfo() {
   }, [isLoaded, user]);
 
   // -----------------------
-  // Handlers for editing
+  // Handlers
   // -----------------------
-  const handleAddChild = () => {
-    childIdCounter += 1;
-    setChildren((prevChildren) => [...prevChildren, { id: childIdCounter, name: "", birthday: "", gender: "" }]);
-  };
-
-  const handleEditChild = (id: number, field: keyof Child, value: string) => {
-    setChildren((prevChildren) =>
-      prevChildren.map((child) => (child.id === id ? { ...child, [field]: value } : child)),
-    );
-  };
-
-  const handleDeleteChild = (id: number) => {
-    setChildren((prevChildren) => prevChildren.filter((child) => child.id !== id));
-  };
-
   const handleEditClick = () => {
     setIsEditing(true);
+  };
+
+  const handleAddChild = () => {
+    localChildCounter += 1;
+    setChildren((prev) => [
+      ...prev,
+      {
+        localId: localChildCounter,
+        childID: "",
+        firstName: "",
+        lastName: "",
+        birthday: "",
+        gender: "",
+      },
+    ]);
+  };
+
+  const handleEditChild = (localId: number, field: keyof Child, value: string) => {
+    setChildren((prev) => prev.map((child) => (child.localId === localId ? { ...child, [field]: value } : child)));
+  };
+
+  const handleDeleteChild = (localId: number) => {
+    setChildren((prev) => prev.filter((child) => child.localId !== localId));
   };
 
   const validateFields = () => {
@@ -118,8 +136,8 @@ export default function PersonalInfo() {
     // Ensure each child is filled
     for (let i = 0; i < children.length; i++) {
       const child = children[i];
-      if (!child.name.trim() || !child.birthday.trim() || !child.gender.trim()) {
-        alert(`Please fill out all fields for child #${i + 1} (Name, Birthday, Gender).`);
+      if (!child.firstName.trim() || !child.lastName.trim() || !child.birthday.trim() || !child.gender.trim()) {
+        alert(`Please fill out all required fields for child #${i + 1} (first/last name, birthday, gender).`);
         return false;
       }
     }
@@ -135,20 +153,22 @@ export default function PersonalInfo() {
     try {
       // Prepare data for PUT
       const payload = {
-        clerkID: user?.id, // Send Clerk ID explicitly
+        clerkID: user?.id,
         firstName,
         lastName,
         email,
         gender,
         birthday: birthday ? new Date(birthday).toISOString() : "",
         children: children.map((child) => ({
-          name: child.name,
-          birthday: child.birthday ? new Date(child.birthday).toISOString() : "",
+          // If you want to preserve childID from DB
+          firstName: child.firstName,
+          lastName: child.lastName,
+          birthday: child.birthday ? new Date(child.birthday).toISOString() : null,
           gender: child.gender,
         })),
       };
 
-      const response = await fetch("/api/users", {
+      const response = await fetch(`/api/users/${user?.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -160,6 +180,9 @@ export default function PersonalInfo() {
 
       const updatedUser = await response.json();
       console.log("User updated successfully:", updatedUser);
+
+      // Optionally re-map updated children from DB if desired
+      // For now, let's just exit edit mode
       setIsEditing(false);
     } catch (err) {
       console.error("Error updating user data:", err);
@@ -236,39 +259,63 @@ export default function PersonalInfo() {
 
       <h3 className={styles.header}>Children</h3>
       {children.map((child) => (
-        <div key={child.id} className={styles.childEntry}>
-          <input
-            className={styles.inputField}
-            type="text"
-            placeholder="Enter child’s name"
-            value={child.name}
-            onChange={(e) => handleEditChild(child.id, "name", e.target.value)}
-            disabled={!isEditing}
-          />
-          <input
-            className={styles.inputField}
-            type="date"
-            value={child.birthday}
-            onChange={(e) => handleEditChild(child.id, "birthday", e.target.value)}
-            disabled={!isEditing}
-          />
-          {!isEditing ? (
-            <input className={styles.inputField} type="text" value={child.gender} disabled />
-          ) : (
-            <select
+        <div key={child.localId} className={styles.childEntry}>
+          {/* If needed for debugging: 
+            {child.childID && <p>Child ID: {child.childID}</p>} 
+          */}
+          <label>
+            First Name:
+            <input
               className={styles.inputField}
-              value={child.gender}
-              onChange={(e) => handleEditChild(child.id, "gender", e.target.value)}
-            >
-              <option value="">Select</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Non-binary">Non-binary</option>
-              <option value="Prefer not to say">Prefer not to say</option>
-            </select>
-          )}
+              type="text"
+              placeholder="Child's first name"
+              value={child.firstName}
+              onChange={(e) => handleEditChild(child.localId, "firstName", e.target.value)}
+              disabled={!isEditing}
+            />
+          </label>
+          <label>
+            Last Name:
+            <input
+              className={styles.inputField}
+              type="text"
+              placeholder="Child's last name"
+              value={child.lastName}
+              onChange={(e) => handleEditChild(child.localId, "lastName", e.target.value)}
+              disabled={!isEditing}
+            />
+          </label>
+          <label>
+            Birthday:
+            <input
+              className={styles.inputField}
+              type="date"
+              value={child.birthday}
+              onChange={(e) => handleEditChild(child.localId, "birthday", e.target.value)}
+              disabled={!isEditing}
+            />
+          </label>
+          <label>
+            Gender:
+            {!isEditing ? (
+              <input className={styles.inputField} type="text" value={child.gender} disabled />
+            ) : (
+              <select
+                className={styles.inputField}
+                value={child.gender}
+                onChange={(e) => handleEditChild(child.localId, "gender", e.target.value)}
+              >
+                <option value="">Select</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Non-binary">Non-binary</option>
+                <option value="Prefer not to say">Prefer not to say</option>
+              </select>
+            )}
+          </label>
+
           {isEditing && (
-            <button className={`${styles.button} ${styles.deleteBtn}`} onClick={() => handleDeleteChild(child.id)}>
+            <button className={`${styles.button} ${styles.deleteBtn}`} onClick={() => handleDeleteChild(child.localId)}>
               Delete
             </button>
           )}

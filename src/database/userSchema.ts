@@ -1,7 +1,6 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IChild {
-  childID?: mongoose.Types.ObjectId;
   firstName: string;
   lastName: string;
   birthday?: Date;
@@ -38,7 +37,6 @@ export interface IUser extends Document {
 
 const childSchema = new Schema<IChild>(
   {
-    childID: { type: mongoose.Schema.Types.ObjectId, auto: true },
     firstName: { type: String, trim: true, required: true },
     lastName: { type: String, trim: true, required: true },
     birthday: { type: Date, default: null },
