@@ -23,23 +23,19 @@ export async function getEvents() {
     await connectDB();
 
     const events = await Event.find().sort({ startDate: 1 }).lean<LeanEvent[]>();
-
     return events.map((event) => {
       return {
         _id: event._id.toString(),
         title: event.title,
         description: event.description,
-        // Only call toISOString() if `start` is valid
-        startDate: event.startDate ? new Date(event.startDate).toISOString() : null,
-
-        // Repeat the same pattern for `endDate`
-        endDate: event.endDate ? new Date(event.endDate).toISOString() : null,
-
+        startDate: event.startDate ? new Date(event.startDate).toLocaleString() : null,
+        endDate: event.endDate ? new Date(event.endDate).toLocaleString() : null,
         location: event.location,
         capacity: event.capacity,
-        registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline).toISOString() : null,
+        registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline).toLocaleString() : null,
         images: event.images || [],
         currentRegistrations: event.registeredUsers?.length || 0,
+        registeredUsers: event.registeredUsers ? event.registeredUsers.map((user: any) => user.toString()) : [],
         fee: event.fee,
       };
     });

@@ -6,6 +6,7 @@ import { Calendar, Clock, Users, CalendarClock } from "lucide-react";
 import Image from "next/image";
 
 export interface EventCardProps {
+  id: string;
   eventTitle: string;
   startDateTime: Date | null;
   endDateTime: Date | null;
@@ -15,9 +16,11 @@ export interface EventCardProps {
   registrationDeadline: Date | null;
   capacity: number;
   currentRegistrations: number;
+  onDelete: (eventId: string) => void;
 }
 
 export default function EventCard({
+  id,
   eventTitle,
   startDateTime,
   endDateTime,
@@ -27,6 +30,7 @@ export default function EventCard({
   registrationDeadline,
   capacity,
   currentRegistrations,
+  onDelete,
 }: EventCardProps) {
   const backgroundImage =
     images.length > 0
@@ -88,6 +92,7 @@ export default function EventCard({
         </div>
 
         <EventInfoPreview
+          id={id}
           title={eventTitle}
           startDateTime={startDateTime}
           endDateTime={endDateTime}
@@ -97,6 +102,7 @@ export default function EventCard({
           registrationDeadline={registrationDeadline}
           capacity={capacity}
           currentRegistrations={currentRegistrations}
+          onDelete={onDelete}
         />
       </CardContent>
     </Card>
