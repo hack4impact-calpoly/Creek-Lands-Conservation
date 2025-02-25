@@ -17,17 +17,24 @@ type EventFormData = {
   maxParticipants: number;
   registrationDeadline: string;
   fee: number;
+  images: string[];
 };
 
 export default function CreateEventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resetUploader, setResetUploader] = useState(false);
   const { toast } = useToast();
   const {
     register,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<EventFormData>();
+
+  const handleImagesUploaded = (urls: string[]) => {
+    setValue("images", urls);
+  };
 
   const onSubmit = async (data: EventFormData, isDraft: boolean) => {
     // start/end date validation
@@ -55,11 +62,11 @@ export default function CreateEventForm() {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ ...data }),
+          body: JSON.stringify(data),
         });
-
         if (response.ok) {
           reset();
+          setResetUploader(true);
           toast({
             title: "Event Created Successfully!",
             description: "Your Event Has Been Published!",
@@ -91,7 +98,7 @@ export default function CreateEventForm() {
     <div>
       <div className="mb-6 flex w-full flex-wrap gap-4">
         <div className="min-w-[250px] flex-1">
-          <FileUpload />
+          <FileUpload onImagesUploaded={handleImagesUploaded} resetFiles={resetUploader} />
         </div>
         <div className="min-w-[250px] flex-1">
           <PDFUpload />

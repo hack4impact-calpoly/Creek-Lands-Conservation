@@ -9,17 +9,79 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface FileWithPreview extends File {
   preview: string;
 }
 
-export default function FileUpload() {
+export default function FileUpload({
+  onImagesUploaded,
+  resetFiles,
+}: {
+  onImagesUploaded: (urls: string[]) => void;
+  resetFiles?: boolean;
+}) {
   const [files, setFiles] = useState<FileWithPreview[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
   const [carouselApi, setCarouselApi] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+
+  const uploadFile = async (file: File): Promise<string> => {
+    try {
+      const fileName = `${Date.now()}-${file.name}`;
+      const presignedRes = await fetch(
+        `/api/s3-presigned-event?fileName=${encodeURIComponent(fileName)}&mimetype=${file.type}`,
+      );
+      const { uploadUrl, fileUrl } = await presignedRes.json();
+
+      await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: {
+          "Content-Type": file.type,
+        },
+      });
+
+      console.log("Uploaded file URL:", fileUrl);
+      return fileUrl;
+    } catch (error) {
+      console.error("Error uploading file:", error);
+      throw error;
+    }
+  };
+
+  const handleUpload = async () => {
+    try {
+      const imageFiles = files.filter((file) => file.type.startsWith("image/"));
+      if (imageFiles.length === 0) return;
+
+      const uploadPromises = imageFiles.map((file) => uploadFile(file));
+      const uploadedUrls = await Promise.all(uploadPromises);
+
+      console.log("All uploaded URLs:", uploadedUrls);
+      onImagesUploaded(uploadedUrls);
+
+      toast({
+        title: "Images uploaded successfully",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error("Error uploading images:", error);
+      toast({
+        title: "Error uploading images",
+        variant: "destructive",
+      });
+    }
+  };
+
+  React.useEffect(() => {
+    if (files.length > 0) {
+      handleUpload();
+    }
+  }, [files]);
 
   const processFiles = (selectedFiles: File[]) => {
     // Filter out duplicates based on file name and size
@@ -97,6 +159,19 @@ export default function FileUpload() {
 
   const imageFiles = files.filter((file) => file.type.startsWith("image/"));
 
+  // Add effect to watch for reset signal
+  React.useEffect(() => {
+    if (resetFiles) {
+      setFiles([]);
+    }
+  }, [resetFiles]);
+
+  // Add a function to handle manual upload and clear files
+  const handleManualUpload = async () => {
+    await handleUpload();
+    setFiles([]); // Clear files after successful upload
+  };
+
   return (
     <>
       <Card className="mx-auto w-full max-w-3xl">
@@ -134,9 +209,14 @@ export default function FileUpload() {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Preview</h3>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedImageIndex(0)} className="text-sm">
-                  View All
-                </Button>
+                <div className="flex gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedImageIndex(0)} className="text-sm">
+                    View All
+                  </Button>
+                  <Button variant="default" size="sm" onClick={handleManualUpload}>
+                    Upload Images
+                  </Button>
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
                 {files.map((file, index) => (
