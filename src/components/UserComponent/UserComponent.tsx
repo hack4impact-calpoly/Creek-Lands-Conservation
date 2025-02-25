@@ -31,6 +31,12 @@ export default function PersonalInfo() {
   const [gender, setGender] = useState("");
   const [birthday, setBirthday] = useState("");
   const [children, setChildren] = useState<Child[]>([]);
+  // Backup state for canceling changes
+  const [originalFirstName, setOriginalFirstName] = useState("");
+  const [originalLastName, setOriginalLastName] = useState("");
+  const [originalGender, setOriginalGender] = useState("");
+  const [originalBirthday, setOriginalBirthday] = useState("");
+  const [originalChildren, setOriginalChildren] = useState<Child[]>([]);
 
   // Editing mode
   const [isEditing, setIsEditing] = useState(false);
@@ -98,6 +104,13 @@ export default function PersonalInfo() {
   // Handlers
   // -----------------------
   const handleEditClick = () => {
+    // Backup the original data before editing
+    setOriginalFirstName(firstName);
+    setOriginalLastName(lastName);
+    setOriginalGender(gender);
+    setOriginalBirthday(birthday);
+    setOriginalChildren([...children]); // Create a deep copy of the children array
+
     setIsEditing(true);
   };
 
@@ -143,6 +156,16 @@ export default function PersonalInfo() {
     }
 
     return true;
+  };
+
+  const handleCancelChanges = () => {
+    setFirstName(originalFirstName);
+    setLastName(originalLastName);
+    setGender(originalGender);
+    setBirthday(originalBirthday);
+    setChildren([...originalChildren]); // Restore children list
+
+    setIsEditing(false);
   };
 
   const handleSaveChanges = async () => {
@@ -228,7 +251,7 @@ export default function PersonalInfo() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            disabled={!isEditing}
+            disabled
           />
         </label>
         <label>
@@ -333,9 +356,14 @@ export default function PersonalInfo() {
           Edit Info
         </button>
       ) : (
-        <button className={styles.button} onClick={handleSaveChanges}>
-          Save Changes
-        </button>
+        <div>
+          <button className={styles.button} onClick={handleSaveChanges}>
+            Save Changes
+          </button>
+          <button className={styles.button} onClick={handleCancelChanges}>
+            Cancel Changes
+          </button>
+        </div>
       )}
     </div>
   );
