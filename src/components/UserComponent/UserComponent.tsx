@@ -8,7 +8,7 @@ import styles from "./UserComponent.module.css";
 interface Child {
   // "localId" is just for React state tracking (not stored in DB).
   localId: number;
-  childID?: string; // optional if new children haven't been assigned an ID by MongoDB
+  _id?: string; // optional if new children haven't been assigned an ID by MongoDB
   firstName: string;
   lastName: string;
   birthday: string; // store as YYYY-MM-DD in the UI
@@ -31,6 +31,7 @@ export default function PersonalInfo() {
   const [gender, setGender] = useState("");
   const [birthday, setBirthday] = useState("");
   const [children, setChildren] = useState<Child[]>([]);
+
   // Backup state for canceling changes
   const [originalFirstName, setOriginalFirstName] = useState("");
   const [originalLastName, setOriginalLastName] = useState("");
@@ -38,7 +39,7 @@ export default function PersonalInfo() {
   const [originalBirthday, setOriginalBirthday] = useState("");
   const [originalChildren, setOriginalChildren] = useState<Child[]>([]);
 
-  // Editing mode
+  // Editing state
   const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
@@ -80,7 +81,7 @@ export default function PersonalInfo() {
             localChildCounter += 1;
             return {
               localId: localChildCounter,
-              childID: childData.childID ?? "",
+              _id: childData._id ?? "",
               firstName: childData.firstName ?? "",
               lastName: childData.lastName ?? "",
               birthday: childData.birthday ? new Date(childData.birthday).toISOString().split("T")[0] : "",
@@ -217,6 +218,7 @@ export default function PersonalInfo() {
   // Render UI
   // -----------------------
   if (loading) return <p>Loading user data...</p>;
+
   if (error) return <p>{error}</p>;
 
   return (
@@ -283,9 +285,6 @@ export default function PersonalInfo() {
       <h3 className={styles.header}>Children</h3>
       {children.map((child) => (
         <div key={child.localId} className={styles.childEntry}>
-          {/* If needed for debugging: 
-            {child.childID && <p>Child ID: {child.childID}</p>} 
-          */}
           <label>
             First Name:
             <input
