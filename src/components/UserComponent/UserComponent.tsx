@@ -216,17 +216,17 @@ export default function PersonalInfo() {
       errors.push("Birthday is required.");
     }
 
-    // Validate phone numbers: if not empty, must be digits
-    if (phoneNumbers.cell.trim() && !isNumeric(phoneNumbers.cell.trim())) {
-      errors.push("Cell phone number must contain digits only.");
+    // Validate phone numbers: must be exactly 10 digits
+    if (phoneNumbers.cell.trim() && !/^\d{10}$/.test(phoneNumbers.cell.trim())) {
+      errors.push("Cell phone number must be exactly 10 digits.");
     }
-    if (phoneNumbers.work.trim() && !isNumeric(phoneNumbers.work.trim())) {
-      errors.push("Work phone number must contain digits only.");
+    if (phoneNumbers.work.trim() && !/^\d{10}$/.test(phoneNumbers.work.trim())) {
+      errors.push("Work phone number must be exactly 10 digits.");
     }
 
-    // Validate zip code: if not empty, must be digits
-    if (address.zipCode.trim() && !isNumeric(address.zipCode.trim())) {
-      errors.push("ZIP code must contain digits only.");
+    // Validate zip code: must be exactly 5 digits
+    if (address.zipCode.trim() && !/^\d{5}$/.test(address.zipCode.trim())) {
+      errors.push("ZIP code must be exactly 5 digits.");
     }
 
     // Check required child fields
