@@ -23,12 +23,10 @@ export async function GET(req: NextRequest, { params }: { params: { clerkID: str
 export async function PUT(req: NextRequest, { params }: { params: { clerkID: string } }) {
   try {
     await connectDB();
-
     const data = await req.json();
-    // Extract the new fields
-    const { firstName, lastName, email, gender, birthday, children } = data;
 
-    // Example: Update the user with these new fields
+    const { firstName, lastName, email, gender, birthday, phoneNumbers, address, children } = data;
+
     const updatedUser = await User.findOneAndUpdate(
       { clerkID: params.clerkID },
       {
@@ -37,10 +35,13 @@ export async function PUT(req: NextRequest, { params }: { params: { clerkID: str
         email,
         gender,
         birthday,
-        // Replacing the entire children array with new data
+        phoneNumbers,
+        address,
         children,
+        // We do NOT update imageUrl, registeredEvents, or waiversSigned
+        // since they aren't included in the payload
       },
-      { new: true }, // Return the updated document
+      { new: true },
     );
 
     if (!updatedUser) {

@@ -4,11 +4,10 @@ import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import styles from "./UserComponent.module.css";
 
-// Define the shape of the child object in the frontend
 interface Child {
-  // "localId" is just for React state tracking (not stored in DB).
+  // "localId" is just for React tracking; not stored in DB.
   localId: number;
-  childID?: string; // optional if new children haven't been assigned an ID by MongoDB
+  childID?: string;
   firstName: string;
   lastName: string;
   birthday: string; // store as YYYY-MM-DD in the UI
@@ -24,12 +23,18 @@ export default function PersonalInfo() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Personal info data
+  // Parent data
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [gender, setGender] = useState("");
   const [birthday, setBirthday] = useState("");
+
+  // New: phoneNumbers and address
+  const [phoneNumbers, setPhoneNumbers] = useState({ cell: "", work: "" });
+  const [address, setAddress] = useState({ home: "", city: "", zipCode: "" });
+
+  // Children
   const [children, setChildren] = useState<Child[]>([]);
 
   // Editing mode
@@ -68,6 +73,19 @@ export default function PersonalInfo() {
         setGender(userData.gender || "");
         setBirthday(userData.birthday ? new Date(userData.birthday).toISOString().split("T")[0] : "");
 
+        // Populate phoneNumbers (cell, work)
+        setPhoneNumbers({
+          cell: userData.phoneNumbers?.cell || "",
+          work: userData.phoneNumbers?.work || "",
+        });
+
+        // Populate address (home, city, zipCode)
+        setAddress({
+          home: userData.address?.home || "",
+          city: userData.address?.city || "",
+          zipCode: userData.address?.zipCode || "",
+        });
+
         // Map DB children into local state
         const mappedChildren: Child[] =
           userData.children?.map((childData: any) => {
@@ -101,6 +119,7 @@ export default function PersonalInfo() {
     setIsEditing(true);
   };
 
+  // Children
   const handleAddChild = () => {
     localChildCounter += 1;
     setChildren((prev) => [
@@ -122,6 +141,15 @@ export default function PersonalInfo() {
 
   const handleDeleteChild = (localId: number) => {
     setChildren((prev) => prev.filter((child) => child.localId !== localId));
+  };
+
+  // For phoneNumbers and address, we can handle them similarly
+  const handlePhoneChange = (field: "cell" | "work", value: string) => {
+    setPhoneNumbers((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleAddressChange = (field: "home" | "city" | "zipCode", value: string) => {
+    setAddress((prev) => ({ ...prev, [field]: value }));
   };
 
   const validateFields = () => {
@@ -159,8 +187,18 @@ export default function PersonalInfo() {
         email,
         gender,
         birthday: birthday ? new Date(birthday).toISOString() : "",
+        phoneNumbers: {
+          cell: phoneNumbers.cell,
+          work: phoneNumbers.work,
+        },
+        address: {
+          home: address.home,
+          city: address.city,
+          zipCode: address.zipCode,
+        },
         children: children.map((child) => ({
-          // If you want to preserve childID from DB
+          // If you want to preserve existing childID, you can add it here:
+          // childID: child.childID,
           firstName: child.firstName,
           lastName: child.lastName,
           birthday: child.birthday ? new Date(child.birthday).toISOString() : null,
@@ -181,8 +219,7 @@ export default function PersonalInfo() {
       const updatedUser = await response.json();
       console.log("User updated successfully:", updatedUser);
 
-      // Optionally re-map updated children from DB if desired
-      // For now, let's just exit edit mode
+      // Optionally re-map children from DB if you want to pull the latest
       setIsEditing(false);
     } catch (err) {
       console.error("Error updating user data:", err);
@@ -257,12 +294,70 @@ export default function PersonalInfo() {
         </label>
       </div>
 
+      {/* NEW: PHONE NUMBERS */}
+      <h3 className={styles.header}>Phone Numbers</h3>
+      <div className={styles.formGroup}>
+        <label>
+          Cell:
+          <input
+            className={styles.inputField}
+            type="text"
+            value={phoneNumbers.cell}
+            onChange={(e) => handlePhoneChange("cell", e.target.value)}
+            disabled={!isEditing}
+          />
+        </label>
+        <label>
+          Work:
+          <input
+            className={styles.inputField}
+            type="text"
+            value={phoneNumbers.work}
+            onChange={(e) => handlePhoneChange("work", e.target.value)}
+            disabled={!isEditing}
+          />
+        </label>
+      </div>
+
+      {/* NEW: ADDRESS */}
+      <h3 className={styles.header}>Address</h3>
+      <div className={styles.formGroup}>
+        <label>
+          Home Address:
+          <input
+            className={styles.inputField}
+            type="text"
+            value={address.home}
+            onChange={(e) => handleAddressChange("home", e.target.value)}
+            disabled={!isEditing}
+          />
+        </label>
+        <label>
+          City:
+          <input
+            className={styles.inputField}
+            type="text"
+            value={address.city}
+            onChange={(e) => handleAddressChange("city", e.target.value)}
+            disabled={!isEditing}
+          />
+        </label>
+        <label>
+          ZIP Code:
+          <input
+            className={styles.inputField}
+            type="text"
+            value={address.zipCode}
+            onChange={(e) => handleAddressChange("zipCode", e.target.value)}
+            disabled={!isEditing}
+          />
+        </label>
+      </div>
+
       <h3 className={styles.header}>Children</h3>
       {children.map((child) => (
         <div key={child.localId} className={styles.childEntry}>
-          {/* If needed for debugging: 
-            {child.childID && <p>Child ID: {child.childID}</p>} 
-          */}
+          {/* {child.childID && <p>Child ID: {child.childID}</p>}  // for debugging */}
           <label>
             First Name:
             <input
