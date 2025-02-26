@@ -31,7 +31,7 @@ interface EventInfoProps {
   email?: string;
   capacity?: number;
   currentRegistrations?: number;
-  onDelete: (eventId: string) => void;
+  onDelete?: (eventId: string) => void;
 }
 
 export function EventInfoPreview({
@@ -81,7 +81,9 @@ export function EventInfoPreview({
       });
 
       // Calls onDelete to remove deleted events from events instead of full reload
-      onDelete(id);
+      if (onDelete) {
+        onDelete(id);
+      }
     } catch (error) {
       toast({
         title: "Error",
@@ -184,7 +186,7 @@ export function EventInfoPreview({
             </div>
           </div>
           <DialogFooter>
-            {isAdmin && (
+            {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
                 <Button variant="outline" onClick={() => handleEditEvent()}>
                   Edit Event
