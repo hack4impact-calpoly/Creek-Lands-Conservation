@@ -39,14 +39,6 @@ export async function getEvents() {
       fee: event.fee,
     }));
 
-    console.log(
-      "Fetched Events from DB:",
-      formattedEvents.map((e) => ({
-        title: e.title,
-        registeredUsers: e.registeredUsers,
-      })),
-    ); // Log registeredUsers for each event
-
     return formattedEvents;
   } catch (error) {
     console.error("Failed to fetch events:", error);
