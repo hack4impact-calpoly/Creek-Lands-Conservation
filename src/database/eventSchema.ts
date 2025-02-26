@@ -1,8 +1,51 @@
 // Importing Mongoose
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
+
+export interface IEvent extends Document {
+  title: string;
+  description?: string;
+  startDate: Date;
+  endDate: Date;
+  location: string;
+  capacity: number;
+  registrationDeadline: Date;
+  images: string[];
+  registeredUsers: mongoose.Types.ObjectId[];
+  waiverId: mongoose.Types.ObjectId[];
+  fee: number;
+  stripePaymentId?: string | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface IEventCreate {
+  title: string;
+  description?: string;
+  startDate: Date;
+  endDate: Date;
+  location: string;
+  capacity?: number;
+  registrationDeadline: Date;
+  images?: string[];
+  fee?: number;
+  stripePaymentId?: string;
+}
+
+export interface IEventUpdate {
+  title?: string;
+  description?: string;
+  startDate?: Date;
+  endDate?: Date;
+  location?: string;
+  capacity?: number;
+  registrationDeadline?: Date;
+  images?: string[];
+  fee?: number;
+  stripePaymentId?: string | null;
+}
 
 // Defining the Event Schema
-const eventSchema = new Schema(
+const eventSchema = new Schema<IEvent>(
   {
     title: {
       type: String,
@@ -54,4 +97,4 @@ const eventSchema = new Schema(
 );
 
 // Exporting the Event model
-export default mongoose.models.Event || mongoose.model("Event", eventSchema);
+export default mongoose.models.Event || mongoose.model<IEvent>("Event", eventSchema);

@@ -28,10 +28,13 @@ export default function CreateEventForm() {
   } = useForm<EventFormData>();
 
   const onSubmit = async (data: EventFormData, isDraft: boolean) => {
-    // start/end date validation
-    const startDateTime = new Date(data.startDate + "T" + data.startTime);
-    const endDateTime = new Date(data.endDate + "T" + data.endTime);
-    if (endDateTime <= startDateTime) {
+    // Combine date and time into ISO 8601 format for MongoDB
+    const startDateTime = new Date(`${data.startDate}T${data.startTime}:00`).toISOString();
+    const endDateTime = new Date(`${data.endDate}T${data.endTime}:00`).toISOString();
+    const registrationDeadline = new Date(data.registrationDeadline).toISOString();
+
+    // Validate start and end times
+    if (new Date(endDateTime) <= new Date(startDateTime)) {
       toast({
         title: "Unable to Create Event!",
         variant: "destructive",
@@ -41,7 +44,18 @@ export default function CreateEventForm() {
       return;
     }
 
-    // start loading
+    // Prepare data for MongoDB
+    const eventData = {
+      title: data.title,
+      description: data.description,
+      startDate: startDateTime,
+      endDate: endDateTime,
+      location: data.location,
+      capacity: Number(data.maxParticipants),
+      registrationDeadline: registrationDeadline,
+      fee: Number(data.fee),
+    };
+
     setIsSubmitting(true);
     console.log(data, isDraft ? "Saved as Draft" : "Published");
 
@@ -50,10 +64,8 @@ export default function CreateEventForm() {
       try {
         const response = await fetch("/api/events", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ ...data }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(eventData),
         });
 
         if (response.ok) {

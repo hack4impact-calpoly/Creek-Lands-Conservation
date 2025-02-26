@@ -102,3 +102,27 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
     );
   }
 }
+
+// Fetch a single event by ID
+export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
+  await connectDB();
+
+  const { eventID } = params;
+  if (!mongoose.Types.ObjectId.isValid(eventID)) {
+    return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
+  }
+
+  try {
+    const event = await Event.findById(eventID);
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(event, { status: 200 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Error fetching event", details: error instanceof Error ? error.message : error },
+      { status: 500 },
+    );
+  }
+}

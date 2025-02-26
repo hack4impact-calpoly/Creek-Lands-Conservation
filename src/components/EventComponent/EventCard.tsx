@@ -16,6 +16,7 @@ export interface EventCardProps {
   registrationDeadline: Date | null;
   capacity: number;
   currentRegistrations: number;
+  onDelete: (eventId: string) => void;
 }
 
 export default function EventCard({
@@ -29,6 +30,7 @@ export default function EventCard({
   registrationDeadline,
   capacity,
   currentRegistrations,
+  onDelete,
 }: EventCardProps) {
   const backgroundImage =
     images.length > 0
@@ -100,6 +102,7 @@ export default function EventCard({
           registrationDeadline={registrationDeadline}
           capacity={capacity}
           currentRegistrations={currentRegistrations}
+          onDelete={onDelete}
         />
       </CardContent>
     </Card>
