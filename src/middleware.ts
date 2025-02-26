@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const isOnboardingRoute = createRouteMatcher(["/onboarding", "/onboarding/children"]);
 const isPublicRoute = createRouteMatcher(["/", "/api/webhooks/clerk"]);
+const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
   const { userId, sessionClaims, redirectToSignIn } = await auth();
@@ -24,7 +25,7 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   }
 
   // Restrict access to `/admin` pages
-  if (req.nextUrl.pathname.startsWith("/admin")) {
+  if (isAdminRoute(req)) {
     if (!userId || role !== "admin") {
       return NextResponse.redirect(new URL("/", req.url)); // Redirect non-admins to homepage
     }

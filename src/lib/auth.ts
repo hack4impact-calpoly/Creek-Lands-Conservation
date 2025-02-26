@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 
-export async function authenticateAdmin(req: Request) {
+export async function authenticateAdmin() {
   const { userId, sessionClaims } = await auth();
   const role = sessionClaims?.metadata?.userRole;
 

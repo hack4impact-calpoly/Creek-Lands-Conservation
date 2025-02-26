@@ -52,7 +52,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
     }
 
     // If not registering, check if the user is an admin (to update event details)
-    const authError = await authenticateAdmin(req);
+    const authError = await authenticateAdmin();
     if (authError !== true) return authError;
 
     // Checks if ID exists before attempting to update
@@ -79,7 +79,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
 export async function DELETE(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
 
-  const authError = await authenticateAdmin(req);
+  const authError = await authenticateAdmin();
   if (authError !== true) return authError;
 
   const { eventID } = params;
@@ -98,6 +98,30 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
   } catch (error) {
     return NextResponse.json(
       { error: "Error deleting event", details: error instanceof Error ? error.message : error },
+      { status: 500 },
+    );
+  }
+}
+
+// Fetch a single event by ID
+export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
+  await connectDB();
+
+  const { eventID } = params;
+  if (!mongoose.Types.ObjectId.isValid(eventID)) {
+    return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
+  }
+
+  try {
+    const event = await Event.findById(eventID);
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(event, { status: 200 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Error fetching event", details: error instanceof Error ? error.message : error },
       { status: 500 },
     );
   }

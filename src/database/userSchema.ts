@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document } from "mongoose";
 
 export interface IChild {
+  _id?: string;
   firstName: string;
   lastName: string;
   birthday?: Date;
@@ -40,12 +41,12 @@ const childSchema = new Schema<IChild>(
     firstName: { type: String, trim: true, required: true },
     lastName: { type: String, trim: true, required: true },
     birthday: { type: Date, default: null },
-    gender: { type: String, enum: ["Male", "Female", "Non-binary", "Prefer Not to Say"], default: "" },
+    gender: { type: String, enum: ["Male", "Female", "Non-binary", "Prefer Not to Say"] },
     imageUrl: { type: String, default: "" },
     registeredEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: "Event" }],
     waiversSigned: [{ type: mongoose.Schema.Types.ObjectId, ref: "Waiver" }],
   },
-  { _id: false },
+  { _id: true },
 );
 
 const userSchema = new Schema<IUser>(
