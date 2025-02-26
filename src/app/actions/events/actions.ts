@@ -14,7 +14,7 @@ interface LeanEvent {
   capacity: number;
   registrationDeadline?: Date;
   images?: string[];
-  registeredUsers?: string[];
+  registeredUsers?: Types.ObjectId[];
   fee?: number;
 }
 
@@ -24,25 +24,30 @@ export async function getEvents() {
 
     const events = await Event.find().sort({ startDate: 1 }).lean<LeanEvent[]>();
 
-    return events.map((event) => {
-      return {
-        _id: event._id.toString(),
-        title: event.title,
-        description: event.description,
-        // Only call toISOString() if `start` is valid
-        startDate: event.startDate ? new Date(event.startDate).toISOString() : null,
+    const formattedEvents = events.map((event) => ({
+      _id: event._id.toString(),
+      title: event.title,
+      description: event.description,
+      startDate: event.startDate ? new Date(event.startDate).toISOString() : null,
+      endDate: event.endDate ? new Date(event.endDate).toISOString() : null,
+      location: event.location,
+      capacity: event.capacity,
+      registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline).toISOString() : null,
+      images: event.images || [],
+      currentRegistrations: event.registeredUsers?.length || 0,
+      registeredUsers: event.registeredUsers ? event.registeredUsers.map((id) => id.toString()) : [],
+      fee: event.fee,
+    }));
 
-        // Repeat the same pattern for `endDate`
-        endDate: event.endDate ? new Date(event.endDate).toISOString() : null,
+    console.log(
+      "Fetched Events from DB:",
+      formattedEvents.map((e) => ({
+        title: e.title,
+        registeredUsers: e.registeredUsers,
+      })),
+    ); // Log registeredUsers for each event
 
-        location: event.location,
-        capacity: event.capacity,
-        registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline).toISOString() : null,
-        images: event.images || [],
-        currentRegistrations: event.registeredUsers?.length || 0,
-        fee: event.fee,
-      };
-    });
+    return formattedEvents;
   } catch (error) {
     console.error("Failed to fetch events:", error);
     throw new Error("Failed to fetch events");

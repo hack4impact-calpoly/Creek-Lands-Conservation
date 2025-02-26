@@ -68,6 +68,7 @@ export default function Home() {
 
         setEvents(formattedEvents);
         setRegisteredEvents(userRegisteredEvents);
+        console.log(userRegisteredEvents);
       } catch (error) {
         console.error("Error fetching events:", error);
         setError("Failed to load events. Please try again later.");
