@@ -66,7 +66,12 @@ export default function Home() {
           event.registeredUsers.map((id) => id.toString()).includes(mongoUserId.toString()),
         );
 
-        setEvents(formattedEvents);
+        // Exclude registered events from the all events list
+        const unregisteredEvents = formattedEvents.filter(
+          (event) => !event.registeredUsers.includes(mongoUserId.toString()),
+        );
+
+        setEvents(unregisteredEvents);
         setRegisteredEvents(userRegisteredEvents);
         console.log(userRegisteredEvents);
       } catch (error) {
