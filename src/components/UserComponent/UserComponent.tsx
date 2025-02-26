@@ -7,7 +7,7 @@ import styles from "./UserComponent.module.css";
 interface Child {
   // "localId" is just for React tracking; not stored in DB.
   localId: number;
-  childID?: string;
+  _id?: string;
   firstName: string;
   lastName: string;
   birthday: string; // store as YYYY-MM-DD in the UI
@@ -36,6 +36,15 @@ export default function PersonalInfo() {
 
   // Children
   const [children, setChildren] = useState<Child[]>([]);
+
+  // Backup state for canceling changes
+  const [originalFirstName, setOriginalFirstName] = useState("");
+  const [originalLastName, setOriginalLastName] = useState("");
+  const [originalGender, setOriginalGender] = useState("");
+  const [originalBirthday, setOriginalBirthday] = useState("");
+  const [originalPhoneNumbers, setoriginalPhoneNumbers] = useState({ cell: "", work: "" });
+  const [originalAddress, setOriginalAddress] = useState({ home: "", city: "", zipCode: "" });
+  const [originalChildren, setOriginalChildren] = useState<Child[]>([]);
 
   // Editing mode
   const [isEditing, setIsEditing] = useState(false);
@@ -92,7 +101,7 @@ export default function PersonalInfo() {
             localChildCounter += 1;
             return {
               localId: localChildCounter,
-              childID: childData.childID ?? "",
+              childID: childData._id ?? "",
               firstName: childData.firstName ?? "",
               lastName: childData.lastName ?? "",
               birthday: childData.birthday ? new Date(childData.birthday).toISOString().split("T")[0] : "",
@@ -116,6 +125,15 @@ export default function PersonalInfo() {
   // Handlers
   // -----------------------
   const handleEditClick = () => {
+    // Backup the original data before editing
+    setOriginalFirstName(firstName);
+    setOriginalLastName(lastName);
+    setOriginalGender(gender);
+    setOriginalBirthday(birthday);
+    setoriginalPhoneNumbers(phoneNumbers);
+    setOriginalAddress(address);
+    setOriginalChildren([...children]); // Create a deep copy of the children array
+
     setIsEditing(true);
   };
 
@@ -126,7 +144,7 @@ export default function PersonalInfo() {
       ...prev,
       {
         localId: localChildCounter,
-        childID: "",
+        _id: "",
         firstName: "",
         lastName: "",
         birthday: "",
@@ -173,6 +191,18 @@ export default function PersonalInfo() {
     return true;
   };
 
+  const handleCancelChanges = () => {
+    setFirstName(originalFirstName);
+    setLastName(originalLastName);
+    setGender(originalGender);
+    setBirthday(originalBirthday);
+    setPhoneNumbers(originalPhoneNumbers);
+    setAddress(originalAddress);
+    setChildren([...originalChildren]); // Restore children list
+
+    setIsEditing(false);
+  };
+
   const handleSaveChanges = async () => {
     if (!validateFields()) {
       return;
@@ -184,7 +214,6 @@ export default function PersonalInfo() {
         clerkID: user?.id,
         firstName,
         lastName,
-        email,
         gender,
         birthday: birthday ? new Date(birthday).toISOString() : "",
         phoneNumbers: {
@@ -213,6 +242,7 @@ export default function PersonalInfo() {
       });
 
       if (!response.ok) {
+        handleCancelChanges();
         throw new Error(`Failed to update user data: ${response.status}`);
       }
 
@@ -222,6 +252,7 @@ export default function PersonalInfo() {
       // Optionally re-map children from DB if you want to pull the latest
       setIsEditing(false);
     } catch (err) {
+      handleCancelChanges();
       console.error("Error updating user data:", err);
       setError("Failed to update user data. Please try again later.");
     }
@@ -260,13 +291,7 @@ export default function PersonalInfo() {
         </label>
         <label>
           Email:
-          <input
-            className={styles.inputField}
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            disabled={!isEditing}
-          />
+          <input className={styles.inputField} type="email" value={email} readOnly disabled />
         </label>
         <label>
           Gender:
@@ -428,9 +453,14 @@ export default function PersonalInfo() {
           Edit Info
         </button>
       ) : (
-        <button className={styles.button} onClick={handleSaveChanges}>
-          Save Changes
-        </button>
+        <div>
+          <button className={styles.button} onClick={handleSaveChanges}>
+            Save Changes
+          </button>
+          <button className={styles.button} onClick={handleCancelChanges}>
+            Cancel Changes
+          </button>
+        </div>
       )}
     </div>
   );
