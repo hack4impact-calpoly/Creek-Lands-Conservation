@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/nextjs";
+import { useRouter } from "next/navigation";
 
 interface EventInfoProps {
   id: string;
@@ -30,6 +31,7 @@ interface EventInfoProps {
   email?: string;
   capacity?: number;
   currentRegistrations?: number;
+  onDelete: (eventId: string) => void;
 }
 
 export function EventInfoPreview({
@@ -44,6 +46,7 @@ export function EventInfoPreview({
   email = "info@creeklands.org",
   capacity,
   currentRegistrations,
+  onDelete,
 }: EventInfoProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
@@ -51,6 +54,7 @@ export function EventInfoPreview({
   const [isRegistering, setIsRegistering] = useState(false);
   const { toast } = useToast();
   const { user } = useUser();
+  const router = useRouter();
   const isAdmin = user?.publicMetadata?.userRole === "admin";
 
   // for registration validation
@@ -83,7 +87,8 @@ export function EventInfoPreview({
         description: "The event has been removed from the system.",
       });
 
-      window.location.reload();
+      // Calls onDelete to remove deleted events from events instead of full reload
+      onDelete(id);
     } catch (error) {
       toast({
         title: "Error",
@@ -123,11 +128,15 @@ export function EventInfoPreview({
     }
   };
 
+  const handleEditEvent = () => {
+    router.push(`/admin/events/edit/${id}`); // Redirect user to the edit page
+  };
+
   return (
     <>
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="outline" className="border-gray-400 text-black">
+          <Button variant="outline" className="border-gray-400 bg-[#488644] text-white">
             View Event Details
           </Button>
         </DialogTrigger>
@@ -218,6 +227,9 @@ export function EventInfoPreview({
             </Button>
             {isAdmin && (
               <div className="flex justify-end gap-4">
+                <Button variant="outline" onClick={() => handleEditEvent()}>
+                  Edit Event
+                </Button>
                 <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} disabled={isDeleting}>
                   {isDeleting ? "Deleting..." : "Delete Event"}
                 </Button>
