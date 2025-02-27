@@ -23,24 +23,45 @@ export async function GET(req: NextRequest, { params }: { params: { clerkID: str
 export async function PUT(req: NextRequest, { params }: { params: { clerkID: string } }) {
   try {
     await connectDB();
-
     const data = await req.json();
-    // Extract the new fields
-    const { firstName, lastName, email, gender, birthday, children } = data;
 
-    // Example: Update the user with these new fields
+    const { firstName, lastName, gender, birthday, phoneNumbers, address, children } = data;
+
+    // Server-side validation
+    const errors = [];
+
+    if (!firstName.trim()) errors.push("First Name is required.");
+    if (!lastName.trim()) errors.push("Last Name is required.");
+    if (!gender.trim()) errors.push("Gender is required.");
+    if (!birthday.trim()) errors.push("Birthday is required.");
+
+    if (phoneNumbers.cell && !/^\d{10}$/.test(phoneNumbers.cell)) {
+      errors.push("Cell phone number must be exactly 10 digits.");
+    }
+    if (phoneNumbers.work && !/^\d{10}$/.test(phoneNumbers.work)) {
+      errors.push("Work phone number must be exactly 10 digits.");
+    }
+    if (address.zipCode && !/^\d{5}$/.test(address.zipCode)) {
+      errors.push("ZIP code must be exactly 5 digits.");
+    }
+    if (errors.length > 0) {
+      return NextResponse.json({ error: errors }, { status: 400 });
+    }
+
     const updatedUser = await User.findOneAndUpdate(
       { clerkID: params.clerkID },
       {
         firstName,
         lastName,
-        email,
         gender,
         birthday,
-        // Replacing the entire children array with new data
+        phoneNumbers,
+        address,
         children,
+        // We do NOT update imageUrl, registeredEvents, or waiversSigned
+        // since they aren't included in the payload
       },
-      { new: true }, // Return the updated document
+      { new: true },
     );
 
     if (!updatedUser) {
