@@ -46,10 +46,17 @@ export function EventInfoPreview({
   currentRegistrations,
 }: EventInfoProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const { toast } = useToast();
   const { user } = useUser();
   const isAdmin = user?.publicMetadata?.userRole === "admin";
+
+  // for registration validation
+  const hasRegistrationClosed = registrationDeadline ? new Date() > registrationDeadline : false;
+  const isFull = capacity !== undefined && currentRegistrations !== undefined && currentRegistrations >= capacity;
+  const isRegisterDisabled = hasRegistrationClosed || isFull;
 
   const eventImages =
     images.length > 0
@@ -86,6 +93,33 @@ export function EventInfoPreview({
     } finally {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
+    }
+  };
+
+  const handleRegisterEvent = async () => {
+    setIsRegistering(true);
+    try {
+      const response = await fetch(`/api/events/${id}/register`, {
+        method: "POST",
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to register for event");
+      }
+
+      toast({
+        title: "Registration successful",
+        description: "You have been registered for the event.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to register for the event. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegistering(false);
+      setIsRegisterDialogOpen(false);
     }
   };
 
@@ -174,7 +208,14 @@ export function EventInfoPreview({
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex justify-between">
+            <Button
+              className={`text-white ${isRegisterDisabled ? "cursor-not-allowed bg-gray-400" : "bg-green-500 hover:bg-green-600"}`}
+              onClick={() => setIsRegisterDialogOpen(true)}
+              disabled={isRegisterDisabled}
+            >
+              {isFull ? "Event Full" : hasRegistrationClosed ? "Registration Closed" : "Sign Up"}
+            </Button>
             {isAdmin && (
               <div className="flex justify-end gap-4">
                 <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} disabled={isDeleting}>
@@ -203,6 +244,21 @@ export function EventInfoPreview({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? "Deleting..." : "Delete Event"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Registration</AlertDialogTitle>
+            <AlertDialogDescription>Are you sure you want to register for this event?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRegisterEvent} disabled={isRegistering}>
+              {isRegistering ? "Registering..." : "Confirm"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
