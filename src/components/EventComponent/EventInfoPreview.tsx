@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Calendar, Clock, MapPin, Mail, Text, Image as ImageIcon, Users, CalendarClock } from "lucide-react";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -60,7 +60,8 @@ export function EventInfoPreview({
   // for registration validation
   const hasRegistrationClosed = registrationDeadline ? new Date() > registrationDeadline : false;
   const isFull = capacity !== undefined && currentRegistrations !== undefined && currentRegistrations >= capacity;
-  const isRegisterDisabled = hasRegistrationClosed || isFull;
+  const [isRegistered, setIsRegistered] = useState(false);
+  const isRegisterDisabled = hasRegistrationClosed || isFull || isRegistered;
 
   const eventImages =
     images.length > 0
@@ -102,11 +103,30 @@ export function EventInfoPreview({
   };
 
   const handleRegisterEvent = async () => {
-    setIsRegistering(true);
-    try {
-      const response = await fetch(`/api/events/${id}/register`, {
-        method: "POST",
+    // make sure you are logged in to register
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to register.",
+        variant: "destructive",
       });
+      return;
+    }
+
+    setIsRegistering(true);
+
+    try {
+      console.log(id);
+      console.log(title);
+      const response = await fetch(`/api/events/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ registerForEvent: true }),
+      });
+
+      console.log(response.json());
 
       if (!response.ok) {
         throw new Error("Failed to register for event");
@@ -223,7 +243,13 @@ export function EventInfoPreview({
               onClick={() => setIsRegisterDialogOpen(true)}
               disabled={isRegisterDisabled}
             >
-              {isFull ? "Event Full" : hasRegistrationClosed ? "Registration Closed" : "Sign Up"}
+              {isFull
+                ? "Event Full"
+                : hasRegistrationClosed
+                  ? "Registration Closed"
+                  : isRegistered
+                    ? "Already Registered"
+                    : "Sign Up"}
             </Button>
             {isAdmin && (
               <div className="flex justify-end gap-4">
