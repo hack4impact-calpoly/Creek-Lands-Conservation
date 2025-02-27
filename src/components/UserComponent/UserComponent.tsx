@@ -188,7 +188,12 @@ export default function PersonalInfo() {
     setGender(originalGender);
     setBirthday(originalBirthday);
     setPhoneNumbers({ ...originalPhoneNumbers });
-    setAddress({ ...originalAddress });
+    // Restore address only if the user erased it
+    setAddress({
+      home: address.home.trim() ? address.home : originalAddress.home,
+      city: address.city.trim() ? address.city : originalAddress.city,
+      zipCode: address.zipCode.trim() ? address.zipCode : originalAddress.zipCode,
+    });
     setChildren([...originalChildren]);
     // Clear validation errors
     setValidationErrors([]);
@@ -199,58 +204,72 @@ export default function PersonalInfo() {
   const validateFields = () => {
     const errors: string[] = [];
 
-    // Check required parent fields
-    if (!firstName.trim()) {
-      errors.push("First Name is required.");
+    // Name validation
+    const isValidName = (name: string) => /^[a-zA-Z\s]{2,50}$/.test(name.trim());
+
+    if (!isValidName(firstName)) {
+      errors.push("First Name must contain only letters and be 2-50 characters long.");
     }
-    if (!lastName.trim()) {
-      errors.push("Last Name is required.");
+    if (!isValidName(lastName)) {
+      errors.push("Last Name must contain only letters and be 2-50 characters long.");
     }
+
     if (!email.trim()) {
       errors.push("Email is required.");
     }
-    if (!gender.trim()) {
-      errors.push("Gender is required.");
+
+    // Birthday validation
+    const today = new Date();
+    const birthDate = new Date(birthday);
+
+    if (birthDate > today) {
+      errors.push("Birthday cannot be in the future.");
     }
     if (!birthday.trim()) {
       errors.push("Birthday is required.");
     }
 
-    // Validate phone numbers: must be exactly 10 digits
-    if (phoneNumbers.cell.trim() && !/^\d{10}$/.test(phoneNumbers.cell.trim())) {
+    if (!gender.trim()) {
+      errors.push("Gender is required.");
+    }
+
+    // Phone number validation (10-digit required)
+    const isValidPhoneNumber = (phone: string) => /^\d{10}$/.test(phone.trim());
+
+    if (phoneNumbers.cell.trim() && !isValidPhoneNumber(phoneNumbers.cell.trim())) {
       errors.push("Cell phone number must be exactly 10 digits.");
     }
-    if (phoneNumbers.work.trim() && !/^\d{10}$/.test(phoneNumbers.work.trim())) {
+    if (phoneNumbers.work.trim() && !isValidPhoneNumber(phoneNumbers.work.trim())) {
       errors.push("Work phone number must be exactly 10 digits.");
     }
 
-    // Validate zip code: must be exactly 5 digits
-    if (address.zipCode.trim() && !/^\d{5}$/.test(address.zipCode.trim())) {
+    // ZIP code validation (exactly 5 digits)
+    const isValidZipCode = (zip: string) => /^\d{5}$/.test(zip.trim());
+
+    if (address.zipCode.trim() && !isValidZipCode(address.zipCode)) {
       errors.push("ZIP code must be exactly 5 digits.");
     }
 
-    // Check required child fields
-    children.forEach((child, idx) => {
-      if (!child.firstName.trim()) {
-        errors.push(`Child #${idx + 1}: First Name is required.`);
+    // Address validation (if home is provided, require city & ZIP)
+    if (address.home.trim()) {
+      if (!address.city.trim()) {
+        errors.push("City is required when home address is provided.");
       }
-      if (!child.lastName.trim()) {
-        errors.push(`Child #${idx + 1}: Last Name is required.`);
+      if (!address.zipCode.trim()) {
+        errors.push("ZIP code is required when home address is provided.");
       }
-      if (!child.birthday.trim()) {
-        errors.push(`Child #${idx + 1}: Birthday is required.`);
-      }
-      if (!child.gender.trim()) {
-        errors.push(`Child #${idx + 1}: Gender is required.`);
-      }
-    });
+    }
+
+    // Preserve original address if empty string is entered
+    if (!address.home.trim()) address.home = originalAddress.home;
+    if (!address.city.trim()) address.city = originalAddress.city;
+    if (!address.zipCode.trim()) address.zipCode = originalAddress.zipCode;
 
     if (errors.length > 0) {
       setValidationErrors(errors);
       return false;
     }
 
-    // No errors
     setValidationErrors([]);
     return true;
   };
