@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import connectDB from "@/database/db";
 import Event from "@/database/eventSchema";
+import User from "@/database/userSchema";
 import { authenticateAdmin } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
 
@@ -17,20 +18,20 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
   }
 
   try {
-    const { clerkUserId } = await auth(); // ✅ Get the authenticated user ID
-    if (!clerkUserId) {
+    const { userId } = await auth(); // ✅ Get the authenticated user ID
+    if (!userId) {
       return NextResponse.json({ error: "Unauthorized. Please log in." }, { status: 401 });
     }
 
     // Find user in MongoDB using Clerk ID
-    const user = await User.findOne({ clerkUserId });
+    const person = await User.findOne({ clerkID: userId });
 
-    if (!user) {
+    if (!person) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
     // get their user id to use for registration
-    const userId = user._id;
+    const mongoUserId = person._id;
 
     const updatedData = await req.json();
     console.log(updatedData);
@@ -58,7 +59,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
         return NextResponse.json({ error: "Event is at full capacity." }, { status: 400 });
       }
 
-      event.registeredUsers.push(userId);
+      event.registeredUsers.push(mongoUserId);
       await event.save();
 
       return NextResponse.json({ message: "Successfully registered for the event.", event }, { status: 200 });
