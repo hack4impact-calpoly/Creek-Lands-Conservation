@@ -17,10 +17,20 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
   }
 
   try {
-    const { userId } = await auth(); // ✅ Get the authenticated user ID
-    if (!userId) {
+    const { clerkUserId } = await auth(); // ✅ Get the authenticated user ID
+    if (!clerkUserId) {
       return NextResponse.json({ error: "Unauthorized. Please log in." }, { status: 401 });
     }
+
+    // Find user in MongoDB using Clerk ID
+    const user = await User.findOne({ clerkUserId });
+
+    if (!user) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // get their user id to use for registration
+    const userId = user._id;
 
     const updatedData = await req.json();
     console.log(updatedData);
