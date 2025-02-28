@@ -30,7 +30,9 @@ export const FormField = ({
   inputClassName,
 }: FormFieldProps) => (
   <div className={cn("space-y-1", className)}>
-    <label className="text-sm sm:text-base">{label}</label>
+    <label className="text-sm sm:text-base" htmlFor={name}>
+      {label}
+    </label>
     {type === "textarea" ? (
       <Textarea {...register(name)} disabled={disabled} className={inputClassName} />
     ) : (
