@@ -128,20 +128,27 @@ export function EventInfoPreview({
         body: JSON.stringify({ registerForEvent: true }),
       });
 
-      console.log(response.json());
+      // Parse the response body as JSON and handle errors accordingly
+      const responseData = await response.json();
 
       if (!response.ok) {
-        throw new Error("Failed to register for event");
+        throw new Error(responseData.error || "Failed to register for event.");
       }
+
+      // Wait for 3 seconds before reloading the page
+      setTimeout(() => {
+        window.location.reload(); // This will reload the page after the specified delay
+      }, 3000);
 
       toast({
         title: "Registration successful",
         description: "You have been registered for the event.",
       });
     } catch (error) {
+      const errorMessage = error.message || "Failed to register for the event. Please try again.";
       toast({
         title: "Error",
-        description: "Failed to register for the event. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

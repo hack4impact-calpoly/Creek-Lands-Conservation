@@ -45,7 +45,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
       }
 
       // Check if user already registered for the event
-      if (event.registeredUsers.includes(userId)) {
+      if (event.registeredUsers.includes(mongoUserId)) {
         return NextResponse.json({ error: "User already registered for this event" }, { status: 400 });
       }
 
