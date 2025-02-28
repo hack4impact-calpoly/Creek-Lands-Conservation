@@ -11,9 +11,22 @@ import { DateTimeField } from "@/components/Forms/DateTimeField";
 import { FormActions } from "@/components/Forms/FormActions";
 import { parseDateTime } from "@/lib/utils";
 import Link from "next/link";
-import { EventFormData } from "@/types/events";
 import { validateEventDates } from "@/lib/utils";
 import LoadingSkeleton from "@/components/Forms/LoadingSkeleton";
+
+interface EventFormData {
+  title: string;
+  startDate: string;
+  startTime: string;
+  endDate: string;
+  endTime: string;
+  location: string;
+  capacity: number;
+  fee: number;
+  description?: string;
+  registrationDeadlineDate: string;
+  registrationDeadlineTime: string;
+}
 
 const EditEventPage = () => {
   const router = useRouter();
