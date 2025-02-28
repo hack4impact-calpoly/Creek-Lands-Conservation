@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { userOnboarding } from "./_actions";
@@ -8,15 +7,16 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState, useEffect } from "react";
 
 export default function OnboardingPage() {
   const { user } = useUser();
   const router = useRouter();
-  const [error, setError] = React.useState("");
-  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
   // Form state
-  const [formData, setFormData] = React.useState({
+  const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     email: "",
@@ -30,10 +30,10 @@ export default function OnboardingPage() {
   });
 
   // Field-specific errors
-  const [fieldErrors, setFieldErrors] = React.useState<{ [key: string]: string }>({});
+  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
 
   // Effect to update state once Clerk user data is available
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       setFormData((prev) => ({
         ...prev,
