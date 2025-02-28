@@ -16,7 +16,7 @@ export interface EventCardProps {
   registrationDeadline: Date | null;
   capacity: number;
   currentRegistrations: number;
-  onDelete: (eventId: string) => void;
+  onDelete?: (eventId: string) => void;
 }
 
 export default function EventCard({
