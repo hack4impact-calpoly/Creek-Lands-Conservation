@@ -13,10 +13,9 @@ export type OnboardingFormData = {
 
 export type ChildFormData = {
   children: Array<{
-    id: string;
     firstName: string;
     lastName: string;
     birthday: string;
-    gender: string;
+    gender: "Male" | "Female" | "Non-binary" | "Prefer Not to Say" | "";
   }>;
 };
