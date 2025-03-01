@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Calendar, Clock, MapPin, Mail, Text, Image as ImageIcon, Users, CalendarClock } from "lucide-react";
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -31,6 +31,7 @@ interface EventInfoProps {
   email?: string;
   capacity?: number;
   currentRegistrations?: number;
+  userRegistered: boolean;
   onDelete?: (eventId: string) => void;
 }
 
@@ -46,6 +47,7 @@ export function EventInfoPreview({
   email = "info@creeklands.org",
   capacity,
   currentRegistrations,
+  userRegistered,
   onDelete,
 }: EventInfoProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -145,10 +147,9 @@ export function EventInfoPreview({
         description: "You have been registered for the event.",
       });
     } catch (error) {
-      const errorMessage = error.message || "Failed to register for the event. Please try again.";
       toast({
         title: "Error",
-        description: errorMessage,
+        description: error instanceof Error ? error.message : "Failed to register for the event. Please try again.",
         variant: "destructive",
       });
     } finally {
@@ -248,7 +249,7 @@ export function EventInfoPreview({
           </div>
           <DialogFooter className="flex justify-between">
             <Button
-              className={`text-white ${isRegisterDisabled ? "cursor-not-allowed bg-gray-400" : "bg-green-500 hover:bg-green-600"}`}
+              className={`text-white ${userRegistered ? "cursor-not-allowed bg-gray-400" : "bg-green-500 hover:bg-green-600"}`}
               onClick={() => setIsRegisterDialogOpen(true)}
               disabled={isRegisterDisabled}
             >
@@ -256,7 +257,7 @@ export function EventInfoPreview({
                 ? "Event Full"
                 : hasRegistrationClosed
                   ? "Registration Closed"
-                  : isRegistered
+                  : userRegistered
                     ? "Already Registered"
                     : "Sign Up"}
             </Button>

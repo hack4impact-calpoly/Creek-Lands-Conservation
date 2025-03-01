@@ -109,6 +109,7 @@ export default function Home() {
                 registrationDeadline={event.registrationDeadline}
                 capacity={event.capacity}
                 currentRegistrations={event.registeredUsers.length}
+                userRegistered={true}
               />
             ))}
           </div>
@@ -130,6 +131,7 @@ export default function Home() {
             registrationDeadline={event.registrationDeadline}
             capacity={event.capacity}
             currentRegistrations={event.registeredUsers.length}
+            userRegistered={false}
           />
         ))}
       </div>
