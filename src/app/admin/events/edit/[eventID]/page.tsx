@@ -216,6 +216,7 @@ const EditEventPage = () => {
                 if (window.history.length > 1) router.back();
                 else router.push("/admin/events");
               }}
+              submitLabel="Save Changes"
               isSubmitting={saving}
             />
           </form>

@@ -1,33 +1,35 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { FieldError } from "react-hook-form";
+import { FieldError, Path, RegisterOptions, UseFormRegister } from "react-hook-form";
 
-type SelectFieldProps = {
+type SelectFieldProps<T extends Record<string, any>> = {
   label: string;
-  name: string;
+  name: Path<T>;
   options: { value: string; label: string }[];
-  register: any;
+  register: UseFormRegister<T>;
+  rules?: RegisterOptions<T, Path<T>>;
   error?: FieldError;
   className?: string;
   disabled?: boolean;
   placeholder?: string;
 };
 
-export const SelectField = ({
+export const SelectField = <T extends Record<string, any>>({
   label,
   name,
   options,
   register,
+  rules,
   error,
   className,
   disabled,
   placeholder = "Select...",
-}: SelectFieldProps) => (
+}: SelectFieldProps<T>) => (
   <div className={cn("space-y-1", className)}>
     <label className="text-sm sm:text-base" htmlFor={name}>
       {label}
     </label>
-    <Select {...register(name)} disabled={disabled}>
+    <Select {...register(name, rules)} disabled={disabled}>
       <SelectTrigger>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>

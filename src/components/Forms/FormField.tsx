@@ -1,7 +1,7 @@
 // components/FormField.tsx
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FieldError, Path, UseFormRegister } from "react-hook-form";
+import { FieldError, Path, RegisterOptions, UseFormRegister } from "react-hook-form";
 import { cn } from "@/lib/utils"; // Assuming you have a cn utility (or use classnames)
 
 type FormFieldProps<T extends Record<string, any>> = {
@@ -11,6 +11,7 @@ type FormFieldProps<T extends Record<string, any>> = {
   error?: FieldError;
   register: UseFormRegister<T>;
   name: Path<T>;
+  rules?: RegisterOptions<T, Path<T>>;
   disabled?: boolean;
   step?: string;
   min?: number;
@@ -25,6 +26,7 @@ export const FormField = <T extends Record<string, any>>({
   error,
   register,
   name,
+  rules,
   disabled,
   step,
   min,
@@ -37,7 +39,7 @@ export const FormField = <T extends Record<string, any>>({
     </label>
     {type === "textarea" ? (
       <Textarea
-        {...register(name)} // this is prettier (pun intended)
+        {...register(name, rules)} // this is prettier (pun intended)
         disabled={disabled}
         className={inputClassName}
         placeholder={placeholder}
@@ -47,7 +49,7 @@ export const FormField = <T extends Record<string, any>>({
         type={type}
         step={step}
         min={min}
-        {...register(name)}
+        {...register(name, rules)}
         disabled={disabled}
         className={inputClassName}
         placeholder={placeholder}
