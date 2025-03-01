@@ -3,11 +3,8 @@
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { userOnboarding } from "./_actions";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { OnboardingFormData } from "@/types/onboarding";
 import { FormField } from "@/components/Forms/FormField";
@@ -38,7 +35,7 @@ export default function OnboardingPage() {
     try {
       const formData = new FormData();
 
-      // TODO once _actions is updated to accept better types, remove this
+      // TODO look at _actions to see if it can accept data directly
       Object.entries(data).forEach(([key, value]) => formData.append(key, value));
 
       const res = await userOnboarding(formData);
@@ -52,39 +49,6 @@ export default function OnboardingPage() {
   };
 
   const handleSkip = () => router.push("/");
-
-  // Form state
-  const [formData, setFormData] = useState({
-    firstName: "",
-    lastName: "",
-    email: "",
-    gender: "",
-    birthday: "",
-    homeAddress: "",
-    city: "",
-    zipCode: "",
-    cellPhone: "",
-    workPhone: "",
-  });
-
-  // Field-specific errors
-  const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
-
-  // TODO fix the validation again
-  // Form validation
-  // const validateForm = () => {
-  //   const errors: { [key: string]: string } = {};
-
-  //   if (!formData.gender) errors.gender = "Gender is required.";
-  //   if (!formData.birthday) errors.birthday = "Birthday is required.";
-  //   if (formData.homeAddress.length < 5) errors.homeAddress = "Address must be at least 5 characters.";
-  //   if (!/^[a-zA-Z\s]+$/.test(formData.city)) errors.city = "City must contain only letters and spaces.";
-  //   if (!/^\d{5}(-\d{4})?$/.test(formData.zipCode)) errors.zipCode = "ZIP Code is invalid.";
-  //   if (!formData.cellPhone) errors.cellPhone = "Cell phone is required.";
-
-  //   setFieldErrors(errors);
-  //   return Object.keys(errors).length === 0;
-  // };
 
   return (
     <Card className="mx-auto max-w-lg rounded-lg bg-white p-6 shadow-md">
