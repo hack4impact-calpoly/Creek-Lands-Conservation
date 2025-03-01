@@ -50,7 +50,7 @@ export default function OnboardingPage() {
     } catch (error: any) {
       toast({
         title: "Error",
-        description: error.message || "Failed to add children, please try again.",
+        description: error.message || "Failed to update information, please try again.",
         variant: "destructive",
       });
       console.error("Onboarding failed:", error);
