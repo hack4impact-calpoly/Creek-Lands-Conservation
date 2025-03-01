@@ -1,12 +1,12 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { FieldError, Path, RegisterOptions, UseFormRegister } from "react-hook-form";
+import { Controller, FieldError, Path, RegisterOptions, UseFormReturn } from "react-hook-form";
 
 type SelectFieldProps<T extends Record<string, any>> = {
   label: string;
   name: Path<T>;
   options: { value: string; label: string }[];
-  register: UseFormRegister<T>;
+  control: UseFormReturn<T>["control"];
   rules?: RegisterOptions<T, Path<T>>;
   error?: FieldError;
   className?: string;
@@ -18,7 +18,7 @@ export const SelectField = <T extends Record<string, any>>({
   label,
   name,
   options,
-  register,
+  control,
   rules,
   error,
   className,
@@ -29,18 +29,28 @@ export const SelectField = <T extends Record<string, any>>({
     <label className="text-sm sm:text-base" htmlFor={name}>
       {label}
     </label>
-    <Select {...register(name, rules)} disabled={disabled}>
-      <SelectTrigger>
-        <SelectValue placeholder={placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        {options.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
-            {option.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Controller
+      name={name}
+      control={control}
+      rules={rules}
+      render={({ field, fieldState }) => (
+        <>
+          <Select {...field} onValueChange={field.onChange} value={field.value} disabled={disabled}>
+            <SelectTrigger>
+              <SelectValue placeholder={placeholder} />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {fieldState.error && <p className="text-xs text-red-500 sm:text-sm">{fieldState.error.message}</p>}
+        </>
+      )}
+    />
     {error && <p className="text-xs text-red-500 sm:text-sm">{error.message}</p>}
   </div>
 );

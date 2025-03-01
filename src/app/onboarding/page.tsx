@@ -19,6 +19,7 @@ export default function OnboardingPage() {
   const router = useRouter();
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors, isSubmitting },
     setValue,
@@ -108,12 +109,20 @@ export default function OnboardingPage() {
                 { value: "Non-binary", label: "Non-binary" },
                 { value: "Prefer Not to Say", label: "Prefer Not to Say" },
               ]}
-              register={register}
+              control={control}
               error={errors.gender}
               placeholder="Select Gender"
+              rules={{ required: "Gender is required" }}
             />
 
-            <FormField label="Birthday *" name="birthday" type="date" register={register} error={errors.birthday} />
+            <FormField
+              label="Birthday *"
+              name="birthday"
+              type="date"
+              register={register}
+              error={errors.birthday}
+              rules={{ required: "Birthday is required" }}
+            />
           </fieldset>
 
           {/* Address */}
@@ -126,9 +135,26 @@ export default function OnboardingPage() {
               register={register}
               error={errors.homeAddress}
               placeholder="123 Main St"
+              rules={{
+                required: "Address is required",
+                minLength: { value: 5, message: "Address must be at least 5 characters" },
+              }}
             />
 
-            <FormField label="City *" name="city" register={register} error={errors.city} placeholder="Enter City" />
+            <FormField
+              label="City *"
+              name="city"
+              register={register}
+              error={errors.city}
+              placeholder="Enter City"
+              rules={{
+                required: "City is required",
+                pattern: {
+                  value: /^[a-zA-Z\s]+$/,
+                  message: "City must contain only letters and spaces",
+                },
+              }}
+            />
 
             <FormField
               label="ZIP Code *"
@@ -136,6 +162,13 @@ export default function OnboardingPage() {
               register={register}
               error={errors.zipCode}
               placeholder="12345 or 12345-6789"
+              rules={{
+                required: "ZIP Code is required",
+                pattern: {
+                  value: /^\d{5}(-\d{4})?$/,
+                  message: "Invalid ZIP Code format",
+                },
+              }}
             />
           </fieldset>
 
@@ -149,6 +182,7 @@ export default function OnboardingPage() {
               register={register}
               error={errors.cellphone}
               placeholder="(123) 456-7890"
+              rules={{ required: "Cell phone is required" }}
             />
 
             <FormField
@@ -159,8 +193,6 @@ export default function OnboardingPage() {
               placeholder="(Optional)"
             />
           </fieldset>
-
-          {errors && <p className="text-sm text-red-600">{errors.root?.message}</p>}
 
           <FormActions
             onSecondary={handleSkip}
