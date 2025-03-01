@@ -1,16 +1,27 @@
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FieldError, FieldValue, FieldValues, Path, RegisterOptions, UseFormRegister } from "react-hook-form";
+import {
+  FieldError,
+  FieldPath,
+  FieldValue,
+  FieldValues,
+  Path,
+  RegisterOptions,
+  UseFormRegister,
+} from "react-hook-form";
 import { cn } from "@/lib/utils";
 
-type FormFieldProps<T extends FieldValues> = {
+type FormFieldProps<
+  TFieldValues extends FieldValues, // represents the form
+  TFieldName extends FieldPath<TFieldValues>, // represents the field we are filling
+> = {
   type?: "text" | "number" | "textarea" | "email" | "tel" | "date" | "time";
   label: string;
   placeholder?: string;
   error?: FieldError;
-  register: UseFormRegister<T>;
-  name: Path<T>;
-  rules?: RegisterOptions<T>;
+  register: UseFormRegister<TFieldValues>;
+  name: TFieldName;
+  rules?: RegisterOptions<TFieldValues, TFieldName>;
   disabled?: boolean;
   step?: string;
   min?: number;
@@ -18,7 +29,7 @@ type FormFieldProps<T extends FieldValues> = {
   inputClassName?: string;
 };
 
-export const FormField = <T extends FieldValues>({
+export const FormField = <T extends FieldValues, U extends FieldPath<T>>({
   type = "text",
   label,
   placeholder,
@@ -31,7 +42,7 @@ export const FormField = <T extends FieldValues>({
   min,
   className,
   inputClassName,
-}: FormFieldProps<T>) => (
+}: FormFieldProps<T, U>) => (
   <div className={cn("space-y-1", className)}>
     <label className="text-sm sm:text-base" htmlFor={name}>
       {label}

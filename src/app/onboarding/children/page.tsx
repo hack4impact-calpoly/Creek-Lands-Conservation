@@ -89,7 +89,7 @@ export default function ChildrenOnboardingPage() {
                 error={errors.children?.[index]?.firstName} // arrays make this a bit more complex
                 rules={{
                   required: "First name is required",
-                  validate: (value) => (typeof value === "string" && value.trim() !== "") || "Cannot be empty",
+                  validate: (value) => !!value.trim() || "Cannot be empty",
                 }}
                 placeholder="Enter first name"
               />
@@ -101,7 +101,7 @@ export default function ChildrenOnboardingPage() {
                 error={errors.children?.[index]?.lastName}
                 rules={{
                   required: "Last name is required",
-                  validate: (value) => (typeof value === "string" && value.trim() !== "") || "Cannot be empty",
+                  validate: (value) => !!value.trim() || "Cannot be empty",
                 }}
                 placeholder="Enter last name"
               />
