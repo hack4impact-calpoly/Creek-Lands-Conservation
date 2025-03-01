@@ -1,21 +1,25 @@
 // components/DateTimeField.tsx
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { FieldError, Path, RegisterOptions, UseFormRegister } from "react-hook-form";
+import { FieldError, FieldPath, FieldValues, Path, RegisterOptions, UseFormRegister } from "react-hook-form";
 
-type DateTimeFieldProps<T extends Record<string, any>> = {
-  dateName: Path<T>;
-  timeName: Path<T>;
+type DateTimeFieldProps<
+  TFieldValues extends FieldValues, // represents the form
+  TDateFieldName extends FieldPath<TFieldValues>,
+  TTimeFieldName extends FieldPath<TFieldValues>, // represents the field we are filling
+> = {
+  dateName: TDateFieldName;
+  timeName: TTimeFieldName;
   label: string;
   errors: { date?: FieldError; time?: FieldError };
-  register: UseFormRegister<T>;
-  dateRules?: RegisterOptions<T, Path<T>>;
-  timeRules?: RegisterOptions<T, Path<T>>;
+  register: UseFormRegister<TFieldValues>;
+  dateRules?: RegisterOptions<TFieldValues, TDateFieldName>;
+  timeRules?: RegisterOptions<TFieldValues, TTimeFieldName>;
   disabled?: boolean;
   className?: string;
 };
 
-export const DateTimeField = <T extends Record<string, any>>({
+export const DateTimeField = <T extends FieldValues, U extends FieldPath<T>, V extends FieldPath<T>>({
   dateName,
   timeName,
   label,
@@ -25,7 +29,7 @@ export const DateTimeField = <T extends Record<string, any>>({
   timeRules,
   disabled,
   className,
-}: DateTimeFieldProps<T>) => (
+}: DateTimeFieldProps<T, U, V>) => (
   <div className={cn("space-y-1", className)}>
     <label className="text-sm sm:text-base">{label}</label>
     <div className="flex flex-row gap-2">

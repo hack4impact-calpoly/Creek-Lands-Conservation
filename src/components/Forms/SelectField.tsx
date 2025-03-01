@@ -1,19 +1,33 @@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { Controller, FieldError, Path, RegisterOptions, UseFormReturn } from "react-hook-form";
+import {
+  Control,
+  Controller,
+  ControllerProps,
+  FieldError,
+  FieldPath,
+  FieldValues,
+  Path,
+  RegisterOptions,
+  UseControllerProps,
+  UseFormReturn,
+} from "react-hook-form";
 
-type SelectFieldProps<T extends Record<string, any>> = {
+type SelectFieldProps<
+  TFieldValues extends FieldValues, // represents the form
+  TFieldName extends FieldPath<TFieldValues>, // represents the field we are filling
+> = {
   label: string;
-  name: Path<T>;
+  name: TFieldName;
   options: { value: string; label: string }[];
-  control: UseFormReturn<T>["control"];
-  rules?: RegisterOptions<T, Path<T>>;
+  control: Control<TFieldValues>;
+  rules?: RegisterOptions<TFieldValues, TFieldName>;
   className?: string;
   disabled?: boolean;
   placeholder?: string;
 };
 
-export const SelectField = <T extends Record<string, any>>({
+export const SelectField = <T extends FieldValues, U extends FieldPath<T>>({
   label,
   name,
   options,
@@ -22,7 +36,7 @@ export const SelectField = <T extends Record<string, any>>({
   className,
   disabled,
   placeholder = "Select...",
-}: SelectFieldProps<T>) => (
+}: SelectFieldProps<T, U>) => (
   <div className={cn("space-y-1", className)}>
     <label className="text-sm sm:text-base" htmlFor={name}>
       {label}

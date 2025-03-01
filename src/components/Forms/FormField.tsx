@@ -19,7 +19,7 @@ type FormFieldProps<
   label: string;
   placeholder?: string;
   error?: FieldError;
-  register: UseFormRegister<TFieldValues>;
+  register: UseFormRegister<TFieldValues>; // TODO pass the register return instead
   name: TFieldName;
   rules?: RegisterOptions<TFieldValues, TFieldName>;
   disabled?: boolean;
