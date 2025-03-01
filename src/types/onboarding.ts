@@ -10,3 +10,13 @@ export type OnboardingFormData = {
   cellphone: string;
   workphone?: string;
 };
+
+export type ChildFormData = {
+  children: Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    birthday: string;
+    gender: string;
+  }>;
+};
