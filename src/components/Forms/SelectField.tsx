@@ -8,7 +8,6 @@ type SelectFieldProps<T extends Record<string, any>> = {
   options: { value: string; label: string }[];
   control: UseFormReturn<T>["control"];
   rules?: RegisterOptions<T, Path<T>>;
-  error?: FieldError;
   className?: string;
   disabled?: boolean;
   placeholder?: string;
@@ -20,7 +19,6 @@ export const SelectField = <T extends Record<string, any>>({
   options,
   control,
   rules,
-  error,
   className,
   disabled,
   placeholder = "Select...",
@@ -51,6 +49,5 @@ export const SelectField = <T extends Record<string, any>>({
         </>
       )}
     />
-    {error && <p className="text-xs text-red-500 sm:text-sm">{error.message}</p>}
   </div>
 );

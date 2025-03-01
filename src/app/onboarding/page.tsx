@@ -74,7 +74,6 @@ export default function OnboardingPage() {
                 { value: "Prefer Not to Say", label: "Prefer Not to Say" },
               ]}
               control={control}
-              error={errors.gender}
               placeholder="Select Gender"
               rules={{ required: "Gender is required" }}
             />
