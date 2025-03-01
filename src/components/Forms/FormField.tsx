@@ -1,15 +1,16 @@
 // components/FormField.tsx
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FieldError } from "react-hook-form";
+import { FieldError, Path, UseFormRegister } from "react-hook-form";
 import { cn } from "@/lib/utils"; // Assuming you have a cn utility (or use classnames)
 
-type FormFieldProps = {
-  type?: "text" | "number" | "textarea";
+type FormFieldProps<T extends Record<string, any>> = {
+  type?: "text" | "number" | "textarea" | "email" | "tel" | "date";
   label: string;
+  placeholder?: string;
   error?: FieldError;
-  register: any;
-  name: string;
+  register: UseFormRegister<T>;
+  name: Path<T>;
   disabled?: boolean;
   step?: string;
   min?: number;
@@ -17,9 +18,10 @@ type FormFieldProps = {
   inputClassName?: string;
 };
 
-export const FormField = ({
+export const FormField = <T extends Record<string, any>>({
   type = "text",
   label,
+  placeholder,
   error,
   register,
   name,
@@ -28,15 +30,28 @@ export const FormField = ({
   min,
   className,
   inputClassName,
-}: FormFieldProps) => (
+}: FormFieldProps<T>) => (
   <div className={cn("space-y-1", className)}>
     <label className="text-sm sm:text-base" htmlFor={name}>
       {label}
     </label>
     {type === "textarea" ? (
-      <Textarea {...register(name)} disabled={disabled} className={inputClassName} />
+      <Textarea
+        {...register(name)} // this is prettier (pun intended)
+        disabled={disabled}
+        className={inputClassName}
+        placeholder={placeholder}
+      />
     ) : (
-      <Input type={type} step={step} min={min} {...register(name)} disabled={disabled} className={inputClassName} />
+      <Input
+        type={type}
+        step={step}
+        min={min}
+        {...register(name)}
+        disabled={disabled}
+        className={inputClassName}
+        placeholder={placeholder}
+      />
     )}
     {error && <p className="text-xs text-red-500 sm:text-sm">{error.message}</p>}
   </div>

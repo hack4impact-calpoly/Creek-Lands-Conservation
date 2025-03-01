@@ -2,7 +2,7 @@
 
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { updateUser } from "@/lib/users";
-
+/* TODO remove the default html form types and use the specific onboarding form types */
 // Utility functions
 const getStringValue = (value: FormDataEntryValue | null) => (value !== null ? String(value).trim() : "");
 

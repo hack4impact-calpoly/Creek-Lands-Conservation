@@ -2,7 +2,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { cn } from "@/lib/utils";
 import { FieldError } from "react-hook-form";
 
-interface SelectFieldProps {
+type SelectFieldProps = {
   label: string;
   name: string;
   options: { value: string; label: string }[];
@@ -11,7 +11,7 @@ interface SelectFieldProps {
   className?: string;
   disabled?: boolean;
   placeholder?: string;
-}
+};
 
 export const SelectField = ({
   label,
