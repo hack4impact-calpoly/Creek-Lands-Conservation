@@ -69,12 +69,7 @@ export default function OnboardingPage() {
   // Field-specific errors
   const [fieldErrors, setFieldErrors] = useState<{ [key: string]: string }>({});
 
-  // Handle input changes
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-    setFieldErrors({ ...fieldErrors, [e.target.name]: "" }); // Clear error when the user starts typing
-  };
-
+  // TODO fix the validation again
   // Form validation
   // const validateForm = () => {
   //   const errors: { [key: string]: string } = {};
