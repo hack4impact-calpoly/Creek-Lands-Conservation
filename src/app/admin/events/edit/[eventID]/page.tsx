@@ -6,7 +6,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { IEventUpdate } from "@/database/eventSchema";
-import { FormField } from "@/components/Forms/FormField";
+import { InputField } from "@/components/Forms/InputField";
 import { DateTimeField } from "@/components/Forms/DateTimeField";
 import { FormActions } from "@/components/Forms/FormActions";
 import { parseDateTime } from "@/lib/utils";
@@ -144,11 +144,11 @@ const EditEventPage = () => {
             <fieldset className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
               <legend className="mb-2 text-lg font-semibold md:col-span-2">Event Details</legend>
 
-              <FormField label="Event Title *" name="title" register={register} error={errors.title} />
+              <InputField label="Event Title *" name="title" register={register} error={errors.title} />
 
-              <FormField label="Location *" name="location" register={register} error={errors.location} />
+              <InputField label="Location *" name="location" register={register} error={errors.location} />
 
-              <FormField
+              <InputField
                 label="Capacity *"
                 name="capacity"
                 type="number"
@@ -158,7 +158,7 @@ const EditEventPage = () => {
                 min={0}
               />
 
-              <FormField
+              <InputField
                 label="Fee ($) *"
                 name="fee"
                 type="number"
@@ -168,7 +168,7 @@ const EditEventPage = () => {
                 min={0}
               />
 
-              <FormField
+              <InputField
                 label="Description"
                 name="description"
                 type="textarea"

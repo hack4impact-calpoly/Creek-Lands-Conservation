@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { OnboardingFormData } from "@/types/onboarding";
-import { FormField } from "@/components/Forms/FormField";
+import { InputField } from "@/components/Forms/InputField";
 import { SelectField } from "@/components/Forms/SelectField";
 import { FormActions } from "@/components/Forms/FormActions";
 import { useToast } from "@/hooks/use-toast";
@@ -67,11 +67,11 @@ export default function OnboardingPage() {
           <fieldset className="flex flex-col gap-3 rounded-lg border p-4 sm:gap-4">
             <legend className="text-lg font-semibold">Personal Information</legend>
 
-            <FormField label="First Name" name="firstName" register={register} disabled />
+            <InputField label="First Name" name="firstName" register={register} disabled />
 
-            <FormField label="Last Name" name="lastName" register={register} disabled />
+            <InputField label="Last Name" name="lastName" register={register} disabled />
 
-            <FormField label="Email" name="email" type="email" register={register} disabled />
+            <InputField label="Email" name="email" type="email" register={register} disabled />
 
             <SelectField
               label="Gender *"
@@ -87,7 +87,7 @@ export default function OnboardingPage() {
               rules={{ required: "Gender is required" }}
             />
 
-            <FormField
+            <InputField
               label="Birthday *"
               name="birthday"
               type="date"
@@ -101,7 +101,7 @@ export default function OnboardingPage() {
           <fieldset className="flex flex-col gap-3 rounded-lg border p-4 sm:gap-4">
             <legend className="text-lg font-semibold">Address</legend>
 
-            <FormField
+            <InputField
               label="Home Address *"
               name="homeAddress"
               register={register}
@@ -113,7 +113,7 @@ export default function OnboardingPage() {
               }}
             />
 
-            <FormField
+            <InputField
               label="City *"
               name="city"
               register={register}
@@ -128,7 +128,7 @@ export default function OnboardingPage() {
               }}
             />
 
-            <FormField
+            <InputField
               label="ZIP Code *"
               name="zipCode"
               register={register}
@@ -147,7 +147,7 @@ export default function OnboardingPage() {
           {/* Contact Information */}
           <fieldset className="flex flex-col gap-3 rounded-lg border p-4 sm:gap-4">
             <legend className="text-lg font-semibold">Contact Information</legend>
-            <FormField
+            <InputField
               label="Cell Phone *"
               name="cellphone"
               type="tel"
@@ -157,7 +157,7 @@ export default function OnboardingPage() {
               rules={{ required: "Cell phone is required" }}
             />
 
-            <FormField
+            <InputField
               label="Work Phone (Optional)"
               name="workphone"
               type="tel"

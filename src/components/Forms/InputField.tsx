@@ -11,7 +11,7 @@ import {
 } from "react-hook-form";
 import { cn } from "@/lib/utils";
 
-type FormFieldProps<
+type InputFieldProps<
   TFieldValues extends FieldValues, // represents the form
   TFieldName extends FieldPath<TFieldValues>, // represents the field we are filling
 > = {
@@ -29,7 +29,7 @@ type FormFieldProps<
   inputClassName?: string;
 };
 
-export const FormField = <T extends FieldValues, U extends FieldPath<T>>({
+export const InputField = <T extends FieldValues, U extends FieldPath<T>>({
   type = "text",
   label,
   placeholder,
@@ -42,7 +42,7 @@ export const FormField = <T extends FieldValues, U extends FieldPath<T>>({
   min,
   className,
   inputClassName,
-}: FormFieldProps<T, U>) => (
+}: InputFieldProps<T, U>) => (
   <div className={cn("space-y-1", className)}>
     <label className="text-sm sm:text-base" htmlFor={name}>
       {label}

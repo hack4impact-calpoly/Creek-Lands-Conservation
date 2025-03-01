@@ -7,7 +7,7 @@ import { childrenOnboarding, completeOnboarding } from "../_actions";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useFieldArray, useForm } from "react-hook-form";
-import { FormField } from "@/components/Forms/FormField";
+import { InputField } from "@/components/Forms/InputField";
 import { SelectField } from "@/components/Forms/SelectField";
 import { FormActions } from "@/components/Forms/FormActions";
 import { useToast } from "@/hooks/use-toast";
@@ -93,7 +93,7 @@ export default function ChildrenOnboardingPage() {
             <fieldset key={field.id} className="flex flex-col gap-3 rounded-lg border p-4 sm:gap-4">
               <legend className="text-md font-semibold">Child {index + 1}</legend>
 
-              <FormField
+              <InputField
                 label="First Name *"
                 name={`children.${index}.firstName`}
                 register={register}
@@ -105,7 +105,7 @@ export default function ChildrenOnboardingPage() {
                 placeholder="Enter first name"
               />
 
-              <FormField
+              <InputField
                 label="Last Name *"
                 name={`children.${index}.lastName`}
                 register={register}
@@ -117,7 +117,7 @@ export default function ChildrenOnboardingPage() {
                 placeholder="Enter last name"
               />
 
-              <FormField
+              <InputField
                 label="Birthday"
                 name={`children.${index}.birthday`}
                 type="date"
