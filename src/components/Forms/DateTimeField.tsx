@@ -1,5 +1,6 @@
 // components/DateTimeField.tsx
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 import { FieldError, Path, RegisterOptions, UseFormRegister } from "react-hook-form";
 
 type DateTimeFieldProps<T extends Record<string, any>> = {

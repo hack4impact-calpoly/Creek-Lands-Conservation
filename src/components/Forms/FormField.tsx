@@ -5,7 +5,7 @@ import { FieldError, Path, RegisterOptions, UseFormRegister } from "react-hook-f
 import { cn } from "@/lib/utils"; // Assuming you have a cn utility (or use classnames)
 
 type FormFieldProps<T extends Record<string, any>> = {
-  type?: "text" | "number" | "textarea" | "email" | "tel" | "date";
+  type?: "text" | "number" | "textarea" | "email" | "tel" | "date" | "time";
   label: string;
   placeholder?: string;
   error?: FieldError;
