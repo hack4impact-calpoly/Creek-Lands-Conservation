@@ -30,12 +30,14 @@ export const DateTimeField = <T extends Record<string, any>>({
     <label className="text-sm sm:text-base">{label}</label>
     <div className="flex flex-row gap-2">
       <Input
+        id={dateName}
         type="date"
         className="flex-1 text-sm sm:text-base"
         {...register(dateName, dateRules)}
         disabled={disabled}
       />
       <Input
+        id={timeName}
         type="time"
         className="flex-1 text-sm sm:text-base"
         {...register(timeName, timeRules)}

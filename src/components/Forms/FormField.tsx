@@ -1,17 +1,16 @@
-// components/FormField.tsx
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { FieldError, Path, RegisterOptions, UseFormRegister } from "react-hook-form";
-import { cn } from "@/lib/utils"; // Assuming you have a cn utility (or use classnames)
+import { FieldError, FieldValue, FieldValues, Path, RegisterOptions, UseFormRegister } from "react-hook-form";
+import { cn } from "@/lib/utils";
 
-type FormFieldProps<T extends Record<string, any>> = {
+type FormFieldProps<T extends FieldValues> = {
   type?: "text" | "number" | "textarea" | "email" | "tel" | "date" | "time";
   label: string;
   placeholder?: string;
   error?: FieldError;
   register: UseFormRegister<T>;
   name: Path<T>;
-  rules?: RegisterOptions<T, Path<T>>;
+  rules?: RegisterOptions<T>;
   disabled?: boolean;
   step?: string;
   min?: number;
@@ -19,7 +18,7 @@ type FormFieldProps<T extends Record<string, any>> = {
   inputClassName?: string;
 };
 
-export const FormField = <T extends Record<string, any>>({
+export const FormField = <T extends FieldValues>({
   type = "text",
   label,
   placeholder,
@@ -39,6 +38,7 @@ export const FormField = <T extends Record<string, any>>({
     </label>
     {type === "textarea" ? (
       <Textarea
+        id={name}
         {...register(name, rules)} // this is prettier (pun intended)
         disabled={disabled}
         className={inputClassName}
@@ -49,6 +49,7 @@ export const FormField = <T extends Record<string, any>>({
         type={type}
         step={step}
         min={min}
+        id={name}
         {...register(name, rules)}
         disabled={disabled}
         className={inputClassName}

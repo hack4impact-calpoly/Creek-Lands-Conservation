@@ -51,12 +51,12 @@ export default function OnboardingPage() {
   const handleSkip = () => router.push("/");
 
   return (
-    <Card className="mx-auto max-w-lg rounded-lg bg-white p-6 shadow-md">
+    <Card className="mx-auto max-w-lg rounded-lg bg-white p-2 shadow-md">
       <CardContent>
         <h1 className="mb-4 text-center text-xl font-bold">Complete Your Profile</h1>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
-          <fieldset className="grid grid-cols-1 gap-3 sm:gap-4">
-            <legend className="mb-2 text-lg font-semibold">Personal Information</legend>
+          <fieldset className="flex flex-col gap-3 rounded-lg border p-4 sm:gap-4">
+            <legend className="text-lg font-semibold">Personal Information</legend>
 
             <FormField label="First Name" name="firstName" register={register} disabled />
 
@@ -89,8 +89,8 @@ export default function OnboardingPage() {
           </fieldset>
 
           {/* Address */}
-          <fieldset className="grid grid-cols-1 gap-3 sm:gap-4">
-            <legend className="mb-2 text-lg font-semibold">Address</legend>
+          <fieldset className="flex flex-col gap-3 rounded-lg border p-4 sm:gap-4">
+            <legend className="text-lg font-semibold">Address</legend>
 
             <FormField
               label="Home Address *"
@@ -136,8 +136,8 @@ export default function OnboardingPage() {
           </fieldset>
 
           {/* Contact Information */}
-          <fieldset className="grid grid-cols-1 gap-3 sm:gap-4">
-            <legend className="mb-2 text-lg font-semibold">Contact Information</legend>
+          <fieldset className="flex flex-col gap-3 rounded-lg border p-4 sm:gap-4">
+            <legend className="text-lg font-semibold">Contact Information</legend>
             <FormField
               label="Cell Phone *"
               name="cellphone"
