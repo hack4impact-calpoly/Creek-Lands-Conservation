@@ -12,6 +12,7 @@ import { Path, useFieldArray, useForm } from "react-hook-form";
 import { FormField } from "@/components/Forms/FormField";
 import { SelectField } from "@/components/Forms/SelectField";
 import { FormActions } from "@/components/Forms/FormActions";
+import { useToast } from "@/hooks/use-toast";
 
 export type ChildFormData = {
   children: Array<{
@@ -25,6 +26,7 @@ export type ChildFormData = {
 export default function ChildrenOnboardingPage() {
   const { user } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
   const {
     control,
     register,
@@ -44,8 +46,8 @@ export default function ChildrenOnboardingPage() {
   const onSubmit = async (data: ChildFormData) => {
     try {
       const children = data.children;
-      // validation is done by the form hook, but the user can choose to
-      // remove all children, check for that case
+      /* validation is done by the form hook, but the user can choose to
+       remove all children to skip the onboarding*/
       if (children.length === 0) {
         const res = await completeOnboarding();
         if (res?.error) throw new Error(res.error);
@@ -54,8 +56,18 @@ export default function ChildrenOnboardingPage() {
         if (res?.error) throw new Error(res.error);
       }
       await user?.reload();
+      toast({
+        title: "Success",
+        description: "Onboarding Complete!",
+        variant: "success",
+      });
       router.push("/");
     } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to add children, please try again.",
+        variant: "destructive",
+      });
       console.error("Onboarding failed:", err.message);
     }
   };
@@ -87,7 +99,7 @@ export default function ChildrenOnboardingPage() {
                 label="First Name *"
                 name={`children.${index}.firstName`}
                 register={register}
-                error={errors.children?.[index]?.firstName} // arrays make this a bit more complex
+                error={errors.children?.[index]?.firstName}
                 rules={{
                   required: "First name is required",
                   validate: (value) => !!value.trim() || "Cannot be empty",
@@ -113,7 +125,7 @@ export default function ChildrenOnboardingPage() {
                 type="date"
                 register={register}
                 error={errors.children?.[index]?.birthday}
-                rules={{ required: "Birthday is required" }}
+                rules={{ required: "Birthday is required" }} // According to Child Schema
               />
 
               <SelectField

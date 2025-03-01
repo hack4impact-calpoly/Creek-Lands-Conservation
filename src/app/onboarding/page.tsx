@@ -10,10 +10,12 @@ import { OnboardingFormData } from "@/types/onboarding";
 import { FormField } from "@/components/Forms/FormField";
 import { SelectField } from "@/components/Forms/SelectField";
 import { FormActions } from "@/components/Forms/FormActions";
+import { useToast } from "@/hooks/use-toast";
 
 export default function OnboardingPage() {
   const { user } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
   const {
     register,
     control,
@@ -35,15 +37,22 @@ export default function OnboardingPage() {
     try {
       const formData = new FormData();
 
-      // TODO look at _actions to see if it can accept data directly
+      // TODO modify _actions to accept the data directly
       Object.entries(data).forEach(([key, value]) => formData.append(key, value));
 
       const res = await userOnboarding(formData);
-      if (res?.message) {
-        await user?.reload();
-        router.push("/onboarding/children");
+      if (res?.error) {
+        throw new Error(res.error);
       }
-    } catch (error) {
+      // no toast here because users still have one more step to complete
+      await user?.reload();
+      router.push("/onboarding/children");
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add children, please try again.",
+        variant: "destructive",
+      });
       console.error("Onboarding failed:", error);
     }
   };

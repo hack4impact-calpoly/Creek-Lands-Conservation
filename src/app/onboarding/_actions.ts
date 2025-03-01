@@ -96,7 +96,7 @@ export const userOnboarding = async (formData: FormData) => {
     const mongoRes = await updateUser(userId, updatedData);
     if (mongoRes.error) return { error: mongoRes.error };
 
-    return { message: "Onboarding complete." };
+    return { message: "User Onboarding complete." };
   } catch (err) {
     console.error("Error in userOnboarding:", err);
     return { error: "Internal error occurred while completing onboarding." };
@@ -120,6 +120,9 @@ export const childrenOnboarding = async (
     waiversSigned: [],
   }));
 
+  // TODO verify which of the fields are required.
+  // Child Schema suggests neither birthday nor gender are required
+  // I will require all of them, remove unecessary requirements later
   if (formattedChildren.some((child) => !child.firstName || !child.lastName || isNaN(child.birthday.getTime()))) {
     return { error: "Each child must have a valid first name, last name, and birthday." };
   }
