@@ -20,7 +20,7 @@ export const FormActions = ({
   className,
 }: FormActionsProps) => (
   <div className={cn("flex flex-col items-center justify-between gap-3 sm:flex-row sm:gap-4", className)}>
-    <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onSecondary}>
+    <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={onSecondary} disabled={isSubmitting}>
       {secondaryLabel}
     </Button>
     <Button type="submit" className="w-full sm:w-auto" disabled={isSubmitting}>

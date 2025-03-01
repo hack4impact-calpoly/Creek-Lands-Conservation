@@ -43,13 +43,14 @@ export default function ChildrenOnboardingPage() {
 
   const onSubmit = async (data: ChildFormData) => {
     try {
-      const validChildren = data.children.filter((child) => child.firstName.trim() && child.lastName.trim());
-
-      if (validChildren.length === 0) {
+      const children = data.children;
+      // validation is done by the form hook, but the user can choose to
+      // remove all children, check for that case
+      if (children.length === 0) {
         const res = await completeOnboarding();
         if (res?.error) throw new Error(res.error);
       } else {
-        const res = await childrenOnboarding(validChildren);
+        const res = await childrenOnboarding(children);
         if (res?.error) throw new Error(res.error);
       }
       await user?.reload();
