@@ -31,7 +31,7 @@ interface EventInfoProps {
   email?: string;
   capacity?: number;
   currentRegistrations?: number;
-  userRegistered: boolean;
+  userRegistered?: boolean;
   onDelete?: (eventId: string) => void;
 }
 
