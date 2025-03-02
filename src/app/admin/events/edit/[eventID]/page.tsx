@@ -14,6 +14,7 @@ import Link from "next/link";
 import { validateEventDates } from "@/lib/utils";
 import LoadingSkeleton from "@/components/Forms/LoadingSkeleton";
 import { EventFormData } from "@/types/events";
+import { TextAreaField } from "@/components/Forms/TextAreaField";
 
 const EditEventPage = () => {
   const router = useRouter();
@@ -144,9 +145,25 @@ const EditEventPage = () => {
             <fieldset className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
               <legend className="mb-2 text-lg font-semibold md:col-span-2">Event Details</legend>
 
-              <InputField label="Event Title *" name="title" register={register} error={errors.title} />
+              <InputField
+                label="Event Title *"
+                name="title"
+                register={register}
+                error={errors.title}
+                rules={{
+                  required: "Cannot leave blank",
+                }}
+              />
 
-              <InputField label="Location *" name="location" register={register} error={errors.location} />
+              <InputField
+                label="Location *"
+                name="location"
+                register={register}
+                error={errors.location}
+                rules={{
+                  required: "Cannot leave blank",
+                }}
+              />
 
               <InputField
                 label="Capacity *"
@@ -155,7 +172,11 @@ const EditEventPage = () => {
                 register={register}
                 error={errors.capacity}
                 disabled={hasEventStarted}
+                step={1}
                 min={0}
+                rules={{
+                  required: "Cannot leave blank",
+                }}
               />
 
               <InputField
@@ -166,15 +187,12 @@ const EditEventPage = () => {
                 register={register}
                 error={errors.fee}
                 min={0}
+                rules={{
+                  required: "Cannot leave blank",
+                }}
               />
 
-              <InputField
-                label="Description"
-                name="description"
-                type="textarea"
-                register={register}
-                className="md:col-span-2"
-              />
+              <TextAreaField label="Description" name="description" register={register} className="md:col-span-2" />
             </fieldset>
 
             {/* Date & Time Section */}
@@ -188,6 +206,12 @@ const EditEventPage = () => {
                 register={register}
                 errors={{ date: errors.startDate, time: errors.startTime }}
                 disabled={hasEventStarted}
+                dateRules={{
+                  required: "Cannot leave blank",
+                }}
+                timeRules={{
+                  required: "Cannot leave blank",
+                }}
               />
 
               <DateTimeField
@@ -197,6 +221,12 @@ const EditEventPage = () => {
                 register={register}
                 errors={{ date: errors.endDate, time: errors.endTime }}
                 disabled={hasEventStarted}
+                dateRules={{
+                  required: "Cannot leave blank",
+                }}
+                timeRules={{
+                  required: "Cannot leave blank",
+                }}
               />
 
               {/* Registration Deadline - (this one is wider) */}

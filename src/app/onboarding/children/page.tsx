@@ -11,15 +11,7 @@ import { InputField } from "@/components/Forms/InputField";
 import { SelectField } from "@/components/Forms/SelectField";
 import { FormActions } from "@/components/Forms/FormActions";
 import { useToast } from "@/hooks/use-toast";
-
-export type ChildFormData = {
-  children: Array<{
-    firstName: string;
-    lastName: string;
-    birthday: string;
-    gender: "Male" | "Female" | "Non-binary" | "Prefer Not to Say" | "";
-  }>;
-};
+import { ChildFormData } from "@/types/onboarding";
 
 export default function ChildrenOnboardingPage() {
   const { user } = useUser();

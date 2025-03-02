@@ -35,12 +35,7 @@ export default function OnboardingPage() {
 
   const onSubmit = async (data: OnboardingFormData) => {
     try {
-      const formData = new FormData();
-
-      // TODO modify _actions to accept the data directly
-      Object.entries(data).forEach(([key, value]) => formData.append(key, value));
-
-      const res = await userOnboarding(formData);
+      const res = await userOnboarding(data);
       if (res?.error) {
         throw new Error(res.error);
       }

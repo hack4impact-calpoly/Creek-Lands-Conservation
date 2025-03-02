@@ -1,4 +1,3 @@
-// components/DateTimeField.tsx
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { FieldError, FieldPath, FieldValues, Path, RegisterOptions, UseFormRegister } from "react-hook-form";
@@ -19,6 +18,7 @@ type DateTimeFieldProps<
   className?: string;
 };
 
+/* If more flexibility is needed, using regular InputField components will have a better result */
 export const DateTimeField = <T extends FieldValues, U extends FieldPath<T>, V extends FieldPath<T>>({
   dateName,
   timeName,
