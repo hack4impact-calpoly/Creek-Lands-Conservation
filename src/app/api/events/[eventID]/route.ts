@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 import connectDB from "@/database/db";
 import Event from "@/database/eventSchema";
+import User from "@/database/userSchema";
 import { authenticateAdmin } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
 
 // PUT: Update an Event
 export async function PUT(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
-
   const { eventID } = params;
   // Checking if the ID is valid
   if (!mongoose.Types.ObjectId.isValid(eventID)) {
@@ -21,17 +21,28 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
       return NextResponse.json({ error: "Unauthorized. Please log in." }, { status: 401 });
     }
 
+    // Find user in MongoDB using Clerk ID
+    const person = await User.findOne({ clerkID: userId });
+
+    if (!person) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+
+    // get their user id to use for registration
+    const mongoUserId = person._id;
+
     const updatedData = await req.json();
 
     // Check if user is trying to register for event
     if (updatedData.registerForEvent) {
+      console.log("PUT - registering for events");
       const event = await Event.findById(eventID);
       if (!event) {
         return NextResponse.json({ error: "Event not found" }, { status: 404 });
       }
 
       // Check if user already registered for the event
-      if (event.registeredUsers.includes(userId)) {
+      if (event.registeredUsers.includes(mongoUserId)) {
         return NextResponse.json({ error: "User already registered for this event" }, { status: 400 });
       }
 
@@ -45,7 +56,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
         return NextResponse.json({ error: "Event is at full capacity." }, { status: 400 });
       }
 
-      event.registeredUsers.push(userId);
+      event.registeredUsers.push(mongoUserId);
       await event.save();
 
       return NextResponse.json({ message: "Successfully registered for the event.", event }, { status: 200 });
