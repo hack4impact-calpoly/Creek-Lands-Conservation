@@ -24,6 +24,8 @@ export default function ChildrenOnboardingPage() {
     formState: { errors, isSubmitting },
   } = useForm<ChildFormData>({
     defaultValues: {
+      // Children IDs should be created in the backend, if anywhere.
+      // Current schema specifies auto generated _id will be used
       children: [{ firstName: "", lastName: "", birthday: "", gender: "" }],
     },
   });
@@ -115,7 +117,7 @@ export default function ChildrenOnboardingPage() {
                 type="date"
                 register={register}
                 error={errors.children?.[index]?.birthday}
-                rules={{ required: "Birthday is required" }} // According to Child Schema
+                rules={{ required: "Birthday is required" }} // TODO verify if required
               />
 
               <SelectField
@@ -128,7 +130,7 @@ export default function ChildrenOnboardingPage() {
                   { value: "Non-binary", label: "Non-binary" },
                   { value: "Prefer Not to Say", label: "Prefer Not to Say" },
                 ]}
-                rules={{ required: "Gender is required" }}
+                rules={{ required: "Gender is required" }} // TODO verify if required
                 placeholder="Select Gender"
               />
 
