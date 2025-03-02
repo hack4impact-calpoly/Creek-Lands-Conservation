@@ -79,6 +79,7 @@ export default function AdminPage() {
             registrationDeadline={event.registrationDeadline}
             capacity={event.capacity}
             currentRegistrations={event.registeredUsers.length}
+            userRegistered={false}
             onDelete={handleDeleteEvent}
           />
         ))}
