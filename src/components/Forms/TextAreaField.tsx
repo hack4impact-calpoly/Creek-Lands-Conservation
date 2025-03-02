@@ -11,7 +11,7 @@ type TextAreaFieldProps<
   // get all input props
   name: TFieldName;
   label: string;
-  register: UseFormRegister<TFieldValues>; // TODO pass the register return instead
+  register: UseFormRegister<TFieldValues>;
   rules?: RegisterOptions<TFieldValues, TFieldName>;
   error?: FieldError;
   className?: string;
