@@ -8,8 +8,6 @@ import { auth } from "@clerk/nextjs/server";
 
 // PUT: Update an Event
 export async function PUT(req: NextRequest, { params }: { params: { eventID: string } }) {
-  console.log("Request received for PUT");
-
   await connectDB();
   const { eventID } = params;
   // Checking if the ID is valid
@@ -34,7 +32,6 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
     const mongoUserId = person._id;
 
     const updatedData = await req.json();
-    console.log(updatedData);
 
     // Check if user is trying to register for event
     if (updatedData.registerForEvent) {
