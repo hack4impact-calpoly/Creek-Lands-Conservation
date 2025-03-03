@@ -4,146 +4,141 @@ import * as React from "react";
 import { useRouter } from "next/navigation";
 import { useUser } from "@clerk/nextjs";
 import { childrenOnboarding, completeOnboarding } from "../_actions";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useFieldArray, useForm } from "react-hook-form";
+import { InputField } from "@/components/Forms/InputField";
+import { SelectField } from "@/components/Forms/SelectField";
+import { FormActions } from "@/components/Forms/FormActions";
+import { useToast } from "@/hooks/use-toast";
+import { ChildFormData } from "@/types/onboarding";
 
 export default function ChildrenOnboardingPage() {
-  const [children, setChildren] = React.useState([
-    { id: Date.now(), firstName: "", lastName: "", birthday: "", gender: "" },
-  ]);
-  const [error, setError] = React.useState("");
-  const [isLoading, setIsLoading] = React.useState(false);
-  const router = useRouter();
   const { user } = useUser();
+  const router = useRouter();
+  const { toast } = useToast();
+  const {
+    control,
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<ChildFormData>({
+    defaultValues: {
+      // Children IDs should be created in the backend, if anywhere.
+      // Current schema specifies auto generated _id will be used
+      children: [{ firstName: "", lastName: "", birthday: "", gender: "" }],
+    },
+  });
 
-  const handleAddChild = () => {
-    setChildren([...children, { id: Date.now(), firstName: "", lastName: "", birthday: "", gender: "" }]);
-  };
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "children",
+  });
 
-  const handleRemoveChild = (id: number) => {
-    setChildren(children.filter((child) => child.id !== id));
-  };
-
-  const handleChange = (index: number, field: string, value: string) => {
-    const updatedChildren = [...children];
-    updatedChildren[index] = { ...updatedChildren[index], [field]: value };
-    setChildren(updatedChildren);
-  };
-
-  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setIsLoading(true);
-
-    if (
-      children.length > 0 &&
-      children.some((child) => !child.firstName || !child.lastName || !child.birthday || !child.gender)
-    ) {
-      setError("All fields for each child must be filled out.");
-      setIsLoading(false);
-      return;
-    }
-
+  const onSubmit = async (data: ChildFormData) => {
     try {
-      if (children.length === 0 || children.every((child) => !child.firstName && !child.lastName)) {
-        await completeOnboarding();
+      const children = data.children;
+      /* validation is done by the form hook, but the user can choose to
+       remove all children to skip the onboarding*/
+      if (children.length === 0) {
+        const res = await completeOnboarding();
+        if (res?.error) throw new Error(res.error);
       } else {
         const res = await childrenOnboarding(children);
-        if (res?.error) {
-          setError(res.error);
-          return;
-        }
-        await user?.reload();
+        if (res?.error) throw new Error(res.error);
       }
-      router.push("/"); // Redirect after onboarding
-    } catch (err) {
-      setError("An unexpected error occurred.");
-    } finally {
-      setIsLoading(false);
+      await user?.reload();
+      toast({
+        title: "Success",
+        description: "Onboarding Complete!",
+        variant: "success",
+      });
+      router.push("/");
+    } catch (err: any) {
+      toast({
+        title: "Error",
+        description: err.message || "Failed to add children, please try again.",
+        variant: "destructive",
+      });
+      console.error("Onboarding failed:", err.message);
     }
   };
 
   const handleSkip = async () => {
-    setIsLoading(true);
     try {
-      await completeOnboarding();
+      const res = await completeOnboarding();
+      if (res?.error) throw new Error(res.error);
       router.push("/");
-    } catch (err) {
-      setError("An unexpected error occurred.");
-    } finally {
-      setIsLoading(false);
+    } catch (err: any) {
+      console.error("Skip failed:", err.message);
     }
   };
 
   return (
-    <Card className="mx-auto max-w-lg rounded-lg bg-white p-6 shadow-md">
+    <Card className="mx-auto max-w-lg rounded-lg bg-white p-2 shadow-md">
       <CardContent>
         <h1 className="mb-4 text-center text-xl font-bold">Add Your Children</h1>
         <p className="text-center text-sm text-gray-600">
-          If you don&apos;t have children to add, you can skip this step.
+          {"If you don't have children to add, you can skip this step."}
         </p>
 
-        <form onSubmit={handleSubmit} className="mt-4 space-y-6">
-          {children.map((child, index) => (
-            <fieldset key={child.id} className="space-y-2 rounded-lg border p-4">
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">
+          {fields.map((field, index) => (
+            <fieldset key={field.id} className="flex flex-col gap-3 rounded-lg border p-4 sm:gap-4">
               <legend className="text-md font-semibold">Child {index + 1}</legend>
 
-              <label htmlFor={`firstName-${index}`} className="block text-sm font-medium">
-                First Name
-              </label>
-              <Input
-                id={`firstName-${index}`}
-                type="text"
+              <InputField
+                label="First Name *"
+                name={`children.${index}.firstName`}
+                register={register}
+                error={errors.children?.[index]?.firstName}
+                rules={{
+                  required: "First name is required",
+                  validate: (value) => !!value.trim() || "Cannot be empty",
+                }}
                 placeholder="Enter first name"
-                value={child.firstName}
-                onChange={(e) => handleChange(index, "firstName", e.target.value)}
-                required
               />
 
-              <label htmlFor={`lastName-${index}`} className="block text-sm font-medium">
-                Last Name
-              </label>
-              <Input
-                id={`lastName-${index}`}
-                type="text"
+              <InputField
+                label="Last Name *"
+                name={`children.${index}.lastName`}
+                register={register}
+                error={errors.children?.[index]?.lastName}
+                rules={{
+                  required: "Last name is required",
+                  validate: (value) => !!value.trim() || "Cannot be empty",
+                }}
                 placeholder="Enter last name"
-                value={child.lastName}
-                onChange={(e) => handleChange(index, "lastName", e.target.value)}
-                required
               />
 
-              <label htmlFor={`birthday-${index}`} className="block text-sm font-medium">
-                Birthday
-              </label>
-              <Input
-                id={`birthday-${index}`}
+              <InputField
+                label="Birthday"
+                name={`children.${index}.birthday`}
                 type="date"
-                value={child.birthday}
-                onChange={(e) => handleChange(index, "birthday", e.target.value)}
-                required
+                register={register}
+                error={errors.children?.[index]?.birthday}
+                rules={{ required: "Birthday is required" }} // TODO verify if required
               />
 
-              <label htmlFor={`gender-${index}`} className="block text-sm font-medium">
-                Gender
-              </label>
-              <Select value={child.gender} onValueChange={(value) => handleChange(index, "gender", value)} required>
-                <SelectTrigger id={`gender-${index}`}>
-                  <SelectValue placeholder="Select Gender" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Male">Male</SelectItem>
-                  <SelectItem value="Female">Female</SelectItem>
-                  <SelectItem value="Non-binary">Non-binary</SelectItem>
-                  <SelectItem value="Prefer Not to Say">Prefer Not to Say</SelectItem>
-                </SelectContent>
-              </Select>
+              <SelectField
+                label="Gender *"
+                name={`children.${index}.gender`}
+                control={control}
+                options={[
+                  { value: "Male", label: "Male" },
+                  { value: "Female", label: "Female" },
+                  { value: "Non-binary", label: "Non-binary" },
+                  { value: "Prefer Not to Say", label: "Prefer Not to Say" },
+                ]}
+                rules={{ required: "Gender is required" }} // TODO verify if required
+                placeholder="Select Gender"
+              />
 
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => handleRemoveChild(child.id)}
-                className="mt-2 text-red-600 hover:bg-red-100"
+                onClick={() => remove(index)}
+                className="mt-2 self-start text-red-600 hover:bg-red-100"
               >
                 Remove Child
               </Button>
@@ -151,21 +146,21 @@ export default function ChildrenOnboardingPage() {
           ))}
 
           <div className="flex justify-center">
-            <Button type="button" variant="outline" onClick={handleAddChild}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => append({ firstName: "", lastName: "", birthday: "", gender: "" })}
+            >
               + Add Another Child
             </Button>
           </div>
 
-          {error && <p className="text-center text-sm text-red-600">{error}</p>}
-
-          <div className="mt-4 flex justify-between">
-            <Button type="submit" disabled={isLoading}>
-              {isLoading ? "Submitting..." : "Save & Continue"}
-            </Button>
-            <Button type="button" variant="ghost" onClick={handleSkip} disabled={isLoading}>
-              Skip
-            </Button>
-          </div>
+          <FormActions
+            onSecondary={handleSkip}
+            isSubmitting={isSubmitting}
+            submitLabel="Save & Continue"
+            secondaryLabel="Skip"
+          />
         </form>
       </CardContent>
     </Card>

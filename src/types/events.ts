@@ -1,5 +1,4 @@
-// types/events.ts
-export interface EventFormData {
+export type EventFormData = {
   title: string;
   startDate: string;
   startTime: string;
@@ -11,4 +10,4 @@ export interface EventFormData {
   description?: string;
   registrationDeadlineDate: string;
   registrationDeadlineTime: string;
-}
+};

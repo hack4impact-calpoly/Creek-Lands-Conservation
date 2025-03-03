@@ -6,14 +6,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { IEventUpdate } from "@/database/eventSchema";
-import { FormField } from "@/components/Forms/FormField";
+import { InputField } from "@/components/Forms/InputField";
 import { DateTimeField } from "@/components/Forms/DateTimeField";
 import { FormActions } from "@/components/Forms/FormActions";
 import { parseDateTime } from "@/lib/utils";
 import Link from "next/link";
-import { EventFormData } from "@/types/events";
 import { validateEventDates } from "@/lib/utils";
 import LoadingSkeleton from "@/components/Forms/LoadingSkeleton";
+import { EventFormData } from "@/types/events";
+import { TextAreaField } from "@/components/Forms/TextAreaField";
 
 const EditEventPage = () => {
   const router = useRouter();
@@ -144,21 +145,41 @@ const EditEventPage = () => {
             <fieldset className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
               <legend className="mb-2 text-lg font-semibold md:col-span-2">Event Details</legend>
 
-              <FormField label="Event Title *" name="title" register={register} error={errors.title} />
+              <InputField
+                label="Event Title *"
+                name="title"
+                register={register}
+                error={errors.title}
+                rules={{
+                  required: "Cannot leave blank",
+                }}
+              />
 
-              <FormField label="Location *" name="location" register={register} error={errors.location} />
+              <InputField
+                label="Location *"
+                name="location"
+                register={register}
+                error={errors.location}
+                rules={{
+                  required: "Cannot leave blank",
+                }}
+              />
 
-              <FormField
+              <InputField
                 label="Capacity *"
                 name="capacity"
                 type="number"
                 register={register}
                 error={errors.capacity}
                 disabled={hasEventStarted}
+                step={1}
                 min={0}
+                rules={{
+                  required: "Cannot leave blank",
+                }}
               />
 
-              <FormField
+              <InputField
                 label="Fee ($) *"
                 name="fee"
                 type="number"
@@ -166,15 +187,12 @@ const EditEventPage = () => {
                 register={register}
                 error={errors.fee}
                 min={0}
+                rules={{
+                  required: "Cannot leave blank",
+                }}
               />
 
-              <FormField
-                label="Description"
-                name="description"
-                type="textarea"
-                register={register}
-                className="md:col-span-2"
-              />
+              <TextAreaField label="Description" name="description" register={register} className="md:col-span-2" />
             </fieldset>
 
             {/* Date & Time Section */}
@@ -188,6 +206,12 @@ const EditEventPage = () => {
                 register={register}
                 errors={{ date: errors.startDate, time: errors.startTime }}
                 disabled={hasEventStarted}
+                dateRules={{
+                  required: "Cannot leave blank",
+                }}
+                timeRules={{
+                  required: "Cannot leave blank",
+                }}
               />
 
               <DateTimeField
@@ -197,6 +221,12 @@ const EditEventPage = () => {
                 register={register}
                 errors={{ date: errors.endDate, time: errors.endTime }}
                 disabled={hasEventStarted}
+                dateRules={{
+                  required: "Cannot leave blank",
+                }}
+                timeRules={{
+                  required: "Cannot leave blank",
+                }}
               />
 
               {/* Registration Deadline - (this one is wider) */}
@@ -212,10 +242,11 @@ const EditEventPage = () => {
             </fieldset>
 
             <FormActions
-              onCancel={() => {
+              onSecondary={() => {
                 if (window.history.length > 1) router.back();
                 else router.push("/admin/events");
               }}
+              submitLabel="Save Changes"
               isSubmitting={saving}
             />
           </form>
