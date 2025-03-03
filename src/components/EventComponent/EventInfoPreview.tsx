@@ -330,23 +330,28 @@ export function EventInfoPreview({
         </AlertDialogContent>
       </AlertDialog>
 
-      <EventRegisterPreview
-        isOpen={isRegisterDialogOpen}
-        onOpenChange={setIsRegisterDialogOpen}
-        eventInfo={{
-          title: title,
-          date: startDateTime ? startDateTime.toLocaleDateString() : "TBD",
-          time: startDateTime ? startDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD",
-          location: location,
-          contactEmail: email || "info@creeklands.org",
-          waiverDueDate: registrationDeadline ? registrationDeadline.toLocaleDateString() : "TBD",
-        }}
-        userInfo={{
-          name: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
-          family: userFamily,
-        }}
-        onConfirm={handleRegisterEvent}
-      />
+      {!isFull && !userRegistered && (
+        <EventRegisterPreview
+          isOpen={isRegisterDialogOpen}
+          onOpenChange={setIsRegisterDialogOpen}
+          eventInfo={{
+            title: title,
+            startDate: startDateTime ? startDateTime.toLocaleDateString() : "TBD",
+            endDate: endDateTime ? endDateTime.toLocaleDateString() : "TBD",
+            startTime: startDateTime
+              ? startDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+              : "TBD",
+            endTime: endDateTime ? endDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD",
+            location: location,
+            contactEmail: email || "info@creeklands.org",
+          }}
+          userInfo={{
+            name: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
+            family: userFamily,
+          }}
+          onConfirm={handleRegisterEvent}
+        />
+      )}
     </>
   );
 }

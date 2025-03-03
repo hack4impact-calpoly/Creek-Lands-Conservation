@@ -12,11 +12,12 @@ interface RegisterDialogProps {
   onOpenChange: (open: boolean) => void;
   eventInfo: {
     title: string;
-    date: string;
-    time: string;
+    startDate: string;
+    endDate: string;
+    startTime: string;
+    endTime: string;
     location: string;
     contactEmail: string;
-    waiverDueDate: string;
   };
   userInfo: {
     name: string;
@@ -33,19 +34,19 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="w-[75vw] min-w-[900px] p-8">
-        <DialogHeader>
-          <div className="flex items-center justify-between">
+        <DialogHeader className="items-center">
+          <div className="mb-2 flex items-center justify-between">
             <DialogTitle className="text-3xl font-bold">Register for: {eventInfo.title}</DialogTitle>
           </div>
 
-          <div className="mt-4 flex gap-6 text-sm text-gray-600">
+          <div className="flex gap-6 text-sm text-gray-600">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
-              {eventInfo.date}
+              {eventInfo.startDate} - {eventInfo.endDate}
             </div>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4" />
-              {eventInfo.time}
+              {eventInfo.startTime} - {eventInfo.endTime}
             </div>
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4" />
@@ -58,7 +59,7 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
           </div>
         </DialogHeader>
 
-        <div className="mt-6 grid grid-cols-2 gap-12">
+        <div className="mt-2 grid grid-cols-2 gap-12">
           <div className="w-full">
             <h3 className="mb-4 font-semibold">Who&apos;s attending?</h3>
             <div className="space-y-3">
