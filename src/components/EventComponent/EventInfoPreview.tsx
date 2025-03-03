@@ -18,6 +18,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
+import { EventRegisterPreview } from "./EventRegisterPreview";
 
 interface EventInfoProps {
   id: string;
@@ -54,6 +55,7 @@ export function EventInfoPreview({
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
+  const [userFamily, setUserFamily] = useState<{ name: string }[]>([]);
   const { toast } = useToast();
   const { user } = useUser();
   const router = useRouter();
@@ -71,6 +73,37 @@ export function EventInfoPreview({
       : [
           "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg",
         ];
+
+  // Fetch user's family information when dialog opens
+  const fetchUserFamily = async () => {
+    if (!user?.id) return;
+
+    try {
+      const response = await fetch(`/api/users/${user.id}`);
+      if (!response.ok) throw new Error("Failed to fetch user data");
+
+      const userData = await response.json();
+      const familyMembers =
+        userData.children?.map((child: any) => ({
+          name: `${child.firstName || ""} ${child.lastName || ""}`.trim(),
+        })) || [];
+
+      setUserFamily(familyMembers);
+    } catch (error) {
+      console.error("Error fetching user family:", error);
+      toast({
+        title: "Error",
+        description: "Failed to load family information",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // Fetch family data when register dialog opens
+  const handleOpenRegisterDialog = () => {
+    fetchUserFamily();
+    setIsRegisterDialogOpen(true);
+  };
 
   const handleDeleteEvent = async () => {
     setIsDeleting(true);
@@ -249,8 +282,8 @@ export function EventInfoPreview({
           </div>
           <DialogFooter className="flex justify-between">
             <Button
-              className={`text-white ${userRegistered ? "cursor-not-allowed bg-gray-400" : "bg-green-500 hover:bg-green-600"}`}
-              onClick={() => setIsRegisterDialogOpen(true)}
+              className={`text-white ${userRegistered ? "cursor-not-allowed bg-gray-400" : "bg-[#488644] text-white hover:bg-[#3a6d37]"}`}
+              onClick={handleOpenRegisterDialog}
               disabled={isRegisterDisabled}
             >
               {isFull
@@ -259,7 +292,7 @@ export function EventInfoPreview({
                   ? "Registration Closed"
                   : userRegistered
                     ? "Already Registered"
-                    : "Sign Up"}
+                    : "Register"}
             </Button>
             {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
@@ -297,20 +330,28 @@ export function EventInfoPreview({
         </AlertDialogContent>
       </AlertDialog>
 
-      <AlertDialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Registration</AlertDialogTitle>
-            <AlertDialogDescription>Are you sure you want to register for this event?</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRegisterEvent} disabled={isRegistering}>
-              {isRegistering ? "Registering..." : "Confirm"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {!isFull && !userRegistered && (
+        <EventRegisterPreview
+          isOpen={isRegisterDialogOpen}
+          onOpenChange={setIsRegisterDialogOpen}
+          eventInfo={{
+            title: title,
+            startDate: startDateTime ? startDateTime.toLocaleDateString() : "TBD",
+            endDate: endDateTime ? endDateTime.toLocaleDateString() : "TBD",
+            startTime: startDateTime
+              ? startDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+              : "TBD",
+            endTime: endDateTime ? endDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD",
+            location: location,
+            contactEmail: email || "info@creeklands.org",
+          }}
+          userInfo={{
+            name: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
+            family: userFamily,
+          }}
+          onConfirm={handleRegisterEvent}
+        />
+      )}
     </>
   );
 }
