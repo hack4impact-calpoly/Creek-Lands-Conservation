@@ -128,9 +128,9 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
               </div>
 
               {waiverSigned ? (
-                <Button variant="outline" className="w-full bg-green-500 text-white hover:bg-green-600">
+                <Button variant="outline" className="w-full bg-[#488644] text-white hover:bg-[#3a6d37]">
                   <Check className="mr-2 h-4 w-4" />
-                  Signed on {/* Add date here */}
+                  Signed on {new Date().toLocaleDateString()}
                   <span className="ml-2 text-sm">Click here to view</span>
                 </Button>
               ) : (
@@ -148,7 +148,7 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
           )}
           {waiverSigned && (
             <Button className="mx-auto w-2/5 bg-[#488644] text-white hover:bg-[#3a6d37]" onClick={onConfirm}>
-              Sign and return to calendar
+              Sign and Return to Events
             </Button>
           )}
         </DialogFooter>

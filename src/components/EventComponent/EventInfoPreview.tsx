@@ -292,7 +292,7 @@ export function EventInfoPreview({
                   ? "Registration Closed"
                   : userRegistered
                     ? "Already Registered"
-                    : "Sign Up"}
+                    : "Register"}
             </Button>
             {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
