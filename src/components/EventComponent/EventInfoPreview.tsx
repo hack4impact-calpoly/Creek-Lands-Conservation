@@ -31,6 +31,7 @@ interface EventInfoProps {
   email?: string;
   capacity?: number;
   currentRegistrations?: number;
+  userRegistered?: boolean;
   onDelete?: (eventId: string) => void;
 }
 
@@ -46,14 +47,23 @@ export function EventInfoPreview({
   email = "info@creeklands.org",
   capacity,
   currentRegistrations,
+  userRegistered,
   onDelete,
 }: EventInfoProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
   const { toast } = useToast();
   const { user } = useUser();
   const router = useRouter();
   const isAdmin = user?.publicMetadata?.userRole === "admin";
+
+  // for registration validation
+  const hasRegistrationClosed = registrationDeadline ? new Date() > registrationDeadline : false;
+  const isFull = capacity !== undefined && currentRegistrations !== undefined && currentRegistrations >= capacity;
+  const [isRegistered, setIsRegistered] = useState(false);
+  const isRegisterDisabled = hasRegistrationClosed || isFull || isRegistered;
 
   const eventImages =
     images.length > 0
@@ -93,6 +103,58 @@ export function EventInfoPreview({
     } finally {
       setIsDeleting(false);
       setIsDeleteDialogOpen(false);
+    }
+  };
+
+  const handleRegisterEvent = async () => {
+    // make sure you are logged in to register
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to register.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsRegistering(true);
+
+    try {
+      console.log(id);
+      console.log(title);
+      const response = await fetch(`/api/events/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ registerForEvent: true }),
+      });
+
+      // Parse the response body as JSON and handle errors accordingly
+      const responseData = await response.json();
+
+      if (!response.ok) {
+        throw new Error(responseData.error || "Failed to register for event.");
+      }
+
+      // Wait for 3 seconds before reloading the page
+      setTimeout(() => {
+        window.location.reload(); // This will reload the page after the specified delay
+      }, 3000);
+
+      toast({
+        title: "Registration successful",
+        description: "You have been registered for the event.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to register for the event. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRegistering(false);
+      setIsRegisterDialogOpen(false);
     }
   };
 
@@ -185,7 +247,20 @@ export function EventInfoPreview({
               </div>
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex justify-between">
+            <Button
+              className={`text-white ${userRegistered ? "cursor-not-allowed bg-gray-400" : "bg-green-500 hover:bg-green-600"}`}
+              onClick={() => setIsRegisterDialogOpen(true)}
+              disabled={isRegisterDisabled}
+            >
+              {isFull
+                ? "Event Full"
+                : hasRegistrationClosed
+                  ? "Registration Closed"
+                  : userRegistered
+                    ? "Already Registered"
+                    : "Sign Up"}
+            </Button>
             {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
                 <Button variant="outline" onClick={() => handleEditEvent()}>
@@ -217,6 +292,21 @@ export function EventInfoPreview({
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               {isDeleting ? "Deleting..." : "Delete Event"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={isRegisterDialogOpen} onOpenChange={setIsRegisterDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirm Registration</AlertDialogTitle>
+            <AlertDialogDescription>Are you sure you want to register for this event?</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRegisterEvent} disabled={isRegistering}>
+              {isRegistering ? "Registering..." : "Confirm"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
