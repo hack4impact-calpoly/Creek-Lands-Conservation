@@ -18,8 +18,6 @@ import { TextAreaField } from "@/components/Forms/TextAreaField";
 import { MinimalTiptapEditor } from "@/components/minimal-tiptap";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
-type Content = string;
-
 const EditEventPage = () => {
   const router = useRouter();
   const { eventID } = useParams();
@@ -30,7 +28,7 @@ const EditEventPage = () => {
     setValue,
     formState: { errors },
   } = useForm<EventFormData>();
-  const [descContent, setDescContent] = useState<Content>("");
+  const [descContent, setDescContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasEventStarted, setHasEventStarted] = useState(false);

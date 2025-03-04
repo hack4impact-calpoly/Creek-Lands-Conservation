@@ -19,12 +19,10 @@ type EventFormData = {
   fee: number;
 };
 
-type Content = string;
-
 export default function CreateEventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [descContent, setDescContent] = useState<Content>("");
-  const [pNoteContent, setPNoteContent] = useState<Content>("");
+  const [descContent, setDescContent] = useState("");
+  const [pNoteContent, setPNoteContent] = useState("");
   const { toast } = useToast();
   const {
     register,
