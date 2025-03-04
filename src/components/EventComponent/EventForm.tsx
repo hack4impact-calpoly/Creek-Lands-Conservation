@@ -84,7 +84,10 @@ export default function CreateEventForm() {
         });
 
         if (response.ok) {
-          setEditorContent("");
+          setDescContent("");
+          setPNoteContent("");
+          setValue("description", "");
+          setValue("paymentNote", "");
           reset();
           toast({
             title: "Event Created Successfully!",
@@ -204,19 +207,20 @@ export default function CreateEventForm() {
         </label>
         <TooltipProvider>
           <MinimalTiptapEditor
+            key={descContent}
             value={descContent}
             onChange={setDescContent}
             className="w-full"
             editorContentClassName="p-5"
             output="html"
-            placeholder="Provide a brief description of the event.."
+            placeholder="Provide a brief description of the event"
             autofocus={true}
             editable={true}
             editorClassName="focus:outline-none"
           />
         </TooltipProvider>
 
-        <input type="hidden" {...register("description")} value={descContent} />
+        <input name="description" id="description" type="hidden" {...register("description")} value={descContent} />
       </div>
 
       <h1 className="text-xl font-bold">Waivers and Registration</h1>
@@ -272,21 +276,24 @@ export default function CreateEventForm() {
         <label htmlFor="paymentNote" className="block font-medium">
           Notes About Payment?
         </label>
-        <TooltipProvider>
-          <MinimalTiptapEditor
-            value={pNoteContent}
-            onChange={setPNoteContent}
-            className="w-full"
-            editorContentClassName="p-5"
-            output="html"
-            placeholder="e.g. If you signed up for the overnight hiking/camping combo, the price is $10 for just the day trip and $20 for overnight. If there are multiple attendees, children under 15 are $10 and adults are $20."
-            autofocus={true}
-            editable={true}
-            editorClassName="focus:outline-none"
-          />
-        </TooltipProvider>
+        <div id="paymentNote" aria-labelledby="paymentNote">
+          <TooltipProvider>
+            <MinimalTiptapEditor
+              key={pNoteContent}
+              value={pNoteContent}
+              onChange={setPNoteContent}
+              className="w-full"
+              editorContentClassName="p-5"
+              output="html"
+              placeholder="e.g. If you signed up for the overnight hiking/camping combo, the price is $10 for just the day trip and $20 for overnight. If there are multiple attendees, children under 15 are $10 and adults are $20."
+              autofocus={true}
+              editable={true}
+              editorClassName="focus:outline-none"
+            />
+          </TooltipProvider>
 
-        {/* <input type="hidden" {...register("description")} value={pNoteContent} /> */}
+          {/* <input name="paymentNote" id="paymentNote" type="hidden" {...register("description")} value={pNoteContent} /> */}
+        </div>
       </div>
 
       <div className="flex justify-end space-x-4">

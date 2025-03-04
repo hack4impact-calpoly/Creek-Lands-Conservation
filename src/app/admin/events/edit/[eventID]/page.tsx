@@ -15,6 +15,8 @@ import { validateEventDates } from "@/lib/utils";
 import LoadingSkeleton from "@/components/Forms/LoadingSkeleton";
 import { EventFormData } from "@/types/events";
 import { TextAreaField } from "@/components/Forms/TextAreaField";
+import { MinimalTiptapEditor } from "@/components/minimal-tiptap";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 const EditEventPage = () => {
   const router = useRouter();
@@ -26,9 +28,14 @@ const EditEventPage = () => {
     setValue,
     formState: { errors },
   } = useForm<EventFormData>();
+  const [descContent, setDescContent] = useState<Content>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasEventStarted, setHasEventStarted] = useState(false);
+
+  useEffect(() => {
+    setValue("description", descContent);
+  }, [descContent, setValue]);
 
   useEffect(() => {
     if (!eventID) return;
@@ -43,6 +50,7 @@ const EditEventPage = () => {
         setValue("location", data.location);
         setValue("capacity", data.capacity);
         setValue("fee", data.fee);
+        setDescContent(data.description || "");
         setValue("description", data.description || "");
 
         // Set date/time fields in local time
@@ -191,8 +199,32 @@ const EditEventPage = () => {
                   required: "Cannot leave blank",
                 }}
               />
+              <div name="description" className="md:col-span-2">
+                <h2 label="Description">Description</h2>
+                <TooltipProvider>
+                  <MinimalTiptapEditor
+                    label="Description"
+                    register={register}
+                    value={descContent}
+                    onChange={setDescContent}
+                    className="w-full"
+                    editorContentClassName="p-5"
+                    output="html"
+                    placeholder="Provide a brief description of the event.."
+                    autofocus={true}
+                    editable={true}
+                    editorClassName="focus:outline-none"
+                  />
+                </TooltipProvider>
 
-              <TextAreaField label="Description" name="description" register={register} className="md:col-span-2" />
+                <input
+                  name="description"
+                  id="description"
+                  type="hidden"
+                  {...register("description")}
+                  value={descContent}
+                />
+              </div>
             </fieldset>
 
             {/* Date & Time Section */}
