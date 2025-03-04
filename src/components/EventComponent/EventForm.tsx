@@ -282,7 +282,7 @@ export default function CreateEventForm() {
           />
         </TooltipProvider>
 
-        <input type="hidden" {...register("description")} value={pNoteContent} />
+        {/* <input type="hidden" {...register("description")} value={pNoteContent} /> */}
       </div>
 
       <div className="flex justify-end space-x-4">
