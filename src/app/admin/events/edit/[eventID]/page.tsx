@@ -18,6 +18,8 @@ import { TextAreaField } from "@/components/Forms/TextAreaField";
 import { MinimalTiptapEditor } from "@/components/minimal-tiptap";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
+type Content = string;
+
 const EditEventPage = () => {
   const router = useRouter();
   const { eventID } = useParams();

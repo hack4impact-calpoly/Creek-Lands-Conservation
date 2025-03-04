@@ -19,6 +19,8 @@ type EventFormData = {
   fee: number;
 };
 
+type Content = string;
+
 export default function CreateEventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [descContent, setDescContent] = useState<Content>("");
@@ -207,7 +209,6 @@ export default function CreateEventForm() {
         </label>
         <TooltipProvider>
           <MinimalTiptapEditor
-            key={descContent}
             value={descContent}
             onChange={setDescContent}
             className="w-full"
@@ -279,7 +280,6 @@ export default function CreateEventForm() {
         <div id="paymentNote" aria-labelledby="paymentNote">
           <TooltipProvider>
             <MinimalTiptapEditor
-              key={pNoteContent}
               value={pNoteContent}
               onChange={setPNoteContent}
               className="w-full"
