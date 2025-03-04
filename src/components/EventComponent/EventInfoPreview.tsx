@@ -19,6 +19,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { EventRegisterPreview } from "./EventRegisterPreview";
+import DOMPurify from "dompurify";
 
 interface EventInfoProps {
   id: string;
@@ -60,6 +61,7 @@ export function EventInfoPreview({
   const { user } = useUser();
   const router = useRouter();
   const isAdmin = user?.publicMetadata?.userRole === "admin";
+  const sanitizedDescription = DOMPurify.sanitize(description);
 
   // for registration validation
   const hasRegistrationClosed = registrationDeadline ? new Date() > registrationDeadline : false;
@@ -260,7 +262,7 @@ export function EventInfoPreview({
 
             <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
               <Text className="h-5 w-5" />
-              <div className="prose" dangerouslySetInnerHTML={{ __html: description }} />
+              <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizedDescription }} />
             </div>
 
             <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
