@@ -6,7 +6,7 @@ import { useUser } from "@clerk/nextjs";
 import { getEvents } from "@/app/actions/events/actions";
 
 interface IEvent {
-  _id: string;
+  id: string;
   title: string;
   startDateTime: Date | null;
   endDateTime: Date | null;
@@ -19,15 +19,17 @@ interface IEvent {
 }
 
 export default function Home() {
-  const [events, setEvents] = useState<IEvent[]>([]);
+  const [allEvents, setAllEvents] = useState<IEvent[]>([]);
   const [registeredEvents, setRegisteredEvents] = useState<IEvent[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [userPastEvents, setUserPastEvents] = useState<IEvent[]>([]);
+  const [isloading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const { isLoaded, user } = useUser();
 
   useEffect(() => {
     async function fetchEvents() {
       try {
+        // TODO if not logged in still show all events
         if (!isLoaded || !user) return;
 
         // Fetch user details from MongoDB
@@ -35,19 +37,15 @@ export default function Home() {
         if (!userResponse.ok) throw new Error("Failed to fetch user data");
 
         const userData = await userResponse.json();
-        console.log("MongoDB User Data:", userData);
 
-        if (!userData || !userData._id) {
-          console.warn("User not found in MongoDB");
-          return;
-        }
+        if (!userData || !userData._id) throw new Error("User not Found in MongoDB");
 
         const mongoUserId = userData._id; // This is the ObjectId
 
         // Fetch events
         const data = await getEvents();
         const formattedEvents: IEvent[] = data.map((event: any) => ({
-          _id: event._id.toString(),
+          id: event._id.toString(),
           title: event.title || "Untitled Event",
           startDateTime: event.startDate ? new Date(event.startDate) : null,
           endDateTime: event.endDate ? new Date(event.endDate) : null,
@@ -59,47 +57,105 @@ export default function Home() {
           registeredUsers: event.registeredUsers ? event.registeredUsers.map((u: any) => u.toString()) : [],
         }));
 
-        console.log("Formatted Events:", formattedEvents);
+        const now = new Date();
+        const registered: IEvent[] = [];
+        const unregistered: IEvent[] = [];
+        const past: IEvent[] = [];
 
-        // Filter events where registeredUsers includes the MongoDB user _id
-        const userRegisteredEvents = formattedEvents.filter((event) =>
-          event.registeredUsers.map((id) => id.toString()).includes(mongoUserId.toString()),
-        );
-
-        // Exclude registered events from the all events list
-        const unregisteredEvents = formattedEvents.filter(
-          (event) => !event.registeredUsers.includes(mongoUserId.toString()),
-        );
-
-        setEvents(unregisteredEvents);
-        setRegisteredEvents(userRegisteredEvents);
-        console.log(userRegisteredEvents);
-      } catch (error) {
+        formattedEvents.forEach((event) => {
+          // all inside one loop instead of having three filters
+          // TODO consider other cases (children registered, upcoming, missed deadline, etc)
+          if (event.registeredUsers.includes(mongoUserId.toString())) {
+            if (event.endDateTime && event.endDateTime < now) {
+              past.push(event);
+            } else {
+              registered.push(event);
+            }
+          } else {
+            unregistered.push(event);
+          }
+        });
+        setAllEvents(unregistered);
+        setRegisteredEvents(registered);
+        setUserPastEvents(past);
+      } catch (error: any) {
         console.error("Error fetching events:", error);
-        setError("Failed to load events. Please try again later.");
+        setError(error.message || "Failed to load events. Please try again later.");
       } finally {
-        setLoading(false);
+        setIsLoading(false);
       }
     }
 
     fetchEvents();
   }, [isLoaded, user]);
 
-  if (loading) return <p>Loading events...</p>;
+  if (isloading) return <p>Loading events...</p>;
   if (error) return <p>{error}</p>;
 
   return (
     <main className="p-4">
-      <h1 className="mb-4 text-2xl font-bold">Upcoming Events</h1>
+      {/* Placeholder Navbar */}
 
+      <div>
+        <nav className="mb-6 flex justify-between bg-gray-100 p-4 shadow-md">
+          <div className="text-lg font-bold">Logo Placeholder</div>
+          <div className="text-sm">Navigation Placeholder</div>
+        </nav>
+      </div>
+
+      <section>
+        <h1 className="mb-4 text-2xl font-bold">Registered Events</h1>
+        <EventGrid events={registeredEvents} />
+      </section>
+
+      <section>
+        <h2 className="mb-4 text-2xl font-bold">All Events</h2>
+        <EventGrid events={allEvents} />
+        <button className="mt-4 rounded bg-gray-300 px-4 py-2">View More</button>
+      </section>
+
+      <section>
+        <h2 className="mb-4 text-2xl font-bold">My Past Events</h2>
+        <EventGrid events={userPastEvents} />
+        <button className="mt-4 rounded bg-gray-300 px-4 py-2">View More</button>
+      </section>
+    </main>
+  );
+}
+
+function EventGrid({ events }: { events: IEvent[] }) {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {events.map((event) => (
+        <EventCard
+          key={event.id}
+          id={event.id}
+          eventTitle={event.title}
+          startDateTime={event.startDateTime}
+          endDateTime={event.endDateTime}
+          location={event.location}
+          description={event.description}
+          images={event.images}
+          registrationDeadline={event.registrationDeadline}
+          capacity={event.capacity}
+          currentRegistrations={event.registeredUsers.length}
+          userRegistered={true}
+        />
+      ))}
+    </div>
+  );
+}
+
+{
+  /* <h1 className="mb-4 text-2xl font-bold">Upcoming Events</h1>
       {isLoaded && user && registeredEvents.length > 0 && (
         <section className="mb-6">
           <h2 className="text-xl font-semibold">Your Registered Events</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {registeredEvents.map((event) => (
               <EventCard
-                key={event._id}
-                id={event._id}
+                key={event.id}
+                id={event.id}
                 eventTitle={event.title}
                 startDateTime={event.startDateTime}
                 endDateTime={event.endDateTime}
@@ -134,7 +190,5 @@ export default function Home() {
             userRegistered={false}
           />
         ))}
-      </div>
-    </main>
-  );
+      </div> */
 }
