@@ -2,6 +2,7 @@ import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
 
 const isOnboardingRoute = createRouteMatcher(["/onboarding", "/onboarding/children"]);
+const isApiRoute = createRouteMatcher(["/api(.*)"]);
 const isPublicRoute = createRouteMatcher(["/", "/api/webhooks/clerk"]);
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 
@@ -9,8 +10,8 @@ export default clerkMiddleware(async (auth, req: NextRequest) => {
   const { userId, sessionClaims, redirectToSignIn } = await auth();
   const role = sessionClaims?.metadata?.userRole;
 
-  // For users visiting /onboarding, don't try to redirect
-  if (userId && isOnboardingRoute(req)) {
+  // don't onboard API calls, but still require login
+  if (userId && (isOnboardingRoute(req) || isApiRoute(req))) {
     return NextResponse.next();
   }
 
