@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
+import { Content } from "@tiptap/react";
 import { MinimalTiptapEditor } from "@/components/minimal-tiptap";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -21,8 +22,8 @@ type EventFormData = {
 
 export default function CreateEventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [descContent, setDescContent] = useState("");
-  const [pNoteContent, setPNoteContent] = useState("");
+  const [descContent, setDescContent] = useState<Content>("");
+  const [pNoteContent, setPNoteContent] = useState<Content>("");
   const { toast } = useToast();
   const {
     register,

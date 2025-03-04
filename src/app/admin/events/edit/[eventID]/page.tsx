@@ -17,6 +17,7 @@ import { EventFormData } from "@/types/events";
 import { TextAreaField } from "@/components/Forms/TextAreaField";
 import { MinimalTiptapEditor } from "@/components/minimal-tiptap";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { Content } from "@tiptap/react";
 
 const EditEventPage = () => {
   const router = useRouter();
@@ -28,7 +29,7 @@ const EditEventPage = () => {
     setValue,
     formState: { errors },
   } = useForm<EventFormData>();
-  const [descContent, setDescContent] = useState("");
+  const [descContent, setDescContent] = useState<Content>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasEventStarted, setHasEventStarted] = useState(false);
