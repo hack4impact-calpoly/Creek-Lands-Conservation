@@ -201,7 +201,7 @@ const EditEventPage = () => {
                   required: "Cannot leave blank",
                 }}
               />
-              <div name="description" className="md:col-span-2">
+              <div className="md:col-span-2">
                 <h2 label="Description">Description</h2>
                 <TooltipProvider>
                   <MinimalTiptapEditor
