@@ -277,7 +277,7 @@ export default function CreateEventForm() {
         <label htmlFor="paymentNote" className="block font-medium">
           Notes About Payment?
         </label>
-        <div id="paymentNote" aria-labelledby="paymentNote">
+        <div>
           <TooltipProvider>
             <MinimalTiptapEditor
               value={pNoteContent}

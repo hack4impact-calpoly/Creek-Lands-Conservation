@@ -202,7 +202,7 @@ const EditEventPage = () => {
                 }}
               />
               <div className="md:col-span-2">
-                <h2 label="Description">Description</h2>
+                <h2>Description</h2>
                 <TooltipProvider>
                   <MinimalTiptapEditor
                     label="Description"
