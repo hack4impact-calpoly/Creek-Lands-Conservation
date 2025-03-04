@@ -35,7 +35,7 @@ const EditEventPage = () => {
   const [hasEventStarted, setHasEventStarted] = useState(false);
 
   useEffect(() => {
-    setValue("description", descContent);
+    setValue("description", descContent || "");
   }, [descContent, setValue]);
 
   useEffect(() => {
