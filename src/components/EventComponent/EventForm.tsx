@@ -35,12 +35,12 @@ export default function CreateEventForm() {
 
   // Sync Tiptap content with react-hook-form
   useEffect(() => {
-    setValue("description", descContent || ""); // Update form field when editorContent changes
+    setValue("description", descContent ? JSON.stringify(descContent) : ""); // Update form field when editorContent changes
   }, [descContent, setValue]);
 
   // Sync Tiptap content with react-hook-form
   useEffect(() => {
-    setValue("paymentNote", pNoteContent || ""); // Update form field when editorContent changes
+    setValue("paymentNote", pNoteContent ? JSON.stringify(pNoteContent) : ""); // Update form field when editorContent changes
   }, [pNoteContent, setValue]);
 
   const onSubmit = async (data: EventFormData, isDraft: boolean) => {
