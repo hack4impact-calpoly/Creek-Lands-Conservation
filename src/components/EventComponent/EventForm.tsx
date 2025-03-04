@@ -21,7 +21,8 @@ type EventFormData = {
 
 export default function CreateEventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [editorContent, setEditorContent] = useState<Content>("");
+  const [descContent, setDescContent] = useState<Content>("");
+  const [pNoteContent, setPNoteContent] = useState<Content>("");
   const { toast } = useToast();
   const {
     register,
@@ -33,8 +34,13 @@ export default function CreateEventForm() {
 
   // Sync Tiptap content with react-hook-form
   useEffect(() => {
-    setValue("description", editorContent); // Update form field when editorContent changes
-  }, [editorContent, setValue]);
+    setValue("description", descContent); // Update form field when editorContent changes
+  }, [descContent, setValue]);
+
+  // Sync Tiptap content with react-hook-form
+  useEffect(() => {
+    setValue("paymentNote", pNoteContent); // Update form field when editorContent changes
+  }, [pNoteContent, setValue]);
 
   const onSubmit = async (data: EventFormData, isDraft: boolean) => {
     // Combine date and time into ISO 8601 format for MongoDB
@@ -129,8 +135,8 @@ export default function CreateEventForm() {
         </label>
         <TooltipProvider>
           <MinimalTiptapEditor
-            value={editorContent}
-            onChange={setEditorContent}
+            value={descContent}
+            onChange={setDescContent}
             className="w-full"
             editorContentClassName="p-5"
             output="html"
@@ -141,7 +147,7 @@ export default function CreateEventForm() {
           />
         </TooltipProvider>
 
-        <input type="hidden" {...register("description")} value={editorContent} />
+        <input type="hidden" {...register("description")} value={descContent} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
@@ -256,6 +262,27 @@ export default function CreateEventForm() {
           className="w-full rounded border p-2"
         />
         {errors.fee && <p className="text-sm text-red-500">{errors.fee.message}</p>}
+      </div>
+
+      <div>
+        <label htmlFor="paymentNote" className="block font-medium">
+          Notes About Payment?
+        </label>
+        <TooltipProvider>
+          <MinimalTiptapEditor
+            value={pNoteContent}
+            onChange={setPNoteContent}
+            className="w-full"
+            editorContentClassName="p-5"
+            output="html"
+            placeholder="e.g. If you signed up for the overnight hiking/camping combo, the price is $10 for just the day trip and $20 for overnight. If there are multiple attendees, children under 15 are $10 and adults are $20."
+            autofocus={true}
+            editable={true}
+            editorClassName="focus:outline-none"
+          />
+        </TooltipProvider>
+
+        <input type="hidden" {...register("description")} value={pNoteContent} />
       </div>
 
       <div className="flex justify-end space-x-4">
