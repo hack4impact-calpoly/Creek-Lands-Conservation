@@ -106,12 +106,15 @@ export default function Home() {
       <section>
         <h1 className="mb-4 text-2xl font-bold">Registered Events</h1>
         <EventGrid events={registeredEvents} />
+        {/* TODO conditionally render view more button*/}
       </section>
 
+      {/* TODO improve spacing between sections */}
       <section>
         <h2 className="mb-4 text-2xl font-bold">All Events</h2>
         <EventGrid events={allEvents} />
         <button className="mt-4 rounded bg-gray-300 px-4 py-2">View More</button>
+        {/* center the view more button */}
       </section>
 
       <section>
@@ -124,6 +127,8 @@ export default function Home() {
 }
 
 function EventGrid({ events }: { events: IEvent[] }) {
+  // TODO from 1-4 column depending on screen space. Max two rows.
+  // TODO view more button expands remaining rows
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {events.map((event) => (
