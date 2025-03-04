@@ -260,7 +260,7 @@ export function EventInfoPreview({
 
             <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
               <Text className="h-5 w-5" />
-              <p>{description}</p>
+              <div className="prose" dangerouslySetInnerHTML={{ __html: description }} />
             </div>
 
             <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">

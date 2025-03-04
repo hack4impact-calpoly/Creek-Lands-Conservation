@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
+import { MinimalTiptapEditor } from "@/components/minimal-tiptap";
+import { TooltipProvider } from "@/components/ui/tooltip";
 
 type EventFormData = {
   title: string;
@@ -19,13 +21,20 @@ type EventFormData = {
 
 export default function CreateEventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [editorContent, setEditorContent] = useState<Content>("");
   const { toast } = useToast();
   const {
     register,
     handleSubmit,
+    setValue,
     reset,
     formState: { errors },
   } = useForm<EventFormData>();
+
+  // Sync Tiptap content with react-hook-form
+  useEffect(() => {
+    setValue("description", editorContent); // Update form field when editorContent changes
+  }, [editorContent, setValue]);
 
   const onSubmit = async (data: EventFormData, isDraft: boolean) => {
     // Combine date and time into ISO 8601 format for MongoDB
@@ -69,6 +78,7 @@ export default function CreateEventForm() {
         });
 
         if (response.ok) {
+          setEditorContent("");
           reset();
           toast({
             title: "Event Created Successfully!",
@@ -117,12 +127,21 @@ export default function CreateEventForm() {
         <label htmlFor="description" className="block font-medium">
           Event Description
         </label>
-        <textarea
-          id="description"
-          placeholder="Provide a brief description of the event"
-          {...register("description")}
-          className="w-full rounded border p-2"
-        />
+        <TooltipProvider>
+          <MinimalTiptapEditor
+            value={editorContent}
+            onChange={setEditorContent}
+            className="w-full"
+            editorContentClassName="p-5"
+            output="html"
+            placeholder="Provide a brief description of the event.."
+            autofocus={true}
+            editable={true}
+            editorClassName="focus:outline-none"
+          />
+        </TooltipProvider>
+
+        <input type="hidden" {...register("description")} value={editorContent} />
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
