@@ -20,9 +20,16 @@ type EventFormData = {
   images: string[];
 };
 
+type WaiverTemplateInfo = {
+  fileUrl: string;
+  fileKey: string;
+  fileName: string;
+};
+
 export default function CreateEventForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resetUploader, setResetUploader] = useState(false);
+  const [waiverTemplates, setWaiverTemplates] = useState<WaiverTemplateInfo[]>([]);
   const { toast } = useToast();
   const {
     register,
@@ -34,6 +41,10 @@ export default function CreateEventForm() {
 
   const handleImagesUploaded = (urls: string[]) => {
     setValue("images", urls);
+  };
+
+  const handlePDFsUploaded = (pdfInfos: WaiverTemplateInfo[]) => {
+    setWaiverTemplates((prev) => [...prev, ...pdfInfos]);
   };
 
   const onSubmit = async (data: EventFormData, isDraft: boolean) => {
@@ -57,30 +68,37 @@ export default function CreateEventForm() {
     // send post request if not draft
     if (!isDraft) {
       try {
+        const bodyToSend = {
+          ...data,
+          startDate: startDateTime.toISOString(),
+          endDate: endDateTime.toISOString(),
+          images: data.images ?? [],
+
+          // pass the PDF info so we can create "template" waivers in the backend
+          waiverTemplates,
+          isDraft, // optional
+        };
+
         const response = await fetch("/api/events", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(data),
+          body: JSON.stringify(bodyToSend),
         });
-        if (response.ok) {
-          reset();
-          setResetUploader(true);
-          toast({
-            title: "Event Created Successfully!",
-            description: "Your Event Has Been Published!",
-            variant: "success",
-            duration: 5000,
-          });
-        } else {
-          toast({
-            title: "Event Creation Failed!",
-            variant: "destructive",
-            description: "An Error Occurred While Creating the Event.",
-            duration: 5000,
-          });
-        }
+        if (!response.ok) throw new Error("Event Creation Failed");
+
+        const createdEvent = await response.json();
+
+        // 5) If success, reset form, clear uploaders, show success toast
+        reset();
+        setResetUploader(true);
+        setWaiverTemplates([]); // clear local PDF info
+        toast({
+          title: "Event Created Successfully!",
+          description: "Your Event Has Been Published!",
+          variant: "success",
+        });
       } catch (error) {
         console.error("Error submitting form:", error);
         toast({
@@ -101,7 +119,7 @@ export default function CreateEventForm() {
           <FileUpload onImagesUploaded={handleImagesUploaded} resetFiles={resetUploader} />
         </div>
         <div className="min-w-[250px] flex-1">
-          <PDFUpload />
+          <PDFUpload type="template" onPDFsUploaded={handlePDFsUploaded} resetFiles={resetUploader} />
         </div>
       </div>
 
