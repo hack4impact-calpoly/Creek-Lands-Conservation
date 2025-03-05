@@ -7,11 +7,13 @@ export default function EventSection({
   title,
   events,
   isRegisteredSection = false,
+  onDelete,
   children,
 }: {
   title: string;
   events: EventInfo[];
   isRegisteredSection?: boolean;
+  onDelete?: (eventId: string) => void;
   children?: React.ReactNode;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -51,6 +53,7 @@ export default function EventSection({
                 eventTitle={event.title}
                 currentRegistrations={event.registeredUsers.length}
                 userRegistered={isRegisteredSection}
+                onDelete={onDelete}
               />
             ))}
           </div>

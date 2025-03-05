@@ -43,6 +43,14 @@ export default function AdminPage() {
     return () => clearInterval(interval);
   }, []);
 
+  const handleDeleteEvent = (eventId: string) => {
+    setEventSections((prev) => ({
+      active: prev.active.filter((event) => event.id !== eventId),
+      upcoming: prev.active.filter((event) => event.id !== eventId),
+      past: prev.past.filter((event) => event.id !== eventId),
+    }));
+  };
+
   if (isLoading)
     return (
       <main className="mx-auto flex max-w-screen-2xl flex-col gap-8 px-8">
@@ -56,13 +64,13 @@ export default function AdminPage() {
 
   return (
     <main className="mx-auto mb-8 flex max-w-screen-2xl flex-col gap-8 px-8">
-      <EventSection title="Active Events" events={eventSections.active}>
+      <EventSection title="Active Events" events={eventSections.active} onDelete={handleDeleteEvent}>
         <Link href="/admin/events/create">
           <button className="rounded-md bg-blue-500 px-4 py-2 text-white">Create Event</button>
         </Link>
       </EventSection>
-      <EventSection title="Upcoming Events" events={eventSections.upcoming} />
-      <EventSection title="Past Events" events={eventSections.past} />
+      <EventSection title="Upcoming Events" events={eventSections.upcoming} onDelete={handleDeleteEvent} />
+      <EventSection title="Past Events" events={eventSections.past} onDelete={handleDeleteEvent} />
     </main>
   );
 }
