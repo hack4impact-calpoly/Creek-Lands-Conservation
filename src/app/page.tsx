@@ -58,7 +58,7 @@ export default function Home() {
   if (error) return <p>{error}</p>;
 
   return (
-    <main className="mx-auto flex max-w-screen-2xl flex-col gap-8 px-8">
+    <main className="mx-auto mb-8 flex max-w-screen-2xl flex-col gap-8 px-8">
       <EventSection title="Registered Events" events={eventSections.registered} isRegisteredSection />
       <EventSection title="Available Events" events={eventSections.all} />
       <EventSection title="Past Events" events={eventSections.past} isRegisteredSection />
