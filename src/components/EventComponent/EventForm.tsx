@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
+import { LoadingSpinner } from "../ui/loading-spinner";
 
 type EventFormData = {
   title: string;
@@ -262,7 +263,7 @@ export default function CreateEventForm() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent">
           <div className="flex items-center space-x-4 rounded-lg bg-white p-6 shadow-lg">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-t-4 border-solid border-blue-500"></div>
-            <p className="text-gray-800">Loading...</p>
+            <LoadingSpinner size="lg" />
           </div>
         </div>
       )}
