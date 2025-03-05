@@ -2,7 +2,7 @@ import { EventInfo } from "@/types/events";
 import EventCard from "./EventCard";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
-import { useMediaQuery } from "@/hooks/mediaQuery";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export default function EventSection({
   title,
