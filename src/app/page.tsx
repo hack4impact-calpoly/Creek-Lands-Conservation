@@ -60,9 +60,9 @@ export default function Home() {
 
   return (
     <main className="mx-auto flex max-w-screen-2xl flex-col gap-8 px-8">
-      <EventSection title="Registered Events" events={eventSections.registered} />
+      <EventSection title="Registered Events" events={eventSections.registered} isRegisteredSection />
       <EventSection title="All Events" events={eventSections.all} />
-      <EventSection title="My Past Events" events={eventSections.past} />
+      <EventSection title="My Past Events" events={eventSections.past} isRegisteredSection />
     </main>
   );
 }
@@ -70,22 +70,21 @@ export default function Home() {
 const EventSection = ({
   title,
   events,
-  isMainHeading = false,
+  isRegisteredSection = false,
 }: {
   title: string;
   events: IEvent[];
-  isMainHeading?: boolean;
+  isRegisteredSection?: boolean;
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const maxInitialEvents = 6;
   const hasMoreEvents = events.length > maxInitialEvents;
   const visibleEvents = isExpanded ? events : events.slice(0, maxInitialEvents);
-  const HeadingTag = isMainHeading ? "h1" : "h2";
 
   return (
     <section className="p-3">
-      <HeadingTag className="mb-8 text-5xl">{title}</HeadingTag>
-      <EventGrid events={visibleEvents} />
+      <h2 className="mb-6 text-4xl md:mb-8 md:text-5xl">{title}</h2>
+      <EventGrid events={visibleEvents} isRegisteredSection={isRegisteredSection} />
       {hasMoreEvents && (
         <div className="mt-4 flex justify-center">
           <button
@@ -100,15 +99,15 @@ const EventSection = ({
   );
 };
 
-const EventGrid = ({ events }: { events: IEvent[] }) => (
-  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+const EventGrid = ({ events, isRegisteredSection }: { events: IEvent[]; isRegisteredSection: boolean }) => (
+  <div className="grid grid-cols-1 justify-items-center gap-4 md:grid-cols-2 md:justify-items-start lg:grid-cols-3">
     {events.map((event) => (
       <EventCard
         key={event.id}
         {...event}
         eventTitle={event.title}
         currentRegistrations={event.registeredUsers.length}
-        userRegistered={true}
+        userRegistered={isRegisteredSection}
       />
     ))}
   </div>

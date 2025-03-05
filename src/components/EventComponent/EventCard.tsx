@@ -58,13 +58,13 @@ export default function EventCard(props: EventCardProps) {
     "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg";
 
   return (
-    <Card className="relative w-full max-w-sm overflow-hidden rounded-lg shadow-lg">
+    <Card className="relative w-full min-w-[312px] max-w-sm overflow-hidden rounded-lg shadow-lg">
       <BackgroundImageLayer imageUrl={backgroundImage} altText={eventTitle} />
 
       <CardContent className="relative flex flex-col gap-4 p-6 text-white">
         <h2 className="text-2xl font-medium">{eventTitle}</h2>
 
-        <div className="space-y-2 text-lg">
+        <div className="space-y-2 text-base lg:text-lg">
           <InfoRow icon={Calendar}>
             {formatDate(startDateTime)} - {formatDate(endDateTime)}
           </InfoRow>
