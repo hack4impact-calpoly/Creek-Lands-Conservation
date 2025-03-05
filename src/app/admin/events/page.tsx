@@ -53,7 +53,7 @@ export default function AdminPage() {
 
   if (isLoading)
     return (
-      <main className="mx-auto flex max-w-screen-2xl flex-col gap-8 px-8">
+      <main className="mx-auto mt-6 flex max-w-screen-2xl flex-col gap-8 px-8">
         <SkeletonEventSection />
         <SkeletonEventSection />
         <SkeletonEventSection />
@@ -63,7 +63,7 @@ export default function AdminPage() {
   if (error) return <p>{error}</p>;
 
   return (
-    <main className="mx-auto mb-8 flex max-w-screen-2xl flex-col gap-8 px-8">
+    <main className="mx-auto mb-8 mt-6 flex max-w-screen-2xl flex-col gap-8 px-8">
       <EventSection title="Active Events" events={eventSections.active} onDelete={handleDeleteEvent}>
         <Link href="/admin/events/create">
           <button className="rounded-md bg-blue-500 px-4 py-2 text-white">Create Event</button>

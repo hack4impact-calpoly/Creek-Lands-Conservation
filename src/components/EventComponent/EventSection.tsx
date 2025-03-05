@@ -45,6 +45,8 @@ export default function EventSection({
         </div>
       ) : (
         <>
+          {/* TODO figure out how to align this with the header better,
+              removing justify center aligns the left edge, but the right edge is worse */}
           <div className="grid grid-cols-1 justify-items-center gap-4 md:grid-cols-2  lg:grid-cols-3">
             {visibleEvents.map((event) => (
               <EventCard
