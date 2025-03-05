@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import EventCard from "@/components/EventComponent/EventCard";
 import { useUser } from "@clerk/nextjs";
 import { getEvents } from "@/app/actions/events/actions";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface IEvent {
   _id: string;
@@ -76,7 +77,7 @@ export default function Home() {
     fetchEvents();
   }, [isLoaded, user]);
 
-  if (loading) return <p>Loading events...</p>;
+  if (loading) return <LoadingSpinner size="lg" />;
   if (error) return <p>{error}</p>;
 
   return (
