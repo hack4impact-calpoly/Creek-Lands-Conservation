@@ -2,6 +2,7 @@ import { EventInfo } from "@/types/events";
 import EventCard from "./EventCard";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
+import { useMediaQuery } from "@/hooks/mediaQuery";
 
 export default function EventSection({
   title,
@@ -17,7 +18,8 @@ export default function EventSection({
   children?: React.ReactNode;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const maxInitialEvents = 6;
+  const is2xl = useMediaQuery("(min-width: 1536px)");
+  const maxInitialEvents = is2xl ? 8 : 6;
   const hasMoreEvents = events.length > maxInitialEvents;
   const visibleEvents = isExpanded ? events : events.slice(0, maxInitialEvents);
   const sectionRef = useRef<HTMLHeadElement | null>(null);
@@ -41,14 +43,14 @@ export default function EventSection({
   }, [isExpanded, hasMoreEvents]);
 
   return (
-    <section ref={sectionRef}>
+    <section className="p-6" ref={sectionRef}>
       <div className="flex items-center justify-between">
         <h2 className="mb-6 text-4xl md:mb-8 md:text-5xl">{title}</h2>
         <div>{children}</div>
       </div>
 
       {events.length === 0 ? (
-        <div className="rounded-lg bg-gray-50 p-8 text-center">
+        <div className=" w-full rounded-lg bg-gray-50 p-8 text-center">
           <p className="text-gray-500">No {title.toLowerCase()} found</p>
           <p className="mt-2 text-gray-400"> Check back later!</p>
         </div>
@@ -56,7 +58,7 @@ export default function EventSection({
         <>
           {/* TODO figure out how to align this with the header better,
               removing justify center aligns the left edge, but the right edge is worse */}
-          <div className="grid grid-cols-1 justify-items-center gap-4 md:grid-cols-2  lg:grid-cols-3">
+          <div className="grid grid-cols-1 justify-items-center  gap-6 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
             {visibleEvents.map((event) => (
               <EventCard
                 key={event.id}

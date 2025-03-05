@@ -29,12 +29,12 @@ const SkeletonEventCard = () => (
   </div>
 );
 
-export default function SkeletonEventSection() {
+export default function SkeletonEventSection({ title }: { title: string }) {
   return (
-    <section className="p-3">
-      <div className="mb-6 h-10 w-1/4 rounded bg-gray-200 md:mb-8 md:h-12" />
-      <div className="grid grid-cols-1 justify-items-center gap-4 md:grid-cols-2 md:justify-items-start lg:grid-cols-3">
-        {[...Array(3)].map((_, i) => (
+    <section className="p-6">
+      <h2 className="mb-6 text-4xl md:mb-8 md:text-5xl">{title}</h2>
+      <div className="grid grid-cols-1 justify-items-center  gap-6 md:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4">
+        {[...Array(4)].map((_, i) => (
           <SkeletonEventCard key={i} />
         ))}
       </div>
