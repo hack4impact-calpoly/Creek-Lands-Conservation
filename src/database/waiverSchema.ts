@@ -12,6 +12,8 @@ export interface IWaiver extends Document {
   isForChild: boolean; // Only true if childSubdocId is present
   uploadedAt: Date;
   type: "template" | "completed"; // Waiver type
+  templateRef?: mongoose.Types.ObjectId; // Reference to the waiver template
+  eventId?: mongoose.Types.ObjectId;
 }
 
 /**
@@ -38,12 +40,14 @@ const waiverSchema = new Schema<IWaiver>({
     enum: ["template", "completed"],
     required: true,
   },
+  templateRef: { type: mongoose.Schema.Types.ObjectId, ref: "Waiver", required: false },
+  eventId: { type: mongoose.Schema.Types.ObjectId, ref: "Event", required: false },
 });
 
 /**
  * Optional index to speed up queries by belongsTo + type
  */
-waiverSchema.index({ belongsTo: 1, type: 1 });
+waiverSchema.index({ belongsToUser: 1, type: 1 });
 
 /**
  * Export the Waiver model
