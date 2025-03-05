@@ -44,9 +44,7 @@ export interface IEvent extends Document {
     waiverId: mongoose.Types.ObjectId;
     required: boolean;
   }[];
-  requiresWaiver: boolean;
   registrationDeadline?: Date;
-  waiverId: mongoose.Types.ObjectId[];
   fee: number;
   stripePaymentId?: string | null;
 }
@@ -129,12 +127,6 @@ const eventSchema = new Schema<IEvent>(
         required: { type: Boolean, default: true },
       },
     ],
-
-    /**
-     * Additional fields if the event requires waivers or references them
-     */
-    requiresWaiver: { type: Boolean, default: true },
-    waiverId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Waiver" }],
 
     /**
      * Fee and optional Stripe payment info
