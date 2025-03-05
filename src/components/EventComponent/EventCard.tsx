@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { EventInfoPreview } from "./EventInfoPreview";
-import { Calendar, Clock, Users, CalendarClock } from "lucide-react";
+import { Calendar, Clock, Users, CalendarClock, LucideProps } from "lucide-react";
 import Image from "next/image";
 
 export interface EventCardProps {
@@ -20,92 +20,81 @@ export interface EventCardProps {
   onDelete?: (eventId: string) => void;
 }
 
-export default function EventCard({
-  id,
-  eventTitle,
-  startDateTime,
-  endDateTime,
-  location,
-  description,
-  images,
-  registrationDeadline,
-  capacity,
-  currentRegistrations,
-  userRegistered,
-  onDelete,
-}: EventCardProps) {
+const InfoRow = ({ icon: Icon, children }: { icon: React.ComponentType<LucideProps>; children: React.ReactNode }) => (
+  <div className="flex items-center gap-2">
+    <Icon className="h-5 w-5" />
+    <span>{children}</span>
+  </div>
+);
+
+const formatDate = (date: Date | null) => date?.toLocaleDateString() || "TBD";
+const formatTime = (date: Date | null) => date?.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) || "TBD";
+
+const BackgroundImageLayer = ({ imageUrl, altText }: { imageUrl: string; altText: string }) => (
+  <div className="absolute inset-0">
+    <Image src={imageUrl} alt={altText} layout="fill" objectFit="cover" className="brightness-110" priority />
+    <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60" />
+  </div>
+);
+
+export default function EventCard(props: EventCardProps) {
+  const {
+    id,
+    eventTitle,
+    startDateTime,
+    endDateTime,
+    location,
+    description,
+    images,
+    registrationDeadline,
+    capacity,
+    currentRegistrations,
+    userRegistered,
+    onDelete,
+  } = props;
+
   const backgroundImage =
-    images.length > 0
-      ? images[0]
-      : "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg";
+    images[0] ||
+    "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg";
 
   return (
     <Card className="relative w-full max-w-sm overflow-hidden rounded-lg shadow-lg">
-      {/* Background Image */}
-      <div className="absolute inset-0">
-        <Image
-          src={backgroundImage}
-          alt={eventTitle}
-          layout="fill" // Ensures it covers the container
-          objectFit="cover"
-          className="brightness-110" // Tailwind class for brightness
-          priority // Ensures the image loads fast
-        />
-      </div>
+      <BackgroundImageLayer imageUrl={backgroundImage} altText={eventTitle} />
 
-      {/* Gradient Overlay for Better Text Readability */}
-      <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60"></div>
-
-      {/* Card Content */}
       <CardContent className="relative flex flex-col gap-4 p-6 text-white">
         <h2 className="text-2xl font-medium">{eventTitle}</h2>
+
         <div className="space-y-2 text-lg">
-          {/* Date */}
-          <div className="flex items-center gap-2">
-            <Calendar className="h-5 w-5" />
-            <span>
-              {startDateTime ? startDateTime.toLocaleDateString() : "TBD"} -{" "}
-              {endDateTime ? endDateTime.toLocaleDateString() : "TBD"}
-            </span>
-          </div>
+          <InfoRow icon={Calendar}>
+            {formatDate(startDateTime)} - {formatDate(endDateTime)}
+          </InfoRow>
 
-          {/* Time */}
-          <div className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            <span>
-              {startDateTime ? startDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD"} -{" "}
-              {endDateTime ? endDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD"}
-            </span>
-          </div>
+          <InfoRow icon={Clock}>
+            {formatTime(startDateTime)} - {formatTime(endDateTime)}
+          </InfoRow>
 
-          {/* Registration Deadline */}
-          <div className="flex items-center gap-2">
-            <CalendarClock className="h-5 w-5" />
-            <span>Deadline: {registrationDeadline ? registrationDeadline.toLocaleString() : "TBD"}</span>
-          </div>
+          <InfoRow icon={CalendarClock}>Deadline: {registrationDeadline?.toLocaleString() || "TBD"}</InfoRow>
 
-          {/* Current Registrations */}
-          <div className="flex items-center gap-2">
-            <Users className="h-5 w-5" />
-            <span>
-              {currentRegistrations} / {capacity} spots filled
-            </span>
-          </div>
+          <InfoRow icon={Users}>
+            {currentRegistrations} / {capacity} spots filled
+          </InfoRow>
         </div>
 
         <EventInfoPreview
-          id={id}
-          title={eventTitle}
-          startDateTime={startDateTime}
-          endDateTime={endDateTime}
-          location={location}
-          description={description}
-          images={images}
-          registrationDeadline={registrationDeadline}
-          capacity={capacity}
-          currentRegistrations={currentRegistrations}
-          userRegistered={userRegistered}
-          onDelete={onDelete}
+          {...{
+            id,
+            title: eventTitle,
+            startDateTime,
+            endDateTime,
+            location,
+            description,
+            images,
+            registrationDeadline,
+            capacity,
+            currentRegistrations,
+            userRegistered,
+            onDelete,
+          }}
         />
       </CardContent>
     </Card>
