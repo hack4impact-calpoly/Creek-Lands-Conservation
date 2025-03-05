@@ -74,7 +74,7 @@ const Navbar = () => {
             {/* My Profile Redirect */}
             <SignInButton>
               <Link
-                href="/sign-in"
+                href="/user"
                 className="relative flex h-full items-center px-6 text-xl font-semibold text-gray-700 transition duration-200 hover:underline hover:decoration-4 hover:underline-offset-8"
               >
                 My Profile
@@ -84,7 +84,7 @@ const Navbar = () => {
             {/* Default Gray Avatar Redirect */}
             <SignInButton>
               <Link
-                href="/sign-in"
+                href="/"
                 className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-300 transition duration-200 hover:bg-gray-400"
               >
                 <User className="h-6 w-6 text-gray-600" />
