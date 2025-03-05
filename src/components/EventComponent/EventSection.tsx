@@ -1,6 +1,6 @@
 import { EventInfo } from "@/types/events";
 import EventCard from "./EventCard";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
 
 export default function EventSection({
@@ -18,9 +18,19 @@ export default function EventSection({
   const maxInitialEvents = 6;
   const hasMoreEvents = events.length > maxInitialEvents;
   const visibleEvents = isExpanded ? events : events.slice(0, maxInitialEvents);
+  const sectionRef = useRef<HTMLHeadElement | null>(null);
+
+  useEffect(() => {
+    if (!isExpanded && hasMoreEvents) {
+      sectionRef.current?.scrollIntoView({
+        behavior: "instant",
+        block: "nearest",
+      });
+    }
+  }, [isExpanded, hasMoreEvents]);
 
   return (
-    <section>
+    <section ref={sectionRef}>
       <div className="flex items-center justify-between">
         <h2 className="mb-6 text-4xl md:mb-8 md:text-5xl">{title}</h2>
         <div>{children}</div>
