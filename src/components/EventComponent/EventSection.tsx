@@ -21,14 +21,23 @@ export default function EventSection({
   const hasMoreEvents = events.length > maxInitialEvents;
   const visibleEvents = isExpanded ? events : events.slice(0, maxInitialEvents);
   const sectionRef = useRef<HTMLHeadElement | null>(null);
+  const prevIsExpandedRef = useRef<boolean>();
 
   useEffect(() => {
+    /* scroll has to happen after re-render for optimal scrollage, 
+    otherwise we scroll on click and then later the screen shifts */
     if (!isExpanded && hasMoreEvents) {
-      sectionRef.current?.scrollIntoView({
-        behavior: "instant",
-        block: "nearest",
-      });
+      // check if button was pressed vs a refresh happened or something
+      if (prevIsExpandedRef.current === true) {
+        // means we used to be expanded, and now aren't so button was pressed
+        sectionRef.current?.scrollIntoView({
+          behavior: "instant",
+          block: "nearest",
+        });
+      }
     }
+    // Update the ref with the current state after each render
+    prevIsExpandedRef.current = isExpanded;
   }, [isExpanded, hasMoreEvents]);
 
   return (
