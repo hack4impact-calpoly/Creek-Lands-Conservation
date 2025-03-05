@@ -12,10 +12,10 @@ import { formatEvents } from "@/lib/utils";
 export default function Home() {
   // TODO consider more possibilities (children registered, deadline missed, etc) and how to sort those cases
   const [eventSections, setEventSections] = useState<{
-    all: EventInfo[];
+    available: EventInfo[];
     registered: EventInfo[];
     past: EventInfo[];
-  }>({ all: [], registered: [], past: [] });
+  }>({ available: [], registered: [], past: [] });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { isLoaded, user } = useUser();
@@ -23,20 +23,25 @@ export default function Home() {
   useEffect(() => {
     const fetchAndProcessEvents = async () => {
       try {
-        // TODO render "all events" if user is not signed in instead of returning early
-        if (!isLoaded || !user) return;
-
-        const userResponse = await fetch(`/api/users/${user.id}`);
-        if (!userResponse.ok) throw new Error("Failed to fetch user data");
-
-        const userData = await userResponse.json();
-        if (!userData?._id) throw new Error("User not Found in MongoDB");
+        if (!isLoaded) return; // Ensure user state is loaded before proceeding
 
         const events = await getEvents();
         const formattedEvents = formatEvents(events);
-        const categorized = categorizeEvents(formattedEvents, userData._id.toString());
 
-        setEventSections(categorized);
+        if (user) {
+          const userResponse = await fetch(`/api/users/${user.id}`);
+          if (!userResponse.ok) throw new Error("Failed to fetch user data");
+
+          const userData = await userResponse.json();
+          if (!userData?._id) throw new Error("User not Found in MongoDB");
+
+          const categorized = categorizeEvents(formattedEvents, userData._id.toString());
+          setEventSections(categorized);
+        } else {
+          // If no user, just show all events
+          setEventSections({ available: formattedEvents, registered: [], past: [] });
+        }
+
         setIsLoading(false);
       } catch (error: any) {
         setError(error.message || "Failed to load events");
@@ -55,12 +60,13 @@ export default function Home() {
         <SkeletonEventSection />
       </main>
     );
+
   if (error) return <p>{error}</p>;
 
   return (
     <main className="mx-auto mb-8 mt-6 flex max-w-screen-2xl flex-col gap-8 px-8">
       <EventSection title="Registered Events" events={eventSections.registered} isRegisteredSection />
-      <EventSection title="Available Events" events={eventSections.all} />
+      <EventSection title="Available Events" events={eventSections.available} />
       <EventSection title="Past Events" events={eventSections.past} isRegisteredSection />
     </main>
   );
@@ -69,8 +75,8 @@ export default function Home() {
 // Helper function
 const categorizeEvents = (events: EventInfo[], userId: string) => {
   const now = new Date();
-  const sections = { all: [], registered: [], past: [] } as {
-    all: EventInfo[];
+  const sections = { available: [], registered: [], past: [] } as {
+    available: EventInfo[];
     registered: EventInfo[];
     past: EventInfo[];
   };
@@ -79,7 +85,7 @@ const categorizeEvents = (events: EventInfo[], userId: string) => {
     if (event.registeredUsers.includes(userId)) {
       event.endDateTime && event.endDateTime < now ? sections.past.push(event) : sections.registered.push(event);
     } else {
-      sections.all.push(event);
+      sections.available.push(event);
     }
   });
 
