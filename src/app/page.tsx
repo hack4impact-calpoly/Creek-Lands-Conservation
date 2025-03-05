@@ -28,23 +28,7 @@ export default function Home() {
   useEffect(() => {
     async function fetchEvents() {
       try {
-        if (!isLoaded || !user) return;
-
-        // Fetch user details from MongoDB
-        const userResponse = await fetch(`/api/users/${user.id}`);
-        if (!userResponse.ok) throw new Error("Failed to fetch user data");
-
-        const userData = await userResponse.json();
-        console.log("MongoDB User Data:", userData);
-
-        if (!userData || !userData._id) {
-          console.warn("User not found in MongoDB");
-          return;
-        }
-
-        const mongoUserId = userData._id; // This is the ObjectId
-
-        // Fetch events
+        // Fetch all events (accessible to everyone)
         const data = await getEvents();
         const formattedEvents: IEvent[] = data.map((event: any) => ({
           _id: event._id.toString(),
@@ -59,21 +43,28 @@ export default function Home() {
           registeredUsers: event.registeredUsers ? event.registeredUsers.map((u: any) => u.toString()) : [],
         }));
 
-        console.log("Formatted Events:", formattedEvents);
+        setEvents(formattedEvents); // Show all events to all users
 
-        // Filter events where registeredUsers includes the MongoDB user _id
-        const userRegisteredEvents = formattedEvents.filter((event) =>
-          event.registeredUsers.map((id) => id.toString()).includes(mongoUserId.toString()),
-        );
+        // If user is signed in, fetch their registered events
+        if (isLoaded && user) {
+          const userResponse = await fetch(`/api/users/${user.id}`);
+          if (!userResponse.ok) throw new Error("Failed to fetch user data");
 
-        // Exclude registered events from the all events list
-        const unregisteredEvents = formattedEvents.filter(
-          (event) => !event.registeredUsers.includes(mongoUserId.toString()),
-        );
+          const userData = await userResponse.json();
+          console.log("MongoDB User Data:", userData);
 
-        setEvents(unregisteredEvents);
-        setRegisteredEvents(userRegisteredEvents);
-        console.log(userRegisteredEvents);
+          if (!userData || !userData._id) {
+            console.warn("User not found in MongoDB");
+            return;
+          }
+
+          const mongoUserId = userData._id.toString(); // Convert to string for comparison
+
+          // Filter events where registeredUsers includes the MongoDB user _id
+          const userRegisteredEvents = formattedEvents.filter((event) => event.registeredUsers.includes(mongoUserId));
+
+          setRegisteredEvents(userRegisteredEvents);
+        }
       } catch (error) {
         console.error("Error fetching events:", error);
         setError("Failed to load events. Please try again later.");
