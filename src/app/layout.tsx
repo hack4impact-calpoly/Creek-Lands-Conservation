@@ -15,13 +15,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider>
       <html lang="en">
         <body>
-          <SignedOut>
-            <SignInButton />
-          </SignedOut>
-          <SignedIn>
-            <Navbar />
-            {children}
-          </SignedIn>
+          <Navbar />
+          {children}
           <Toaster />
         </body>
       </html>
