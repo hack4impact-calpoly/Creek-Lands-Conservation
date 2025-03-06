@@ -11,3 +11,16 @@ export type EventFormData = {
   registrationDeadlineDate: string;
   registrationDeadlineTime: string;
 };
+
+export type EventInfo = {
+  id: string;
+  title: string;
+  startDateTime: Date | null;
+  endDateTime: Date | null;
+  location: string;
+  description: string;
+  images: string[];
+  registrationDeadline: Date | null;
+  capacity: number;
+  registeredUsers: string[];
+};

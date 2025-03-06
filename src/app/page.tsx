@@ -4,129 +4,90 @@ import { useEffect, useState } from "react";
 import EventCard from "@/components/EventComponent/EventCard";
 import { useUser } from "@clerk/nextjs";
 import { getEvents } from "@/app/actions/events/actions";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
-
-interface IEvent {
-  _id: string;
-  title: string;
-  startDateTime: Date | null;
-  endDateTime: Date | null;
-  location: string;
-  description: string;
-  images: string[];
-  registrationDeadline: Date | null;
-  capacity: number;
-  registeredUsers: string[];
-}
+import { EventInfo } from "@/types/events";
+import EventSection from "@/components/EventComponent/EventSection";
+import SkeletonEventSection from "@/components/EventComponent/EventSectionSkeleton";
+import { formatEvents } from "@/lib/utils";
 
 export default function Home() {
-  const [events, setEvents] = useState<IEvent[]>([]);
-  const [registeredEvents, setRegisteredEvents] = useState<IEvent[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  // TODO consider more possibilities (children registered, deadline missed, etc) and how to sort those cases
+  const [eventSections, setEventSections] = useState<{
+    available: EventInfo[];
+    registered: EventInfo[];
+    past: EventInfo[];
+  }>({ available: [], registered: [], past: [] });
+  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { isLoaded, user } = useUser();
 
   useEffect(() => {
-    async function fetchEvents() {
+    const fetchAndProcessEvents = async () => {
       try {
-        // Fetch all events (accessible to everyone)
-        const data = await getEvents();
-        const formattedEvents: IEvent[] = data.map((event: any) => ({
-          _id: event._id.toString(),
-          title: event.title || "Untitled Event",
-          startDateTime: event.startDate ? new Date(event.startDate) : null,
-          endDateTime: event.endDate ? new Date(event.endDate) : null,
-          location: event.location || "Location not available",
-          description: event.description || "No description provided",
-          images: Array.isArray(event.images) ? event.images : [],
-          registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline) : null,
-          capacity: event.capacity || 0,
-          registeredUsers: event.registeredUsers ? event.registeredUsers.map((u: any) => u.toString()) : [],
-        }));
+        if (!isLoaded) return; // Ensure user state is loaded before proceeding
 
-        setEvents(formattedEvents); // Show all events to all users
+        const events = await getEvents();
+        const formattedEvents = formatEvents(events);
 
-        // If user is signed in, fetch their registered events
-        if (isLoaded && user) {
+        if (user) {
           const userResponse = await fetch(`/api/users/${user.id}`);
           if (!userResponse.ok) throw new Error("Failed to fetch user data");
 
           const userData = await userResponse.json();
-          console.log("MongoDB User Data:", userData);
+          if (!userData?._id) throw new Error("User not Found in MongoDB");
 
-          if (!userData || !userData._id) {
-            console.warn("User not found in MongoDB");
-            return;
-          }
-
-          const mongoUserId = userData._id.toString(); // Convert to string for comparison
-
-          // Filter events where registeredUsers includes the MongoDB user _id
-          const userRegisteredEvents = formattedEvents.filter((event) => event.registeredUsers.includes(mongoUserId));
-
-          setRegisteredEvents(userRegisteredEvents);
+          const categorized = categorizeEvents(formattedEvents, userData._id.toString());
+          setEventSections(categorized);
+        } else {
+          // If no user, just show all events
+          setEventSections({ available: formattedEvents, registered: [], past: [] });
         }
-      } catch (error) {
-        console.error("Error fetching events:", error);
-        setError("Failed to load events. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    }
 
-    fetchEvents();
+        setIsLoading(false);
+      } catch (error: any) {
+        setError(error.message || "Failed to load events");
+        setIsLoading(false);
+      }
+    };
+
+    fetchAndProcessEvents();
   }, [isLoaded, user]);
 
-  if (loading) return <LoadingSpinner size="lg" />;
+  if (isLoading)
+    return (
+      <main className="mx-auto mb-8 flex flex-col">
+        <SkeletonEventSection title="Registered Events" />
+        <SkeletonEventSection title="Available Events" />
+        <SkeletonEventSection title="Past Events" />
+      </main>
+    );
+
   if (error) return <p>{error}</p>;
 
   return (
-    <main className="p-4">
-      <h1 className="mb-4 text-2xl font-bold">Upcoming Events</h1>
-
-      {isLoaded && user && registeredEvents.length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-xl font-semibold">Your Registered Events</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {registeredEvents.map((event) => (
-              <EventCard
-                key={event._id}
-                id={event._id}
-                eventTitle={event.title}
-                startDateTime={event.startDateTime}
-                endDateTime={event.endDateTime}
-                location={event.location}
-                description={event.description}
-                images={event.images}
-                registrationDeadline={event.registrationDeadline}
-                capacity={event.capacity}
-                currentRegistrations={event.registeredUsers.length}
-                userRegistered={true}
-              />
-            ))}
-          </div>
-        </section>
-      )}
-
-      <h2 className="mb-4 text-xl font-semibold">All Events</h2>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {events.map((event) => (
-          <EventCard
-            key={event._id}
-            id={event._id}
-            eventTitle={event.title}
-            startDateTime={event.startDateTime}
-            endDateTime={event.endDateTime}
-            location={event.location}
-            description={event.description}
-            images={event.images}
-            registrationDeadline={event.registrationDeadline}
-            capacity={event.capacity}
-            currentRegistrations={event.registeredUsers.length}
-            userRegistered={false}
-          />
-        ))}
-      </div>
+    <main className="mx-auto mb-8 flex flex-col">
+      <EventSection title="Registered Events" events={eventSections.registered} isRegisteredSection />
+      <EventSection title="Available Events" events={eventSections.available} />
+      <EventSection title="Past Events" events={eventSections.past} isRegisteredSection />
     </main>
   );
 }
+
+// Helper function
+const categorizeEvents = (events: EventInfo[], userId: string) => {
+  const now = new Date();
+  const sections = { available: [], registered: [], past: [] } as {
+    available: EventInfo[];
+    registered: EventInfo[];
+    past: EventInfo[];
+  };
+
+  events.forEach((event) => {
+    if (event.registeredUsers.includes(userId)) {
+      event.endDateTime && event.endDateTime < now ? sections.past.push(event) : sections.registered.push(event);
+    } else {
+      sections.available.push(event);
+    }
+  });
+
+  return sections;
+};
