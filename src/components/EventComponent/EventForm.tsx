@@ -19,6 +19,7 @@ type EventFormData = {
   maxParticipants: number;
   registrationDeadline: string;
   fee: number;
+  paymentNote: string;
 };
 
 export default function CreateEventForm() {
