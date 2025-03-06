@@ -66,7 +66,7 @@ export default function AdminPage() {
     <main className="mx-auto mb-8 flex flex-col">
       <EventSection title="Active Events" events={eventSections.active} onDelete={handleDeleteEvent}>
         <Link href="/admin/events/create">
-          <button className="rounded-md bg-blue-500 px-4 py-2 text-white">Create Event</button>
+          <button className="rounded-md bg-[#558552] px-4 py-2 text-white hover:bg-[#488644]">Create Event</button>
         </Link>
       </EventSection>
       <EventSection title="Upcoming Events" events={eventSections.upcoming} onDelete={handleDeleteEvent} />
