@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { IEventUpdate } from "@/database/eventSchema";
 import { InputField } from "@/components/Forms/InputField";
@@ -15,6 +15,9 @@ import { validateEventDates } from "@/lib/utils";
 import LoadingSkeleton from "@/components/Forms/LoadingSkeleton";
 import { EventFormData } from "@/types/events";
 import { TextAreaField } from "@/components/Forms/TextAreaField";
+import { MinimalTiptapEditor } from "@/components/minimal-tiptap";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { Content } from "@tiptap/react";
 
 const EditEventPage = () => {
   const router = useRouter();
@@ -24,6 +27,7 @@ const EditEventPage = () => {
     register,
     handleSubmit,
     setValue,
+    control,
     formState: { errors },
   } = useForm<EventFormData>();
   const [loading, setLoading] = useState(true);
@@ -191,8 +195,24 @@ const EditEventPage = () => {
                   required: "Cannot leave blank",
                 }}
               />
-
-              <TextAreaField label="Description" name="description" register={register} className="md:col-span-2" />
+              <div className="md:col-span-2">
+                <h2>Description</h2>
+                <Controller
+                  name="description"
+                  control={control}
+                  render={({ field }) => (
+                    <TooltipProvider>
+                      <MinimalTiptapEditor
+                        className="w-full"
+                        editorContentClassName="p-5"
+                        output="html"
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </TooltipProvider>
+                  )}
+                />
+              </div>
             </fieldset>
 
             {/* Date & Time Section */}
