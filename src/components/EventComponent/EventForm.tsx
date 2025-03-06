@@ -106,7 +106,7 @@ export default function CreateEventForm() {
 
   return (
     <form onSubmit={handleSubmit((data) => onSubmit(data, false))} className="mx-auto max-w-4xl space-y-6 p-6">
-      <h1 className="text-xl font-bold">Basic Information</h1>
+      <h1 className="text-3xl font-medium">Basic Information</h1>
       <div className="flex space-x-4">
         <div className="flex-1">
           <label htmlFor="title" className="block font-medium">
@@ -188,7 +188,7 @@ export default function CreateEventForm() {
         </div>
       </div>
 
-      <h1 className="text-xl font-bold">Further Details</h1>
+      <h1 className="text-3xl font-medium">Further Details</h1>
       <div>
         <label htmlFor="description" className="block font-medium">
           Event Description
@@ -210,7 +210,7 @@ export default function CreateEventForm() {
         />
       </div>
 
-      <h1 className="text-xl font-bold">Waivers and Registration</h1>
+      <h1 className="text-3xl font-medium">Waivers and Registration</h1>
       <div>
         <label htmlFor="registrationDeadline" className="block font-medium">
           Registration Deadline
@@ -241,7 +241,7 @@ export default function CreateEventForm() {
         {errors.maxParticipants && <p className="text-sm text-red-500">{errors.maxParticipants.message}</p>}
       </div>
 
-      <h1 className="text-xl font-bold">Payment</h1>
+      <h1 className="text-3xl font-medium">Payment</h1>
       <div>
         <label htmlFor="fee" className="block font-medium">
           Event Fee
