@@ -1,4 +1,4 @@
-// leaving this here cuz I like how it looks... delete if you don't want it
+// alternative loading card design
 const SkeletonEventCard2 = () => (
   <div className="w-full max-w-sm animate-pulse rounded-lg bg-gray-100 shadow-lg">
     <div className="h-48 w-full rounded-t-lg bg-gray-300" />
