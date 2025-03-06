@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import styles from "./UserComponent.module.css";
+import { Input } from "@/components/ui/input";
 
 interface Child {
   localId: number;
@@ -334,212 +335,172 @@ export default function PersonalInfo() {
   if (error) return <p>{error}</p>;
 
   return (
-    <div className={styles.personalInfoContainer}>
-      <h2 className={styles.header}>Personal Information</h2>
+    <div className="mx-auto max-w-4xl px-6 py-10">
+      <h2 className="mb-6 text-3xl font-semibold text-gray-800">Account Information</h2>
 
-      <div className={styles.formGroup}>
-        <label>
-          First Name:
+      {/* Primary Accountholder Information */}
+      <section className="mb-8">
+        <h3 className="mb-4 text-xl font-semibold text-gray-700">Primary Accountholder Information</h3>
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <input
-            className={styles.inputField}
             type="text"
+            placeholder="First Name"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
             disabled={!isEditing}
+            className="rounded-md border border-gray-300 p-2"
           />
-        </label>
-        <label>
-          Last Name:
           <input
-            className={styles.inputField}
             type="text"
+            placeholder="Last Name"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             disabled={!isEditing}
+            className="rounded-md border border-gray-300 p-2"
           />
-        </label>
-        <label>
-          Email:
-          <input className={styles.inputField} type="email" value={email} readOnly disabled />
-        </label>
-        <label>
-          Gender:
-          {!isEditing ? (
-            <input className={styles.inputField} type="text" value={gender} disabled />
-          ) : (
-            <select className={styles.inputField} value={gender} onChange={(e) => setGender(e.target.value)}>
-              <option value="">Select</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Non-binary">Non-binary</option>
-              <option value="Prefer not to say">Prefer not to say</option>
-            </select>
-          )}
-        </label>
-        <label>
-          Birthday:
           <input
-            className={styles.inputField}
-            type="date"
-            value={birthday}
-            onChange={(e) => setBirthday(e.target.value)}
-            disabled={!isEditing}
-          />
-        </label>
-      </div>
-
-      {/* PHONE NUMBERS */}
-      <h3 className={styles.header}>Phone Numbers</h3>
-      <div className={styles.formGroup}>
-        <label>
-          Cell:
-          <input
-            className={styles.inputField}
             type="text"
+            placeholder="Pronouns"
+            value={gender}
+            onChange={(e) => setGender(e.target.value)}
+            disabled={!isEditing}
+            className="rounded-md border border-gray-300 p-2"
+          />
+          <input
+            type="email"
+            placeholder="Email"
+            value={user?.emailAddresses[0]?.emailAddress || ""}
+            disabled
+            className="rounded-md border border-gray-300 p-2"
+          />
+          <input
+            type="tel"
+            placeholder="Phone Number"
             value={phoneNumbers.cell}
             onChange={(e) => handlePhoneChange("cell", e.target.value)}
             disabled={!isEditing}
+            className="rounded-md border border-gray-300 p-2"
           />
-        </label>
-        <label>
-          Work:
           <input
-            className={styles.inputField}
             type="text"
-            value={phoneNumbers.work}
-            onChange={(e) => handlePhoneChange("work", e.target.value)}
-            disabled={!isEditing}
+            placeholder="Medical Information (optional)"
+            className="col-span-2 rounded-md border border-gray-300 p-2"
           />
-        </label>
-      </div>
+        </div>
+      </section>
 
-      {/* ADDRESS */}
-      <h3 className={styles.header}>Address</h3>
-      <div className={styles.formGroup}>
-        <label>
-          Home Address:
+      {/* Address Section */}
+      <section className="mt-8">
+        <h3 className="mb-3 text-xl font-semibold text-gray-800">Address</h3>
+        <div className="grid grid-cols-2 gap-4">
           <input
-            className={styles.inputField}
             type="text"
+            placeholder="Address Line 1"
             value={address.home}
             onChange={(e) => handleAddressChange("home", e.target.value)}
             disabled={!isEditing}
+            className="rounded-md border border-gray-300 p-2"
           />
-        </label>
-        <label>
-          City:
           <input
-            className={styles.inputField}
             type="text"
+            placeholder="Address Line 2 (optional)"
+            className="rounded-md border border-gray-300 p-2"
+          />
+          <input
+            type="text"
+            placeholder="City"
             value={address.city}
             onChange={(e) => handleAddressChange("city", e.target.value)}
             disabled={!isEditing}
+            className="rounded-md border border-gray-300 p-2"
           />
-        </label>
-        <label>
-          ZIP Code:
+          <input type="text" placeholder="State" className="rounded-md border border-gray-300 p-2" />
           <input
-            className={styles.inputField}
             type="text"
+            placeholder="Zip Code"
             value={address.zipCode}
             onChange={(e) => handleAddressChange("zipCode", e.target.value)}
             disabled={!isEditing}
+            className="rounded-md border border-gray-300 p-2"
           />
-        </label>
-      </div>
+        </div>
 
-      <h3 className={styles.header}>Children</h3>
-      {children.map((child) => (
-        <div key={child.localId} className={styles.childEntry}>
-          {/* Debug: {child._id && <p>Child DB _id: {child._id}</p>} */}
-          <label>
-            First Name:
+        <button
+          className="mt-4 rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700"
+          onClick={() => console.log("Add New Address Clicked")}
+        >
+          Add New Address
+        </button>
+      </section>
+
+      {/* Family Member Information */}
+      <section className="mt-8">
+        <h3 className="mb-4 text-xl font-semibold">Family Member Information</h3>
+        {children.map((child) => (
+          <div key={child.localId} className="my-4 grid grid-cols-2 gap-4">
             <input
-              className={styles.inputField}
               type="text"
-              placeholder="Child's first name"
+              placeholder="First Name"
               value={child.firstName}
               onChange={(e) => handleEditChild(child.localId, "firstName", e.target.value)}
               disabled={!isEditing}
+              className="rounded-md border border-gray-300 p-2"
             />
-          </label>
-          <label>
-            Last Name:
             <input
-              className={styles.inputField}
               type="text"
-              placeholder="Child's last name"
+              placeholder="Last Name"
               value={child.lastName}
               onChange={(e) => handleEditChild(child.localId, "lastName", e.target.value)}
               disabled={!isEditing}
+              className="rounded-md border border-gray-300 p-2"
             />
-          </label>
-          <label>
-            Birthday:
+            <input type="email" placeholder="Email" className="rounded-md border border-gray-300 p-2" />
+            <input type="text" placeholder="Phone Number" className="rounded-md border border-gray-300 p-2" />
+            <input type="text" placeholder="Pronouns" className="rounded-md border border-gray-300 p-2" />
+            <input type="text" placeholder="Relationship" className="rounded-md border border-gray-300 p-2" />
             <input
-              className={styles.inputField}
-              type="date"
-              value={child.birthday}
-              onChange={(e) => handleEditChild(child.localId, "birthday", e.target.value)}
-              disabled={!isEditing}
+              type="text"
+              placeholder="Medical Information (optional)"
+              className="col-span-2 rounded-md border border-gray-300 p-2"
             />
-          </label>
-          <label>
-            Gender:
-            {!isEditing ? (
-              <input className={styles.inputField} type="text" value={child.gender} disabled />
-            ) : (
-              <select
-                className={styles.inputField}
-                value={child.gender}
-                onChange={(e) => handleEditChild(child.localId, "gender", e.target.value)}
-              >
-                <option value="">Select</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Non-binary">Non-binary</option>
-                <option value="Prefer not to say">Prefer not to say</option>
-              </select>
-            )}
-          </label>
+          </div>
+        ))}
 
-          {isEditing && (
-            <button className={`${styles.button} ${styles.deleteBtn}`} onClick={() => handleDeleteChild(child.localId)}>
-              Delete
+        <button className="mt-6 rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700" onClick={handleAddChild}>
+          Add New Family Member
+        </button>
+      </section>
+
+      {/* Save and Cancel Buttons */}
+      <div className="mt-8 flex gap-4">
+        {isEditing ? (
+          <>
+            <button
+              className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700"
+              onClick={handleSaveChanges}
+            >
+              Save Profile Changes
             </button>
-          )}
-        </div>
-      ))}
+            <button
+              className="rounded-md bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+              onClick={handleCancelChanges}
+            >
+              Discard Profile Changes
+            </button>
+          </>
+        ) : (
+          <button className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700" onClick={handleEditClick}>
+            Edit Information
+          </button>
+        )}
+      </div>
 
-      {isEditing && (
-        <button className={styles.button} onClick={handleAddChild}>
-          Add Child
-        </button>
-      )}
-
-      {/* Show validation errors inline */}
+      {/* Validation Errors */}
       {validationErrors.length > 0 && (
-        <div className={styles.validationErrorContainer}>
-          {validationErrors.map((errMsg, idx) => (
-            <p className={styles.validationError} key={idx}>
-              {errMsg}
-            </p>
+        <div className="mt-4 rounded-md bg-red-100 p-3 text-red-700">
+          {validationErrors.map((error, idx) => (
+            <p key={idx}>{error}</p>
           ))}
-        </div>
-      )}
-
-      {!isEditing ? (
-        <button className={styles.button} onClick={handleEditClick}>
-          Edit Info
-        </button>
-      ) : (
-        <div>
-          <button className={styles.button} onClick={handleSaveChanges}>
-            Save Changes
-          </button>
-          <button className={styles.button} onClick={handleCancelChanges}>
-            Cancel Changes
-          </button>
         </div>
       )}
     </div>
