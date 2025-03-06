@@ -198,6 +198,7 @@ export const useMinimalTiptapEditor = ({
         class: cn("focus:outline-none", editorClassName),
       },
     },
+    immediatelyRender: false, // Fix hydration mismatch
     onUpdate: ({ editor }) => handleUpdate(editor),
     onCreate: ({ editor }) => handleCreate(editor),
     onBlur: ({ editor }) => handleBlur(editor),
