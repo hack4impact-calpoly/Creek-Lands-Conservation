@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
+import { useForm, Controller } from "react-hook-form";
 import { Card, CardContent } from "@/components/ui/card";
 import { IEventUpdate } from "@/database/eventSchema";
 import { InputField } from "@/components/Forms/InputField";
@@ -27,16 +27,12 @@ const EditEventPage = () => {
     register,
     handleSubmit,
     setValue,
+    control,
     formState: { errors },
   } = useForm<EventFormData>();
-  const [descContent, setDescContent] = useState<Content>("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [hasEventStarted, setHasEventStarted] = useState(false);
-
-  useEffect(() => {
-    setValue("description", descContent || "");
-  }, [descContent, setValue]);
 
   useEffect(() => {
     if (!eventID) return;
@@ -51,7 +47,6 @@ const EditEventPage = () => {
         setValue("location", data.location);
         setValue("capacity", data.capacity);
         setValue("fee", data.fee);
-        setDescContent(data.description || "");
         setValue("description", data.description || "");
 
         // Set date/time fields in local time
@@ -202,28 +197,20 @@ const EditEventPage = () => {
               />
               <div className="md:col-span-2">
                 <h2>Description</h2>
-                <TooltipProvider>
-                  <MinimalTiptapEditor
-                    label="Description"
-                    register={register}
-                    value={descContent}
-                    onChange={setDescContent}
-                    className="w-full"
-                    editorContentClassName="p-5"
-                    output="html"
-                    placeholder="Provide a brief description of the event.."
-                    autofocus={true}
-                    editable={true}
-                    editorClassName="focus:outline-none"
-                  />
-                </TooltipProvider>
-
-                <input
+                <Controller
                   name="description"
-                  id="description"
-                  type="hidden"
-                  {...register("description")}
-                  value={descContent}
+                  control={control}
+                  render={({ field }) => (
+                    <TooltipProvider>
+                      <MinimalTiptapEditor
+                        className="w-full"
+                        editorContentClassName="p-5"
+                        output="html"
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </TooltipProvider>
+                  )}
                 />
               </div>
             </fieldset>
