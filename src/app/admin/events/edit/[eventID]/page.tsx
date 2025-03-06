@@ -18,6 +18,7 @@ import { TextAreaField } from "@/components/Forms/TextAreaField";
 import { MinimalTiptapEditor } from "@/components/minimal-tiptap";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Content } from "@tiptap/react";
+import BackButton from "@/components/ui/back-button";
 
 const EditEventPage = () => {
   const router = useRouter();
@@ -130,9 +131,9 @@ const EditEventPage = () => {
   if (loading) return <LoadingSkeleton />;
 
   return (
-    <div>
-      <Link href="/admin/events" className="mb-4 inline-block text-blue-600 hover:text-blue-800">
-        ← Back to Admin
+    <div className="container mx-auto px-4 py-8">
+      <Link href="/admin/events" className="mb-4 inline-block">
+        <BackButton />
       </Link>
       <Card className="mx-auto max-w-2xl rounded-lg p-4 shadow-lg sm:p-6">
         <CardContent>
