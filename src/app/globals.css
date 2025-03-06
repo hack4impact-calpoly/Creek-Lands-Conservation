@@ -73,3 +73,9 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Clerk User Button Styling */
+.cl-avatarBox {
+  width: 2.75rem;
+  height: 2.75rem;
+}

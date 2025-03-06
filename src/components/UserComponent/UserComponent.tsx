@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import styles from "./UserComponent.module.css";
+import { LoadingSpinner } from "../ui/loading-spinner";
 
 interface Child {
   localId: number;
@@ -330,7 +331,7 @@ export default function PersonalInfo() {
   // -----------------------
   // Render UI
   // -----------------------
-  if (loading) return <p>Loading user data...</p>;
+  if (loading) return <LoadingSpinner size="lg" />;
   if (error) return <p>{error}</p>;
 
   return (
