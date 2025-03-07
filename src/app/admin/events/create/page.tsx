@@ -7,7 +7,7 @@ export default function CreateEventPage() {
       <Link href="/admin/events" className="mb-4 inline-block text-blue-600 hover:text-blue-800">
         ← Back to Admin
       </Link>
-      <h1 className="mb-6 text-2xl font-bold">Create Event</h1>
+      <h1 className="mb-6 text-center text-5xl font-medium">Create Event</h1>
       <CreateEventForm />
     </div>
   );

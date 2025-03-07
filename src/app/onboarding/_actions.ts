@@ -2,11 +2,11 @@
 
 import { auth, clerkClient } from "@clerk/nextjs/server";
 import { updateUser } from "@/lib/users";
-
+import { OnboardingFormData } from "@/types/onboarding";
 // Utility functions
-const getStringValue = (value: FormDataEntryValue | null) => (value !== null ? String(value).trim() : "");
+const getStringValue = (value: String | undefined | null) => (value ? String(value).trim() : "");
 
-const getDateValue = (value: FormDataEntryValue | null) => {
+const getDateValue = (value: String | undefined | null) => {
   const dateString = getStringValue(value);
   return dateString ? new Date(dateString) : undefined;
 };
@@ -47,6 +47,8 @@ const validateUserData = (data: any) => {
   return null;
 };
 
+const validateChildData = (data: any) => {};
+
 // Mark onboarding as complete in Clerk
 export const completeOnboarding = async () => {
   const { userId } = await auth();
@@ -67,24 +69,24 @@ export const completeOnboarding = async () => {
 };
 
 // Handles user onboarding form submission
-export const userOnboarding = async (formData: FormData) => {
+export const userOnboarding = async (formData: OnboardingFormData) => {
   const { userId } = await auth();
   if (!userId) return { error: "No Logged In User" };
 
   const updatedData = {
-    firstName: getStringValue(formData.get("firstName")),
-    lastName: getStringValue(formData.get("lastName")),
-    email: getStringValue(formData.get("email")),
-    gender: getStringValue(formData.get("gender")) as "" | "Male" | "Female" | "Non-binary" | "Prefer Not to Say",
-    birthday: getDateValue(formData.get("birthday")),
+    firstName: formData.firstName.trim(),
+    lastName: formData.lastName.trim(),
+    email: formData.email.trim(),
+    gender: formData.gender,
+    birthday: formData.birthday ? new Date(formData.birthday) : undefined,
     address: {
-      home: getStringValue(formData.get("homeAddress")),
-      city: getStringValue(formData.get("city")),
-      zipCode: getStringValue(formData.get("zipCode")),
+      home: formData.homeAddress.trim(),
+      city: formData.city.trim(),
+      zipCode: formData.zipCode.trim(),
     },
     phoneNumbers: {
-      cell: getStringValue(formData.get("cellPhone")),
-      work: getStringValue(formData.get("workPhone")),
+      cell: formData.cellphone.trim(),
+      work: formData.workphone?.trim(),
     },
   };
 
@@ -96,7 +98,7 @@ export const userOnboarding = async (formData: FormData) => {
     const mongoRes = await updateUser(userId, updatedData);
     if (mongoRes.error) return { error: mongoRes.error };
 
-    return { message: "Onboarding complete." };
+    return { message: "User Onboarding complete." };
   } catch (err) {
     console.error("Error in userOnboarding:", err);
     return { error: "Internal error occurred while completing onboarding." };
@@ -114,14 +116,22 @@ export const childrenOnboarding = async (
   const formattedChildren = children.map((child) => ({
     firstName: child.firstName.trim(),
     lastName: child.lastName.trim(),
-    birthday: new Date(child.birthday),
+    birthday: child.birthday ? new Date(child.birthday) : undefined,
     gender: child.gender as "Male" | "Female" | "Non-binary" | "Prefer Not to Say",
     registeredEvents: [],
     waiversSigned: [],
   }));
 
-  if (formattedChildren.some((child) => !child.firstName || !child.lastName || isNaN(child.birthday.getTime()))) {
-    return { error: "Each child must have a valid first name, last name, and birthday." };
+  // TODO verify which of the fields are required.
+  // Child Schema suggests neither birthday nor gender are required
+  // I will require birthday, since that is probably important info.
+  if (
+    formattedChildren.some(
+      (child) => !child.firstName || !child.lastName || !child.birthday || isNaN(child.birthday.getTime()),
+    )
+  ) {
+    // TODO refactor this validation into a more robust function if needed later (like for the user).
+    return { error: "Each child must have a valid first name, last name and birthday" };
   }
 
   try {

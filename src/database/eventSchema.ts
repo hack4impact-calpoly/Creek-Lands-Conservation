@@ -77,7 +77,8 @@ const eventSchema = new Schema<IEvent>(
       required: true,
     },
     images: [{ type: String, default: [] }],
-    registeredUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+    registeredUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Change ObjectId to String
+
     waiverId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Waiver" }],
     fee: {
       type: Number,

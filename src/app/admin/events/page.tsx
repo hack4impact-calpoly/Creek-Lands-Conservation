@@ -1,88 +1,103 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect, useState } from "react";
 import { getEvents } from "@/app/actions/events/actions";
-import EventCard from "@/components/EventComponent/EventCard";
-
-interface IEvent {
-  _id: string;
-  title: string;
-  startDateTime: Date | null;
-  endDateTime: Date | null;
-  location: string;
-  description: string;
-  images: string[];
-  registrationDeadline: Date | null;
-  capacity: number;
-  registeredUsers: string[];
-}
+import { EventInfo } from "@/types/events";
+import EventSection from "@/components/EventComponent/EventSection";
+import SkeletonEventSection from "@/components/EventComponent/EventSectionSkeleton";
+import Link from "next/link";
+import { formatEvents } from "@/lib/utils";
 
 export default function AdminPage() {
-  const [events, setEvents] = useState<IEvent[]>([]);
+  const [eventSections, setEventSections] = useState<{
+    active: EventInfo[];
+    upcoming: EventInfo[];
+    past: EventInfo[];
+  }>({ active: [], upcoming: [], past: [] });
 
-  const fetchEvents = async () => {
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchAndProcessEvents = async () => {
     try {
-      const data = await getEvents();
+      const events = await getEvents();
+      const formattedEvents = formatEvents(events);
+      const categorized = categorizeEvents(formattedEvents);
 
-      // Transform MongoDB objects into `IEvent` format
-      const formattedEvents: IEvent[] = data.map((event: any) => ({
-        _id: event._id.toString(),
-        title: event.title || "Untitled Event",
-        startDateTime: event.startDate ? new Date(event.startDate) : null,
-        endDateTime: event.endDate ? new Date(event.endDate) : null,
-        location: event.location || "Location not available",
-        description: event.description || "No description provided",
-        images: Array.isArray(event.images) ? event.images : [],
-        registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline) : null,
-        capacity: event.capacity || 0,
-        registeredUsers: event.registeredUsers,
-      }));
-      setEvents(formattedEvents);
-    } catch (error) {
-      console.error("Error fetching events:", error);
+      setEventSections(categorized);
+      setIsLoading(false);
+    } catch (error: any) {
+      setError(error.message || "Failed to load events");
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchEvents();
+    fetchAndProcessEvents();
 
+    // Refresh events every 5 minutes
     const interval = setInterval(() => {
-      fetchEvents();
+      fetchAndProcessEvents();
     }, 300000);
 
     return () => clearInterval(interval);
   }, []);
 
-  // Function to remove deleted event from state
   const handleDeleteEvent = (eventId: string) => {
-    setEvents((prevEvents) => prevEvents.filter((event) => event._id !== eventId));
+    setEventSections((prev) => ({
+      active: prev.active.filter((event) => event.id !== eventId),
+      upcoming: prev.active.filter((event) => event.id !== eventId),
+      past: prev.past.filter((event) => event.id !== eventId),
+    }));
   };
 
+  if (isLoading)
+    return (
+      <main className="mx-auto mb-8 flex flex-col">
+        <SkeletonEventSection title="Active Events" />
+        <SkeletonEventSection title="Upcoming Events" />
+        <SkeletonEventSection title="Past Events" />
+      </main>
+    );
+
+  if (error) return <p>{error}</p>;
+
   return (
-    <div>
-      <h1>All Events</h1>
-      <Link href="/admin/events/create">
-        <button className="rounded-md bg-blue-500 px-4 py-2 text-white">Create Event</button>
-      </Link>
-      <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {events.map((event) => (
-          <EventCard
-            key={event._id}
-            id={event._id}
-            eventTitle={event.title}
-            startDateTime={event.startDateTime}
-            endDateTime={event.endDateTime}
-            location={event.location}
-            description={event.description}
-            images={event.images}
-            registrationDeadline={event.registrationDeadline}
-            capacity={event.capacity}
-            currentRegistrations={event.registeredUsers.length}
-            onDelete={handleDeleteEvent}
-          />
-        ))}
-      </div>
-    </div>
+    <main className="mx-auto mb-8 flex flex-col">
+      <EventSection title="Active Events" events={eventSections.active} onDelete={handleDeleteEvent}>
+        <Link href="/admin/events/create">
+          <button className="rounded-md bg-blue-500 px-4 py-2 text-white">Create Event</button>
+        </Link>
+      </EventSection>
+      <EventSection title="Upcoming Events" events={eventSections.upcoming} onDelete={handleDeleteEvent} />
+      <EventSection title="Past Events" events={eventSections.past} onDelete={handleDeleteEvent} />
+    </main>
   );
 }
+
+const categorizeEvents = (events: EventInfo[]) => {
+  const now = new Date();
+  const sections = { active: [], upcoming: [], past: [] } as {
+    active: EventInfo[];
+    upcoming: EventInfo[];
+    past: EventInfo[];
+  };
+
+  events.forEach((event) => {
+    if (event.startDateTime && event.endDateTime) {
+      if (event.startDateTime <= now && event.endDateTime >= now) {
+        sections.active.push(event);
+      } else if (event.startDateTime > now) {
+        sections.upcoming.push(event);
+      } else {
+        sections.past.push(event);
+      }
+    } else if (event.startDateTime && event.startDateTime > now) {
+      sections.upcoming.push(event);
+    } else {
+      sections.past.push(event);
+    }
+  });
+
+  return sections;
+};
