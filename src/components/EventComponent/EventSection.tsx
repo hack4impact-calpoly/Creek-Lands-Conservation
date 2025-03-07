@@ -50,9 +50,9 @@ export default function EventSection({
       </div>
 
       {events.length === 0 ? (
-        <div className=" w-full rounded-lg bg-gray-50 p-8 text-center">
-          <p className="text-gray-500">No {title.toLowerCase()} found</p>
-          <p className="mt-2 text-gray-400"> Check back later!</p>
+        <div className=" w-full rounded-lg p-8 text-center">
+          <p className="text-2xl text-gray-500">No {title.toLowerCase()} found</p>
+          <p className="mt-2 text-xl text-gray-400"> Check back later!</p>
         </div>
       ) : (
         <>
@@ -72,7 +72,7 @@ export default function EventSection({
           </div>
           {hasMoreEvents && (
             <div className="mt-4 flex justify-center">
-              <Button onClick={() => setIsExpanded(!isExpanded)} className="bg-gray-500">
+              <Button onClick={() => setIsExpanded(!isExpanded)} className="bg-[#45575e]">
                 {isExpanded ? "See Less" : "See More"}
               </Button>
             </div>

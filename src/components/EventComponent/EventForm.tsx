@@ -285,14 +285,14 @@ export default function CreateEventForm() {
           type="button"
           onClick={handleSubmit((data) => onSubmit(data, true))}
           disabled={isSubmitting}
-          className="rounded border bg-gray-200 px-4 py-2 hover:bg-gray-300"
+          className="rounded border bg-[#45575E] px-4 py-2 text-white hover:bg-gray-500"
         >
           Save as Draft
         </button>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="rounded border bg-blue-500 px-4 py-2 text-white hover:bg-blue-600"
+          className="rounded border bg-[#558552] px-4 py-2 text-white hover:bg-[#6FAF68]"
         >
           Publish Event
         </button>
