@@ -303,7 +303,6 @@ export default function CreateEventForm() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent">
           <div className="flex items-center space-x-4 rounded-lg bg-white p-6 shadow-lg">
             <div className="h-12 w-12 animate-spin rounded-full border-4 border-t-4 border-solid border-blue-500"></div>
-            <LoadingSpinner size="lg" />
           </div>
         </div>
       )}
