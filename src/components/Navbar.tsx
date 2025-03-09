@@ -19,6 +19,7 @@ const Navbar = () => {
               alt="Creek Lands Logo"
               width={120}
               height={30}
+              style={{ width: "auto", height: "auto" }}
               className="object-contain"
             />
           </Link>
