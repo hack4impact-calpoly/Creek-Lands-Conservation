@@ -32,7 +32,15 @@ const formatTime = (date: Date | null) => date?.toLocaleTimeString([], { hour: "
 
 const BackgroundImageLayer = ({ imageUrl, altText }: { imageUrl: string; altText: string }) => (
   <div className="absolute inset-0">
-    <Image src={imageUrl} alt={altText} layout="fill" objectFit="cover" className="brightness-110" priority />
+    <Image
+      src={imageUrl}
+      alt={altText}
+      fill
+      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 25vw"
+      style={{ objectFit: "cover" }}
+      className="brightness-110"
+      priority
+    />
     <div className="absolute inset-0 bg-gradient-to-b from-black/30 to-black/60" />
   </div>
 );
