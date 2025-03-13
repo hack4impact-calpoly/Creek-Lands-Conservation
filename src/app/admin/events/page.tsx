@@ -6,15 +6,13 @@ import { EventInfo } from "@/types/events";
 import EventSection from "@/components/EventComponent/EventSection";
 import SkeletonEventSection from "@/components/EventComponent/EventSectionSkeleton";
 import Link from "next/link";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatEvents } from "@/lib/utils";
 
 export default function AdminPage() {
-  const [eventSections, setEventSections] = useState<{
-    active: EventInfo[];
-    upcoming: EventInfo[];
-    past: EventInfo[];
-  }>({ active: [], upcoming: [], past: [] });
-
+  const [futureEvents, setFutureEvents] = useState<EventInfo[]>([]);
+  const [ongoingEvents, setOngoingEvents] = useState<EventInfo[]>([]);
+  const [pastEvents, setPastEvents] = useState<EventInfo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -22,9 +20,11 @@ export default function AdminPage() {
     try {
       const events = await getEvents();
       const formattedEvents = formatEvents(events);
-      const categorized = categorizeEvents(formattedEvents);
+      const { future, ongoing, past } = categorizeEvents(formattedEvents);
 
-      setEventSections(categorized);
+      setFutureEvents(future);
+      setOngoingEvents(ongoing);
+      setPastEvents(past);
       setIsLoading(false);
     } catch (error: any) {
       setError(error.message || "Failed to load events");
@@ -44,18 +44,16 @@ export default function AdminPage() {
   }, []);
 
   const handleDeleteEvent = (eventId: string) => {
-    setEventSections((prev) => ({
-      active: prev.active.filter((event) => event.id !== eventId),
-      upcoming: prev.active.filter((event) => event.id !== eventId),
-      past: prev.past.filter((event) => event.id !== eventId),
-    }));
+    setFutureEvents((prev) => prev.filter((event) => event.id !== eventId));
+    setOngoingEvents((prev) => prev.filter((event) => event.id !== eventId));
+    setPastEvents((prev) => prev.filter((event) => event.id !== eventId));
   };
 
   if (isLoading)
     return (
       <main className="mx-auto mb-8 flex flex-col">
-        <SkeletonEventSection title="Active Events" />
-        <SkeletonEventSection title="Upcoming Events" />
+        <SkeletonEventSection title="Future Events" />
+        <SkeletonEventSection title="Ongoing Events" />
         <SkeletonEventSection title="Past Events" />
       </main>
     );
@@ -64,40 +62,63 @@ export default function AdminPage() {
 
   return (
     <main className="mx-auto mb-8 flex flex-col">
-      <EventSection title="Active Events" events={eventSections.active} onDelete={handleDeleteEvent}>
+      <div className="mb-6 flex justify-end">
         <Link href="/admin/events/create">
           <button className="rounded-md bg-[#558552] px-4 py-2 text-white hover:bg-[#488644]">Create Event</button>
         </Link>
-      </EventSection>
-      <EventSection title="Upcoming Events" events={eventSections.upcoming} onDelete={handleDeleteEvent} />
-      <EventSection title="Past Events" events={eventSections.past} onDelete={handleDeleteEvent} />
+      </div>
+
+      {/* Tabs for event categories */}
+      <Tabs defaultValue="future" className="w-full">
+        <TabsList className="border-white-300 flex space-x-4 border-b pb-2">
+          <TabsTrigger value="future">Future Events</TabsTrigger>
+          <TabsTrigger value="ongoing">Ongoing Events</TabsTrigger>
+          <TabsTrigger value="past">Past Events</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="future">
+          <EventSection title="Future Events" events={futureEvents} onDelete={handleDeleteEvent} />
+        </TabsContent>
+        <TabsContent value="ongoing">
+          <EventSection title="Ongoing Events" events={ongoingEvents} onDelete={handleDeleteEvent} />
+        </TabsContent>
+        <TabsContent value="past">
+          <EventSection title="Past Events" events={pastEvents} onDelete={handleDeleteEvent} />
+        </TabsContent>
+      </Tabs>
     </main>
   );
 }
 
+/**
+ * Categorizes events into Future, Ongoing, and Past.
+ */
 const categorizeEvents = (events: EventInfo[]) => {
   const now = new Date();
-  const sections = { active: [], upcoming: [], past: [] } as {
-    active: EventInfo[];
-    upcoming: EventInfo[];
+  const categorized = { future: [], ongoing: [], past: [] } as {
+    future: EventInfo[];
+    ongoing: EventInfo[];
     past: EventInfo[];
   };
 
   events.forEach((event) => {
-    if (event.startDateTime && event.endDateTime) {
-      if (event.startDateTime <= now && event.endDateTime >= now) {
-        sections.active.push(event);
-      } else if (event.startDateTime > now) {
-        sections.upcoming.push(event);
+    const startDate = event.startDateTime ? new Date(event.startDateTime) : null;
+    const endDate = event.endDateTime ? new Date(event.endDateTime) : null;
+
+    if (startDate && endDate) {
+      if (startDate > now) {
+        categorized.future.push(event);
+      } else if (startDate <= now && endDate >= now) {
+        categorized.ongoing.push(event);
       } else {
-        sections.past.push(event);
+        categorized.past.push(event);
       }
-    } else if (event.startDateTime && event.startDateTime > now) {
-      sections.upcoming.push(event);
+    } else if (startDate && startDate > now) {
+      categorized.future.push(event);
     } else {
-      sections.past.push(event);
+      categorized.past.push(event);
     }
   });
 
-  return sections;
+  return categorized;
 };
