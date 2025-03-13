@@ -70,14 +70,13 @@ export default function PersonalInfo() {
       try {
         setLoading(true);
 
-        // GET from /api/users/[clerkID]
         const response = await fetch(`/api/users/${user.id}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch user data: ${response.status}`);
         }
 
         const userData = await response.json();
-        console.log("MongoDB User Data:", userData);
+        console.log("Full API Response:", userData); // Log full response
 
         if (!userData || !userData._id) {
           console.warn("User not found in MongoDB");
@@ -86,41 +85,54 @@ export default function PersonalInfo() {
           return;
         }
 
+        // Ensure children is present
+        if (!userData.children || !Array.isArray(userData.children)) {
+          console.warn("Children field missing or not an array");
+          setChildren([]); // Reset children
+        } else {
+          console.log("Children Data:", userData.children); // Log children array
+        }
+
         // Populate parent's info
         setFirstName(userData.firstName || "");
         setLastName(userData.lastName || "");
         setEmail(userData.email || "");
         setGender(userData.gender || "");
-        setBirthday(userData.birthday ? new Date(userData.birthday).toISOString().split("T")[0] : "");
-
-        // phoneNumbers
+        setBirthday(
+          userData.birthday
+            ? new Date(userData.birthday).toISOString().split("T")[0] // Convert to YYYY-MM-DD
+            : "",
+        );
         setPhoneNumbers({
           cell: userData.phoneNumbers?.cell || "",
           work: userData.phoneNumbers?.work || "",
         });
 
-        // address
         setAddress({
           home: userData.address?.home || "",
           city: userData.address?.city || "",
           zipCode: userData.address?.zipCode || "",
         });
 
-        // children
+        // Map children properly
         const mappedChildren: Child[] =
           userData.children?.map((childData: any) => {
+            console.log("Processing Child:", childData);
             localChildCounter += 1;
             return {
               localId: localChildCounter,
               _id: childData._id ?? "",
               firstName: childData.firstName ?? "",
               lastName: childData.lastName ?? "",
-              birthday: childData.birthday ? new Date(childData.birthday).toISOString().split("T")[0] : "",
+              birthday: childData.birthday
+                ? new Date(childData.birthday).toISOString().split("T")[0] // Convert to YYYY-MM-DD
+                : "",
               gender: childData.gender ?? "",
             };
           }) || [];
 
         setChildren(mappedChildren);
+        console.log("Mapped Children:", mappedChildren); // Log final mapped children
       } catch (err) {
         console.error("Error fetching user data:", err);
         setError("Failed to load user data. Please try again later.");
@@ -339,131 +351,95 @@ export default function PersonalInfo() {
     <div className="mx-auto max-w-4xl px-6 py-10">
       <h2 className="mb-6 text-3xl font-semibold text-gray-800">Account Information</h2>
 
-      {/* Primary Accountholder Information */}
+      {/* Primary Account Holder Information */}
       <section className="mb-8">
-        <h3 className="mb-4 text-xl font-semibold text-gray-700">Primary Accountholder Information</h3>
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <input
-            type="text"
-            placeholder="First Name"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            disabled={!isEditing}
-            className="rounded-md border border-gray-300 p-2"
-          />
-          <input
-            type="text"
-            placeholder="Last Name"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            disabled={!isEditing}
-            className="rounded-md border border-gray-300 p-2"
-          />
-          <input
-            type="text"
-            placeholder="Pronouns"
-            value={gender}
-            onChange={(e) => setGender(e.target.value)}
-            disabled={!isEditing}
-            className="rounded-md border border-gray-300 p-2"
-          />
-          <input
-            type="email"
-            placeholder="Email"
-            value={user?.emailAddresses[0]?.emailAddress || ""}
-            disabled
-            className="rounded-md border border-gray-300 p-2"
-          />
-          <input
-            type="tel"
-            placeholder="Phone Number"
-            value={phoneNumbers.cell}
-            onChange={(e) => handlePhoneChange("cell", e.target.value)}
-            disabled={!isEditing}
-            className="rounded-md border border-gray-300 p-2"
-          />
-          <input
-            type="text"
-            placeholder="Medical Information (optional)"
-            className="col-span-2 rounded-md border border-gray-300 p-2"
-          />
+        <h3 className="mb-4 text-xl font-semibold text-gray-700">Primary Account Holder Information</h3>
+        <div className="space-y-4">
+          {[
+            { label: "First Name", value: firstName, setValue: setFirstName, type: "text" },
+            { label: "Last Name", value: lastName, setValue: setLastName, type: "text" },
+            { label: "Pronouns", value: gender, setValue: setGender, type: "text" },
+            { label: "Email", value: user?.emailAddresses[0]?.emailAddress || "", disabled: true, type: "email" },
+            {
+              label: "Birthday",
+              value: birthday ? new Date(birthday).toISOString().split("T")[0] : "",
+              setValue: (v: string) => setBirthday(new Date(v).toISOString()),
+              type: "date",
+            },
+
+            {
+              label: "Phone Number",
+              value: phoneNumbers.cell,
+              setValue: (v: string) => handlePhoneChange("cell", v),
+              type: "tel",
+            },
+            { label: "Medical Information (optional)", value: "", type: "text" },
+          ].map(({ label, value, setValue, type, disabled }, index) => (
+            <div key={index} className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">{label}</label>
+              <input
+                type={type}
+                value={value}
+                onChange={setValue ? (e) => setValue(e.target.value) : undefined}
+                disabled={disabled || !isEditing}
+                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+              />
+            </div>
+          ))}
         </div>
       </section>
 
       {/* Address Section */}
       <section className="mt-8">
         <h3 className="mb-3 text-xl font-semibold text-gray-800">Address</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <input
-            type="text"
-            placeholder="Address Line 1"
-            value={address.home}
-            onChange={(e) => handleAddressChange("home", e.target.value)}
-            disabled={!isEditing}
-            className="rounded-md border border-gray-300 p-2"
-          />
-          <input
-            type="text"
-            placeholder="Address Line 2 (optional)"
-            className="rounded-md border border-gray-300 p-2"
-          />
-          <input
-            type="text"
-            placeholder="City"
-            value={address.city}
-            onChange={(e) => handleAddressChange("city", e.target.value)}
-            disabled={!isEditing}
-            className="rounded-md border border-gray-300 p-2"
-          />
-          <input type="text" placeholder="State" className="rounded-md border border-gray-300 p-2" />
-          <input
-            type="text"
-            placeholder="Zip Code"
-            value={address.zipCode}
-            onChange={(e) => handleAddressChange("zipCode", e.target.value)}
-            disabled={!isEditing}
-            className="rounded-md border border-gray-300 p-2"
-          />
+        <div className="space-y-4">
+          {[
+            { label: "Address Line 1", value: address.home, setValue: (v: string) => handleAddressChange("home", v) },
+            { label: "Address Line 2 (optional)", value: "" },
+            { label: "City", value: address.city, setValue: (v: string) => handleAddressChange("city", v) },
+            { label: "Zip Code", value: address.zipCode, setValue: (v: string) => handleAddressChange("zipCode", v) },
+          ].map(({ label, value, setValue }, index) => (
+            <div key={index} className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">{label}</label>
+              <input
+                type="text"
+                value={value}
+                onChange={setValue ? (e) => setValue(e.target.value) : undefined}
+                disabled={!isEditing}
+                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+              />
+            </div>
+          ))}
         </div>
-
-        <button
-          className="mt-4 rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700"
-          onClick={() => console.log("Add New Address Clicked")}
-        >
-          Add New Address
-        </button>
       </section>
 
       {/* Family Member Information */}
       <section className="mt-8">
         <h3 className="mb-4 text-xl font-semibold">Family Member Information</h3>
         {children.map((child) => (
-          <div key={child.localId} className="my-4 grid grid-cols-2 gap-4">
-            <input
-              type="text"
-              placeholder="First Name"
-              value={child.firstName}
-              onChange={(e) => handleEditChild(child.localId, "firstName", e.target.value)}
-              disabled={!isEditing}
-              className="rounded-md border border-gray-300 p-2"
-            />
-            <input
-              type="text"
-              placeholder="Last Name"
-              value={child.lastName}
-              onChange={(e) => handleEditChild(child.localId, "lastName", e.target.value)}
-              disabled={!isEditing}
-              className="rounded-md border border-gray-300 p-2"
-            />
-            <input type="email" placeholder="Email" className="rounded-md border border-gray-300 p-2" />
-            <input type="text" placeholder="Phone Number" className="rounded-md border border-gray-300 p-2" />
-            <input type="text" placeholder="Pronouns" className="rounded-md border border-gray-300 p-2" />
-            <input type="text" placeholder="Relationship" className="rounded-md border border-gray-300 p-2" />
-            <input
-              type="text"
-              placeholder="Medical Information (optional)"
-              className="col-span-2 rounded-md border border-gray-300 p-2"
-            />
+          <div key={child.localId} className="mb-4 space-y-4 border-b pb-4">
+            {[
+              { label: "First Name", field: "firstName", value: child.firstName },
+              { label: "Last Name", field: "lastName", value: child.lastName },
+              { label: "Pronouns", field: "gender", value: child.gender },
+              {
+                label: "Birthday",
+                field: "birthday",
+                value: child.birthday ? new Date(child.birthday).toISOString().split("T")[0] : "",
+                type: "date",
+              },
+            ].map(({ label, field, value, type }, index) => (
+              <div key={index} className="grid grid-cols-3 items-center gap-4">
+                <label className="text-sm font-medium text-gray-700">{label}</label>
+                <input
+                  type={type || "text"}
+                  value={value}
+                  onChange={(e) => handleEditChild(child.localId, field as keyof Child, e.target.value)}
+                  disabled={!isEditing}
+                  className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+                />
+              </div>
+            ))}
           </div>
         ))}
 
