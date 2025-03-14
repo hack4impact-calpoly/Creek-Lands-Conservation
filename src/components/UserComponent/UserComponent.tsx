@@ -2,8 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import styles from "./UserComponent.module.css";
-import { Input } from "@/components/ui/input";
 import { LoadingSpinner } from "../ui/loading-spinner";
 
 interface Child {
@@ -15,6 +13,7 @@ interface Child {
   gender: string;
 }
 
+const genderOptions = ["Male", "Female", "Non-binary", "Prefer not to say"];
 let localChildCounter = 0;
 
 export default function PersonalInfo() {
@@ -54,7 +53,7 @@ export default function PersonalInfo() {
   });
   const [originalChildren, setOriginalChildren] = useState<Child[]>([]);
 
-  // **New**: We'll store validation errors in an array of strings
+  // Validation errors
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Editing mode
@@ -76,7 +75,6 @@ export default function PersonalInfo() {
         }
 
         const userData = await response.json();
-        console.log("Full API Response:", userData); // Log full response
 
         if (!userData || !userData._id) {
           console.warn("User not found in MongoDB");
@@ -117,22 +115,18 @@ export default function PersonalInfo() {
         // Map children properly
         const mappedChildren: Child[] =
           userData.children?.map((childData: any) => {
-            console.log("Processing Child:", childData);
             localChildCounter += 1;
             return {
               localId: localChildCounter,
               _id: childData._id ?? "",
               firstName: childData.firstName ?? "",
               lastName: childData.lastName ?? "",
-              birthday: childData.birthday
-                ? new Date(childData.birthday).toISOString().split("T")[0] // Convert to YYYY-MM-DD
-                : "",
+              birthday: childData.birthday ? new Date(childData.birthday).toISOString().split("T")[0] : "",
               gender: childData.gender ?? "",
             };
           }) || [];
 
         setChildren(mappedChildren);
-        console.log("Mapped Children:", mappedChildren); // Log final mapped children
       } catch (err) {
         console.error("Error fetching user data:", err);
         setError("Failed to load user data. Please try again later.");
@@ -144,9 +138,6 @@ export default function PersonalInfo() {
     fetchUserData();
   }, [isLoaded, user]);
 
-  // -----------------------
-  // Handlers
-  // -----------------------
   const handleEditClick = () => {
     // Backup the original data before editing
     setOriginalFirstName(firstName);
@@ -175,12 +166,12 @@ export default function PersonalInfo() {
     ]);
   };
 
-  const handleEditChild = (localId: number, field: keyof Child, value: string) => {
-    setChildren((prev) => prev.map((child) => (child.localId === localId ? { ...child, [field]: value } : child)));
-  };
-
   const handleDeleteChild = (localId: number) => {
     setChildren((prev) => prev.filter((child) => child.localId !== localId));
+  };
+
+  const handleEditChild = (localId: number, field: keyof Child, value: string) => {
+    setChildren((prev) => prev.map((child) => (child.localId === localId ? { ...child, [field]: value } : child)));
   };
 
   // For phoneNumbers and address
@@ -189,11 +180,6 @@ export default function PersonalInfo() {
   };
   const handleAddressChange = (field: "home" | "city" | "zipCode", value: string) => {
     setAddress((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // Helper to check if a string is numeric (digits only)
-  const isNumeric = (value: string) => {
-    return /^\d+$/.test(value);
   };
 
   const handleCancelChanges = () => {
@@ -218,8 +204,8 @@ export default function PersonalInfo() {
   const validateFields = () => {
     const errors: string[] = [];
 
-    // Name validation
-    const isValidName = (name: string) => /^[a-zA-Z\s]{2,50}$/.test(name.trim());
+    // Parent name validation
+    const isValidName = (name: string) => /^[a-zA-Z\\s]{2,50}$/.test(name.trim());
 
     if (!isValidName(firstName)) {
       errors.push("First Name must contain only letters and be 2-50 characters long.");
@@ -232,28 +218,28 @@ export default function PersonalInfo() {
       errors.push("Email is required.");
     }
 
-    // Birthday validation
+    // Parent birthday validation
     const today = new Date();
     const birthDate = new Date(birthday);
 
     if (birthDate > today) {
-      errors.push("Birthday cannot be in the future.");
+      errors.push("Birthday cannot be in the future (for Primary Account Holder).");
     }
     if (!birthday.trim()) {
-      errors.push("Birthday is required.");
+      errors.push("Birthday is required (for Primary Account Holder).");
     }
 
     if (!gender.trim()) {
-      errors.push("Gender is required.");
+      errors.push("Gender is required (for Primary Account Holder).");
     }
 
-    // Phone number validation (10-digit required)
+    // Parent phone number validation (10-digit required)
     const isValidPhoneNumber = (phone: string) => /^\d{10}$/.test(phone.trim());
 
-    if (phoneNumbers.cell.trim() && !isValidPhoneNumber(phoneNumbers.cell.trim())) {
+    if (phoneNumbers.cell.trim() && !isValidPhoneNumber(phoneNumbers.cell)) {
       errors.push("Cell phone number must be exactly 10 digits.");
     }
-    if (phoneNumbers.work.trim() && !isValidPhoneNumber(phoneNumbers.work.trim())) {
+    if (phoneNumbers.work.trim() && !isValidPhoneNumber(phoneNumbers.work)) {
       errors.push("Work phone number must be exactly 10 digits.");
     }
 
@@ -278,6 +264,27 @@ export default function PersonalInfo() {
     if (!address.home.trim()) address.home = originalAddress.home;
     if (!address.city.trim()) address.city = originalAddress.city;
     if (!address.zipCode.trim()) address.zipCode = originalAddress.zipCode;
+
+    // Validating each child's required fields:
+    children.forEach((child, idx) => {
+      if (!isValidName(child.firstName)) {
+        errors.push(`Family Member #${idx + 1}: First Name must contain only letters and be 2-50 characters long.`);
+      }
+      if (!isValidName(child.lastName)) {
+        errors.push(`Family Member #${idx + 1}: Last Name must contain only letters and be 2-50 characters long.`);
+      }
+      if (!child.gender.trim()) {
+        errors.push(`Family Member #${idx + 1}: Gender is required.`);
+      }
+      if (child.birthday) {
+        const childBirthDate = new Date(child.birthday);
+        if (childBirthDate > today) {
+          errors.push(`Family Member #${idx + 1}: Birthday cannot be in the future.`);
+        }
+      } else {
+        errors.push(`Family Member #${idx + 1}: Birthday is required.`);
+      }
+    });
 
     if (errors.length > 0) {
       setValidationErrors(errors);
@@ -341,9 +348,6 @@ export default function PersonalInfo() {
     }
   };
 
-  // -----------------------
-  // Render UI
-  // -----------------------
   if (loading) return <LoadingSpinner size="lg" />;
   if (error) return <p>{error}</p>;
 
@@ -355,37 +359,93 @@ export default function PersonalInfo() {
       <section className="mb-8">
         <h3 className="mb-4 text-xl font-semibold text-gray-700">Primary Account Holder Information</h3>
         <div className="space-y-4">
-          {[
-            { label: "First Name", value: firstName, setValue: setFirstName, type: "text" },
-            { label: "Last Name", value: lastName, setValue: setLastName, type: "text" },
-            { label: "Pronouns", value: gender, setValue: setGender, type: "text" },
-            { label: "Email", value: user?.emailAddresses[0]?.emailAddress || "", disabled: true, type: "email" },
-            {
-              label: "Birthday",
-              value: birthday ? new Date(birthday).toISOString().split("T")[0] : "",
-              setValue: (v: string) => setBirthday(new Date(v).toISOString()),
-              type: "date",
-            },
+          {/* First Name */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">First Name</label>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
 
-            {
-              label: "Phone Number",
-              value: phoneNumbers.cell,
-              setValue: (v: string) => handlePhoneChange("cell", v),
-              type: "tel",
-            },
-            { label: "Medical Information (optional)", value: "", type: "text" },
-          ].map(({ label, value, setValue, type, disabled }, index) => (
-            <div key={index} className="grid grid-cols-3 items-center gap-4">
-              <label className="text-sm font-medium text-gray-700">{label}</label>
-              <input
-                type={type}
-                value={value}
-                onChange={setValue ? (e) => setValue(e.target.value) : undefined}
-                disabled={disabled || !isEditing}
-                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
-              />
-            </div>
-          ))}
+          {/* Last Name */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Last Name</label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Gender Dropdown */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Gender</label>
+            <select
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+            >
+              <option value="">-- Select --</option>
+              {genderOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Email (disabled) */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Email</label>
+            <input
+              type="email"
+              value={user?.emailAddresses[0]?.emailAddress || ""}
+              disabled
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Birthday */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Birthday</label>
+            <input
+              type="date"
+              value={birthday ? new Date(birthday).toISOString().split("T")[0] : ""}
+              onChange={(e) => setBirthday(new Date(e.target.value).toISOString())}
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Phone Number */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Phone Number</label>
+            <input
+              type="tel"
+              value={phoneNumbers.cell}
+              onChange={(e) => handlePhoneChange("cell", e.target.value)}
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Medical Information (optional, no state) */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Medical Info (optional)</label>
+            <input
+              type="text"
+              value=""
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
         </div>
       </section>
 
@@ -393,76 +453,159 @@ export default function PersonalInfo() {
       <section className="mt-8">
         <h3 className="mb-3 text-xl font-semibold text-gray-800">Address</h3>
         <div className="space-y-4">
-          {[
-            { label: "Address Line 1", value: address.home, setValue: (v: string) => handleAddressChange("home", v) },
-            { label: "Address Line 2 (optional)", value: "" },
-            { label: "City", value: address.city, setValue: (v: string) => handleAddressChange("city", v) },
-            { label: "Zip Code", value: address.zipCode, setValue: (v: string) => handleAddressChange("zipCode", v) },
-          ].map(({ label, value, setValue }, index) => (
-            <div key={index} className="grid grid-cols-3 items-center gap-4">
-              <label className="text-sm font-medium text-gray-700">{label}</label>
-              <input
-                type="text"
-                value={value}
-                onChange={setValue ? (e) => setValue(e.target.value) : undefined}
-                disabled={!isEditing}
-                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
-              />
-            </div>
-          ))}
+          {/* Address Line 1 */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Address Line 1</label>
+            <input
+              type="text"
+              value={address.home}
+              onChange={(e) => handleAddressChange("home", e.target.value)}
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Address Line 2 (optional, no state) */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Address Line 2 (optional)</label>
+            <input
+              type="text"
+              value=""
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* City */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">City</label>
+            <input
+              type="text"
+              value={address.city}
+              onChange={(e) => handleAddressChange("city", e.target.value)}
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* ZIP Code */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Zip Code</label>
+            <input
+              type="text"
+              value={address.zipCode}
+              onChange={(e) => handleAddressChange("zipCode", e.target.value)}
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
         </div>
       </section>
 
       {/* Family Member Information */}
       <section className="mt-8">
         <h3 className="mb-4 text-xl font-semibold">Family Member Information</h3>
-        {children.map((child) => (
+        {children.map((child, idx) => (
           <div key={child.localId} className="mb-4 space-y-4 border-b pb-4">
-            {[
-              { label: "First Name", field: "firstName", value: child.firstName },
-              { label: "Last Name", field: "lastName", value: child.lastName },
-              { label: "Pronouns", field: "gender", value: child.gender },
-              {
-                label: "Birthday",
-                field: "birthday",
-                value: child.birthday ? new Date(child.birthday).toISOString().split("T")[0] : "",
-                type: "date",
-              },
-            ].map(({ label, field, value, type }, index) => (
-              <div key={index} className="grid grid-cols-3 items-center gap-4">
-                <label className="text-sm font-medium text-gray-700">{label}</label>
-                <input
-                  type={type || "text"}
-                  value={value}
-                  onChange={(e) => handleEditChild(child.localId, field as keyof Child, e.target.value)}
-                  disabled={!isEditing}
-                  className="col-span-2 w-full rounded-md border border-gray-300 p-2"
-                />
+            {/* Child # Title (not strictly needed, but can help clarity) */}
+            <div className="text-lg font-semibold">Family Member #{idx + 1}</div>
+
+            {/* First Name */}
+            <div className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">First Name</label>
+              <input
+                type="text"
+                value={child.firstName}
+                onChange={(e) => handleEditChild(child.localId, "firstName", e.target.value)}
+                disabled={!isEditing}
+                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+              />
+            </div>
+
+            {/* Last Name */}
+            <div className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">Last Name</label>
+              <input
+                type="text"
+                value={child.lastName}
+                onChange={(e) => handleEditChild(child.localId, "lastName", e.target.value)}
+                disabled={!isEditing}
+                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+              />
+            </div>
+
+            {/* Gender dropdown */}
+            <div className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">Gender</label>
+              <select
+                disabled={!isEditing}
+                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+                value={child.gender}
+                onChange={(e) => handleEditChild(child.localId, "gender", e.target.value)}
+              >
+                <option value="">-- Select --</option>
+                {genderOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Birthday */}
+            <div className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">Birthday</label>
+              <input
+                type="date"
+                value={child.birthday ? new Date(child.birthday).toISOString().split("T")[0] : ""}
+                onChange={(e) => handleEditChild(child.localId, "birthday", e.target.value)}
+                disabled={!isEditing}
+                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+              />
+            </div>
+
+            {/* Delete Button */}
+            {isEditing && (
+              <div className="flex justify-end">
+                <button
+                  className="rounded-md bg-red-600 px-3 py-2 text-white hover:bg-red-700"
+                  onClick={() => handleDeleteChild(child.localId)}
+                >
+                  Remove Child
+                </button>
               </div>
-            ))}
+            )}
           </div>
         ))}
 
-        <button className="mt-6 rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700" onClick={handleAddChild}>
-          Add New Family Member
-        </button>
+        {/* Add Child Button */}
+        {isEditing && (
+          <div className="flex justify-end">
+            <button
+              className="mt-6 rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700"
+              onClick={handleAddChild}
+            >
+              Add New Family Member
+            </button>
+          </div>
+        )}
       </section>
 
       {/* Save and Cancel Buttons */}
-      <div className="mt-8 flex gap-4">
+      <div className="mt-8 flex justify-end gap-4">
         {isEditing ? (
           <>
-            <button
-              className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-              onClick={handleSaveChanges}
-            >
-              Save Profile Changes
-            </button>
             <button
               className="rounded-md bg-red-600 px-4 py-2 text-white hover:bg-red-700"
               onClick={handleCancelChanges}
             >
               Discard Profile Changes
+            </button>
+            <button
+              className="rounded-md bg-[#558552] px-4 py-2 text-white hover:bg-[#488644]"
+              onClick={handleSaveChanges}
+            >
+              Save Profile Changes
             </button>
           </>
         ) : (
