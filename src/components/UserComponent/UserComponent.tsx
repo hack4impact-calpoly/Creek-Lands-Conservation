@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import styles from "./UserComponent.module.css";
 import { LoadingSpinner } from "../ui/loading-spinner";
 
 interface Child {
@@ -14,6 +13,7 @@ interface Child {
   gender: string;
 }
 
+const genderOptions = ["Male", "Female", "Non-binary", "Prefer not to say"];
 let localChildCounter = 0;
 
 export default function PersonalInfo() {
@@ -53,7 +53,7 @@ export default function PersonalInfo() {
   });
   const [originalChildren, setOriginalChildren] = useState<Child[]>([]);
 
-  // **New**: We'll store validation errors in an array of strings
+  // Validation errors
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
   // Editing mode
@@ -69,14 +69,12 @@ export default function PersonalInfo() {
       try {
         setLoading(true);
 
-        // GET from /api/users/[clerkID]
         const response = await fetch(`/api/users/${user.id}`);
         if (!response.ok) {
           throw new Error(`Failed to fetch user data: ${response.status}`);
         }
 
         const userData = await response.json();
-        console.log("MongoDB User Data:", userData);
 
         if (!userData || !userData._id) {
           console.warn("User not found in MongoDB");
@@ -85,27 +83,36 @@ export default function PersonalInfo() {
           return;
         }
 
+        // Ensure children is present
+        if (!userData.children || !Array.isArray(userData.children)) {
+          console.warn("Children field missing or not an array");
+          setChildren([]); // Reset children
+        } else {
+          console.log("Children Data:", userData.children); // Log children array
+        }
+
         // Populate parent's info
         setFirstName(userData.firstName || "");
         setLastName(userData.lastName || "");
         setEmail(userData.email || "");
         setGender(userData.gender || "");
-        setBirthday(userData.birthday ? new Date(userData.birthday).toISOString().split("T")[0] : "");
-
-        // phoneNumbers
+        setBirthday(
+          userData.birthday
+            ? new Date(userData.birthday).toISOString().split("T")[0] // Convert to YYYY-MM-DD
+            : "",
+        );
         setPhoneNumbers({
           cell: userData.phoneNumbers?.cell || "",
           work: userData.phoneNumbers?.work || "",
         });
 
-        // address
         setAddress({
           home: userData.address?.home || "",
           city: userData.address?.city || "",
           zipCode: userData.address?.zipCode || "",
         });
 
-        // children
+        // Map children properly
         const mappedChildren: Child[] =
           userData.children?.map((childData: any) => {
             localChildCounter += 1;
@@ -131,9 +138,6 @@ export default function PersonalInfo() {
     fetchUserData();
   }, [isLoaded, user]);
 
-  // -----------------------
-  // Handlers
-  // -----------------------
   const handleEditClick = () => {
     // Backup the original data before editing
     setOriginalFirstName(firstName);
@@ -162,12 +166,12 @@ export default function PersonalInfo() {
     ]);
   };
 
-  const handleEditChild = (localId: number, field: keyof Child, value: string) => {
-    setChildren((prev) => prev.map((child) => (child.localId === localId ? { ...child, [field]: value } : child)));
-  };
-
   const handleDeleteChild = (localId: number) => {
     setChildren((prev) => prev.filter((child) => child.localId !== localId));
+  };
+
+  const handleEditChild = (localId: number, field: keyof Child, value: string) => {
+    setChildren((prev) => prev.map((child) => (child.localId === localId ? { ...child, [field]: value } : child)));
   };
 
   // For phoneNumbers and address
@@ -176,11 +180,6 @@ export default function PersonalInfo() {
   };
   const handleAddressChange = (field: "home" | "city" | "zipCode", value: string) => {
     setAddress((prev) => ({ ...prev, [field]: value }));
-  };
-
-  // Helper to check if a string is numeric (digits only)
-  const isNumeric = (value: string) => {
-    return /^\d+$/.test(value);
   };
 
   const handleCancelChanges = () => {
@@ -205,8 +204,8 @@ export default function PersonalInfo() {
   const validateFields = () => {
     const errors: string[] = [];
 
-    // Name validation
-    const isValidName = (name: string) => /^[a-zA-Z\s]{2,50}$/.test(name.trim());
+    // Parent name validation
+    const isValidName = (name: string) => /^[a-zA-Z\\s]{2,50}$/.test(name.trim());
 
     if (!isValidName(firstName)) {
       errors.push("First Name must contain only letters and be 2-50 characters long.");
@@ -219,28 +218,28 @@ export default function PersonalInfo() {
       errors.push("Email is required.");
     }
 
-    // Birthday validation
+    // Parent birthday validation
     const today = new Date();
     const birthDate = new Date(birthday);
 
     if (birthDate > today) {
-      errors.push("Birthday cannot be in the future.");
+      errors.push("Birthday cannot be in the future (for Primary Account Holder).");
     }
     if (!birthday.trim()) {
-      errors.push("Birthday is required.");
+      errors.push("Birthday is required (for Primary Account Holder).");
     }
 
     if (!gender.trim()) {
-      errors.push("Gender is required.");
+      errors.push("Gender is required (for Primary Account Holder).");
     }
 
-    // Phone number validation (10-digit required)
+    // Parent phone number validation (10-digit required)
     const isValidPhoneNumber = (phone: string) => /^\d{10}$/.test(phone.trim());
 
-    if (phoneNumbers.cell.trim() && !isValidPhoneNumber(phoneNumbers.cell.trim())) {
+    if (phoneNumbers.cell.trim() && !isValidPhoneNumber(phoneNumbers.cell)) {
       errors.push("Cell phone number must be exactly 10 digits.");
     }
-    if (phoneNumbers.work.trim() && !isValidPhoneNumber(phoneNumbers.work.trim())) {
+    if (phoneNumbers.work.trim() && !isValidPhoneNumber(phoneNumbers.work)) {
       errors.push("Work phone number must be exactly 10 digits.");
     }
 
@@ -265,6 +264,27 @@ export default function PersonalInfo() {
     if (!address.home.trim()) address.home = originalAddress.home;
     if (!address.city.trim()) address.city = originalAddress.city;
     if (!address.zipCode.trim()) address.zipCode = originalAddress.zipCode;
+
+    // Validating each child's required fields:
+    children.forEach((child, idx) => {
+      if (!isValidName(child.firstName)) {
+        errors.push(`Family Member #${idx + 1}: First Name must contain only letters and be 2-50 characters long.`);
+      }
+      if (!isValidName(child.lastName)) {
+        errors.push(`Family Member #${idx + 1}: Last Name must contain only letters and be 2-50 characters long.`);
+      }
+      if (!child.gender.trim()) {
+        errors.push(`Family Member #${idx + 1}: Gender is required.`);
+      }
+      if (child.birthday) {
+        const childBirthDate = new Date(child.birthday);
+        if (childBirthDate > today) {
+          errors.push(`Family Member #${idx + 1}: Birthday cannot be in the future.`);
+        }
+      } else {
+        errors.push(`Family Member #${idx + 1}: Birthday is required.`);
+      }
+    });
 
     if (errors.length > 0) {
       setValidationErrors(errors);
@@ -328,219 +348,279 @@ export default function PersonalInfo() {
     }
   };
 
-  // -----------------------
-  // Render UI
-  // -----------------------
   if (loading) return <LoadingSpinner size="lg" />;
   if (error) return <p>{error}</p>;
 
   return (
-    <div className={styles.personalInfoContainer}>
-      <h2 className={styles.header}>Personal Information</h2>
+    <div className="mx-auto max-w-4xl px-6 py-10">
+      <h2 className="mb-6 text-3xl font-semibold text-gray-800">Account Information</h2>
 
-      <div className={styles.formGroup}>
-        <label>
-          First Name:
-          <input
-            className={styles.inputField}
-            type="text"
-            value={firstName}
-            onChange={(e) => setFirstName(e.target.value)}
-            disabled={!isEditing}
-          />
-        </label>
-        <label>
-          Last Name:
-          <input
-            className={styles.inputField}
-            type="text"
-            value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
-            disabled={!isEditing}
-          />
-        </label>
-        <label>
-          Email:
-          <input className={styles.inputField} type="email" value={email} readOnly disabled />
-        </label>
-        <label>
-          Gender:
-          {!isEditing ? (
-            <input className={styles.inputField} type="text" value={gender} disabled />
-          ) : (
-            <select className={styles.inputField} value={gender} onChange={(e) => setGender(e.target.value)}>
-              <option value="">Select</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Non-binary">Non-binary</option>
-              <option value="Prefer not to say">Prefer not to say</option>
+      {/* Primary Account Holder Information */}
+      <section className="mb-8">
+        <h3 className="mb-4 text-xl font-semibold text-gray-700">Primary Account Holder Information</h3>
+        <div className="space-y-4">
+          {/* First Name */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">First Name</label>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Last Name */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Last Name</label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Gender Dropdown */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Gender</label>
+            <select
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+              value={gender}
+              onChange={(e) => setGender(e.target.value)}
+            >
+              <option value="">-- Select --</option>
+              {genderOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
             </select>
-          )}
-        </label>
-        <label>
-          Birthday:
-          <input
-            className={styles.inputField}
-            type="date"
-            value={birthday}
-            onChange={(e) => setBirthday(e.target.value)}
-            disabled={!isEditing}
-          />
-        </label>
-      </div>
+          </div>
 
-      {/* PHONE NUMBERS */}
-      <h3 className={styles.header}>Phone Numbers</h3>
-      <div className={styles.formGroup}>
-        <label>
-          Cell:
-          <input
-            className={styles.inputField}
-            type="text"
-            value={phoneNumbers.cell}
-            onChange={(e) => handlePhoneChange("cell", e.target.value)}
-            disabled={!isEditing}
-          />
-        </label>
-        <label>
-          Work:
-          <input
-            className={styles.inputField}
-            type="text"
-            value={phoneNumbers.work}
-            onChange={(e) => handlePhoneChange("work", e.target.value)}
-            disabled={!isEditing}
-          />
-        </label>
-      </div>
-
-      {/* ADDRESS */}
-      <h3 className={styles.header}>Address</h3>
-      <div className={styles.formGroup}>
-        <label>
-          Home Address:
-          <input
-            className={styles.inputField}
-            type="text"
-            value={address.home}
-            onChange={(e) => handleAddressChange("home", e.target.value)}
-            disabled={!isEditing}
-          />
-        </label>
-        <label>
-          City:
-          <input
-            className={styles.inputField}
-            type="text"
-            value={address.city}
-            onChange={(e) => handleAddressChange("city", e.target.value)}
-            disabled={!isEditing}
-          />
-        </label>
-        <label>
-          ZIP Code:
-          <input
-            className={styles.inputField}
-            type="text"
-            value={address.zipCode}
-            onChange={(e) => handleAddressChange("zipCode", e.target.value)}
-            disabled={!isEditing}
-          />
-        </label>
-      </div>
-
-      <h3 className={styles.header}>Children</h3>
-      {children.map((child) => (
-        <div key={child.localId} className={styles.childEntry}>
-          {/* Debug: {child._id && <p>Child DB _id: {child._id}</p>} */}
-          <label>
-            First Name:
+          {/* Email (disabled) */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Email</label>
             <input
-              className={styles.inputField}
-              type="text"
-              placeholder="Child's first name"
-              value={child.firstName}
-              onChange={(e) => handleEditChild(child.localId, "firstName", e.target.value)}
-              disabled={!isEditing}
+              type="email"
+              value={user?.emailAddresses[0]?.emailAddress || ""}
+              disabled
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
             />
-          </label>
-          <label>
-            Last Name:
+          </div>
+
+          {/* Birthday */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Birthday</label>
             <input
-              className={styles.inputField}
-              type="text"
-              placeholder="Child's last name"
-              value={child.lastName}
-              onChange={(e) => handleEditChild(child.localId, "lastName", e.target.value)}
-              disabled={!isEditing}
-            />
-          </label>
-          <label>
-            Birthday:
-            <input
-              className={styles.inputField}
               type="date"
-              value={child.birthday}
-              onChange={(e) => handleEditChild(child.localId, "birthday", e.target.value)}
+              value={birthday ? new Date(birthday).toISOString().split("T")[0] : ""}
+              onChange={(e) => setBirthday(new Date(e.target.value).toISOString())}
               disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
             />
-          </label>
-          <label>
-            Gender:
-            {!isEditing ? (
-              <input className={styles.inputField} type="text" value={child.gender} disabled />
-            ) : (
+          </div>
+
+          {/* Phone Number */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Phone Number</label>
+            <input
+              type="tel"
+              value={phoneNumbers.cell}
+              onChange={(e) => handlePhoneChange("cell", e.target.value)}
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Medical Information (optional, no state) */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Medical Info (optional)</label>
+            <input
+              type="text"
+              value=""
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Address Section */}
+      <section className="mt-8">
+        <h3 className="mb-3 text-xl font-semibold text-gray-800">Address</h3>
+        <div className="space-y-4">
+          {/* Address Line 1 */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Address Line 1</label>
+            <input
+              type="text"
+              value={address.home}
+              onChange={(e) => handleAddressChange("home", e.target.value)}
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Address Line 2 (optional, no state) */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Address Line 2 (optional)</label>
+            <input
+              type="text"
+              value=""
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* City */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">City</label>
+            <input
+              type="text"
+              value={address.city}
+              onChange={(e) => handleAddressChange("city", e.target.value)}
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* ZIP Code */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Zip Code</label>
+            <input
+              type="text"
+              value={address.zipCode}
+              onChange={(e) => handleAddressChange("zipCode", e.target.value)}
+              disabled={!isEditing}
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* Family Member Information */}
+      <section className="mt-8">
+        <h3 className="mb-4 text-xl font-semibold">Family Member Information</h3>
+        {children.map((child, idx) => (
+          <div key={child.localId} className="mb-4 space-y-4 border-b pb-4">
+            {/* Child # Title (not strictly needed, but can help clarity) */}
+            <div className="text-lg font-semibold">Family Member #{idx + 1}</div>
+
+            {/* First Name */}
+            <div className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">First Name</label>
+              <input
+                type="text"
+                value={child.firstName}
+                onChange={(e) => handleEditChild(child.localId, "firstName", e.target.value)}
+                disabled={!isEditing}
+                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+              />
+            </div>
+
+            {/* Last Name */}
+            <div className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">Last Name</label>
+              <input
+                type="text"
+                value={child.lastName}
+                onChange={(e) => handleEditChild(child.localId, "lastName", e.target.value)}
+                disabled={!isEditing}
+                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+              />
+            </div>
+
+            {/* Gender dropdown */}
+            <div className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">Gender</label>
               <select
-                className={styles.inputField}
+                disabled={!isEditing}
+                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
                 value={child.gender}
                 onChange={(e) => handleEditChild(child.localId, "gender", e.target.value)}
               >
-                <option value="">Select</option>
-                <option value="Male">Male</option>
-                <option value="Female">Female</option>
-                <option value="Non-binary">Non-binary</option>
-                <option value="Prefer not to say">Prefer not to say</option>
+                <option value="">-- Select --</option>
+                {genderOptions.map((option) => (
+                  <option key={option} value={option}>
+                    {option}
+                  </option>
+                ))}
               </select>
+            </div>
+
+            {/* Birthday */}
+            <div className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">Birthday</label>
+              <input
+                type="date"
+                value={child.birthday ? new Date(child.birthday).toISOString().split("T")[0] : ""}
+                onChange={(e) => handleEditChild(child.localId, "birthday", e.target.value)}
+                disabled={!isEditing}
+                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+              />
+            </div>
+
+            {/* Delete Button */}
+            {isEditing && (
+              <div className="flex justify-end">
+                <button
+                  className="rounded-md bg-red-600 px-3 py-2 text-white hover:bg-red-700"
+                  onClick={() => handleDeleteChild(child.localId)}
+                >
+                  Remove Child
+                </button>
+              </div>
             )}
-          </label>
+          </div>
+        ))}
 
-          {isEditing && (
-            <button className={`${styles.button} ${styles.deleteBtn}`} onClick={() => handleDeleteChild(child.localId)}>
-              Delete
+        {/* Add Child Button */}
+        {isEditing && (
+          <div className="flex justify-end">
+            <button
+              className="mt-6 rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700"
+              onClick={handleAddChild}
+            >
+              Add New Family Member
             </button>
-          )}
-        </div>
-      ))}
+          </div>
+        )}
+      </section>
 
-      {isEditing && (
-        <button className={styles.button} onClick={handleAddChild}>
-          Add Child
-        </button>
-      )}
+      {/* Save and Cancel Buttons */}
+      <div className="mt-8 flex justify-end gap-4">
+        {isEditing ? (
+          <>
+            <button
+              className="rounded-md bg-red-600 px-4 py-2 text-white hover:bg-red-700"
+              onClick={handleCancelChanges}
+            >
+              Discard Profile Changes
+            </button>
+            <button
+              className="rounded-md bg-[#558552] px-4 py-2 text-white hover:bg-[#488644]"
+              onClick={handleSaveChanges}
+            >
+              Save Profile Changes
+            </button>
+          </>
+        ) : (
+          <button className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700" onClick={handleEditClick}>
+            Edit Information
+          </button>
+        )}
+      </div>
 
-      {/* Show validation errors inline */}
+      {/* Validation Errors */}
       {validationErrors.length > 0 && (
-        <div className={styles.validationErrorContainer}>
-          {validationErrors.map((errMsg, idx) => (
-            <p className={styles.validationError} key={idx}>
-              {errMsg}
-            </p>
+        <div className="mt-4 rounded-md bg-red-100 p-3 text-red-700">
+          {validationErrors.map((error, idx) => (
+            <p key={idx}>{error}</p>
           ))}
-        </div>
-      )}
-
-      {!isEditing ? (
-        <button className={styles.button} onClick={handleEditClick}>
-          Edit Info
-        </button>
-      ) : (
-        <div>
-          <button className={styles.button} onClick={handleSaveChanges}>
-            Save Changes
-          </button>
-          <button className={styles.button} onClick={handleCancelChanges}>
-            Cancel Changes
-          </button>
         </div>
       )}
     </div>
