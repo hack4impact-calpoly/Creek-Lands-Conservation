@@ -7,6 +7,7 @@ import { useUser } from "@clerk/nextjs";
 import { getEvents } from "@/app/actions/events/actions";
 import { EventInfo } from "@/types/events";
 import { formatEvents } from "@/lib/utils";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
 
 interface RegisteredEvent {
   id: string;
@@ -76,7 +77,7 @@ export default function WaiversPage() {
   if (isLoading) {
     return (
       <div className="container mx-auto p-6">
-        <h1 className="mb-6 text-2xl font-bold">Loading waivers...</h1>
+        <LoadingSpinner />
       </div>
     );
   }
