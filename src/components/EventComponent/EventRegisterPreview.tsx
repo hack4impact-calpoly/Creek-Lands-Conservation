@@ -20,16 +20,21 @@ interface RegisterDialogProps {
     contactEmail: string;
   };
   userInfo: {
+    id: string;
     name: string;
-    family: { name: string }[];
+    family: { id: string; name: string }[];
   };
-  onConfirm: () => void;
+  onConfirm: (attendees: string[]) => void;
 }
 
 export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo, onConfirm }: RegisterDialogProps) {
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
   const [waiverEmail, setWaiverEmail] = useState("");
   const [waiverSigned, setWaiverSigned] = useState(false);
+
+  const handleClick = () => {
+    onConfirm(selectedAttendees);
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -65,16 +70,16 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <Checkbox
-                  id={userInfo.name}
-                  checked={selectedAttendees.includes(userInfo.name)}
+                  id={userInfo.id}
+                  checked={selectedAttendees.includes(userInfo.id)}
                   onCheckedChange={(checked) => {
                     setSelectedAttendees((prev) =>
-                      checked ? [...prev, userInfo.name] : prev.filter((name) => name !== userInfo.name),
+                      checked ? [...prev, userInfo.id] : prev.filter((id) => id !== userInfo.id),
                     );
                   }}
                 />
                 <label
-                  htmlFor={userInfo.name}
+                  htmlFor={userInfo.id}
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   {userInfo.name}
@@ -83,16 +88,17 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
               {userInfo.family.map((member) => (
                 <div key={member.name} className="flex items-center space-x-3">
                   <Checkbox
-                    id={member.name}
-                    checked={selectedAttendees.includes(member.name)}
+                    key={member.id}
+                    id={member.id}
+                    checked={selectedAttendees.includes(member.id)}
                     onCheckedChange={(checked) => {
                       setSelectedAttendees((prev) =>
-                        checked ? [...prev, member.name] : prev.filter((name) => name !== member.name),
+                        checked ? [...prev, member.id] : prev.filter((name) => name !== member.id),
                       );
                     }}
                   />
                   <label
-                    htmlFor={member.name}
+                    htmlFor={member.id}
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
                     {member.name}
@@ -142,12 +148,12 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
 
         <DialogFooter className="mt-6">
           {!waiverSigned && (
-            <Button className="mx-auto w-2/5 bg-[#488644] text-white hover:bg-[#3a6d37]" onClick={onConfirm}>
+            <Button className="mx-auto w-2/5 bg-[#488644] text-white hover:bg-[#3a6d37]" onClick={handleClick}>
               Register for Event
             </Button>
           )}
           {waiverSigned && (
-            <Button className="mx-auto w-2/5 bg-[#488644] text-white hover:bg-[#3a6d37]" onClick={onConfirm}>
+            <Button className="mx-auto w-2/5 bg-[#488644] text-white hover:bg-[#3a6d37]" onClick={handleClick}>
               Sign and Return to Events
             </Button>
           )}

@@ -20,6 +20,7 @@ import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
 import { EventRegisterPreview } from "./EventRegisterPreview";
 import DOMPurify from "dompurify";
+import mongoose from "mongoose";
 
 interface EventInfoProps {
   id: string;
@@ -56,7 +57,8 @@ export function EventInfoPreview({
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [userFamily, setUserFamily] = useState<{ name: string }[]>([]);
+  const [userFamily, setUserFamily] = useState<{ id: string; name: string }[]>([]);
+  const [userID, setUserID] = useState<string>("");
   const { toast } = useToast();
   const { user } = useUser();
   const router = useRouter();
@@ -87,10 +89,12 @@ export function EventInfoPreview({
       const userData = await response.json();
       const familyMembers =
         userData.children?.map((child: any) => ({
+          id: child._id,
           name: `${child.firstName || ""} ${child.lastName || ""}`.trim(),
         })) || [];
 
       setUserFamily(familyMembers);
+      setUserID(userData._id);
     } catch (error) {
       console.error("Error fetching user family:", error);
       toast({
@@ -141,7 +145,7 @@ export function EventInfoPreview({
     }
   };
 
-  const handleRegisterEvent = async () => {
+  const handleRegisterEvent = async (attendees: string[]) => {
     // make sure you are logged in to register
     if (!user) {
       toast({
@@ -157,12 +161,12 @@ export function EventInfoPreview({
     try {
       console.log(id);
       console.log(title);
-      const response = await fetch(`/api/events/${id}`, {
+      const response = await fetch(`/api/events/${id}/registrations`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ registerForEvent: true }),
+        body: JSON.stringify({ attendees }),
       });
 
       // Parse the response body as JSON and handle errors accordingly
@@ -348,6 +352,7 @@ export function EventInfoPreview({
             contactEmail: email || "info@creeklands.org",
           }}
           userInfo={{
+            id: userID,
             name: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
             family: userFamily,
           }}
