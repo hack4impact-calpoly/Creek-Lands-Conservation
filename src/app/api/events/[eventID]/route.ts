@@ -21,46 +21,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
       return NextResponse.json({ error: "Unauthorized. Please log in." }, { status: 401 });
     }
 
-    // Find user in MongoDB using Clerk ID
-    const person = await User.findOne({ clerkID: userId });
-
-    if (!person) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    // get their user id to use for registration
-    const mongoUserId = person._id;
-
     const updatedData = await req.json();
-
-    // Check if user is trying to register for event
-    if (updatedData.registerForEvent) {
-      console.log("PUT - registering for events");
-      const event = await Event.findById(eventID);
-      if (!event) {
-        return NextResponse.json({ error: "Event not found" }, { status: 404 });
-      }
-
-      // Check if user already registered for the event
-      if (event.registeredUsers.includes(mongoUserId)) {
-        return NextResponse.json({ error: "User already registered for this event" }, { status: 400 });
-      }
-
-      // Check if the registration deadline passed
-      if (new Date() > event.registrationDeadline) {
-        return NextResponse.json({ error: "Registration deadline has passed" }, { status: 400 });
-      }
-
-      // Check if event is full
-      if (event.capacity > 0 && event.registeredUsers.length >= event.capacity) {
-        return NextResponse.json({ error: "Event is at full capacity." }, { status: 400 });
-      }
-
-      event.registeredUsers.push(mongoUserId);
-      await event.save();
-
-      return NextResponse.json({ message: "Successfully registered for the event.", event }, { status: 200 });
-    }
 
     // If not registering, check if the user is an admin (to update event details)
     const authError = await authenticateAdmin();
