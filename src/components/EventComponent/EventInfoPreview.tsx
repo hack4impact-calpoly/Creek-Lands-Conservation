@@ -58,7 +58,17 @@ export function EventInfoPreview({
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [userFamily, setUserFamily] = useState<{ id: string; name: string }[]>([]);
-  const [userID, setUserID] = useState<string>("");
+  const [userInfo, setUserInfo] = useState<{
+    id: string;
+    name: string;
+    alreadyRegistered: boolean;
+    family: { id: string; name: string; alreadyRegistered: boolean }[];
+  }>({
+    id: "",
+    name: "",
+    alreadyRegistered: false,
+    family: [],
+  });
   const { toast } = useToast();
   const { user } = useUser();
   const router = useRouter();
@@ -87,14 +97,21 @@ export function EventInfoPreview({
       if (!response.ok) throw new Error("Failed to fetch user data");
 
       const userData = await response.json();
-      const familyMembers =
+      const family =
         userData.children?.map((child: any) => ({
           id: child._id,
           name: `${child.firstName || ""} ${child.lastName || ""}`.trim(),
+          alreadyRegistered: child.registeredEvents.includes(id),
         })) || [];
 
-      setUserFamily(familyMembers);
-      setUserID(userData._id);
+      setUserFamily(family);
+      setUserInfo({
+        id: userData._id,
+        name: `${userData?.firstName || ""} ${userData?.lastName || ""}`.trim(),
+        alreadyRegistered: userData.registeredEvents.includes(id),
+        family,
+      });
+      console.log(family);
     } catch (error) {
       console.error("Error fetching user family:", error);
       toast({
@@ -351,11 +368,7 @@ export function EventInfoPreview({
             location: location,
             contactEmail: email || "info@creeklands.org",
           }}
-          userInfo={{
-            id: userID,
-            name: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
-            family: userFamily,
-          }}
+          userInfo={userInfo}
           onConfirm={handleRegisterEvent}
         />
       )}

@@ -22,7 +22,8 @@ interface RegisterDialogProps {
   userInfo: {
     id: string;
     name: string;
-    family: { id: string; name: string }[];
+    alreadyRegistered: boolean;
+    family: { id: string; name: string; alreadyRegistered: boolean }[];
   };
   onConfirm: (attendees: string[]) => void;
 }
@@ -71,18 +72,20 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
               <div className="flex items-center space-x-3">
                 <Checkbox
                   id={userInfo.id}
-                  checked={selectedAttendees.includes(userInfo.id)}
+                  checked={selectedAttendees.includes(userInfo.id) || userInfo.alreadyRegistered}
                   onCheckedChange={(checked) => {
                     setSelectedAttendees((prev) =>
                       checked ? [...prev, userInfo.id] : prev.filter((id) => id !== userInfo.id),
                     );
                   }}
+                  disabled={userInfo.alreadyRegistered}
                 />
                 <label
                   htmlFor={userInfo.id}
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   {userInfo.name}
+                  {userInfo.alreadyRegistered && <span>(already registered)</span>}
                 </label>
               </div>
               {userInfo.family.map((member) => (
@@ -90,12 +93,13 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
                   <Checkbox
                     key={member.id}
                     id={member.id}
-                    checked={selectedAttendees.includes(member.id)}
+                    checked={selectedAttendees.includes(member.id) || member.alreadyRegistered}
                     onCheckedChange={(checked) => {
                       setSelectedAttendees((prev) =>
                         checked ? [...prev, member.id] : prev.filter((name) => name !== member.id),
                       );
                     }}
+                    disabled={member.alreadyRegistered}
                   />
                   <label
                     htmlFor={member.id}

@@ -23,4 +23,5 @@ export type EventInfo = {
   registrationDeadline: Date | null;
   capacity: number;
   registeredUsers: string[];
+  registeredChildren: string[];
 };

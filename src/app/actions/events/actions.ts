@@ -15,6 +15,7 @@ interface LeanEvent {
   registrationDeadline?: Date;
   images?: string[];
   registeredUsers?: Types.ObjectId[];
+  registeredChildren?: Types.ObjectId[];
   fee?: number;
 }
 
@@ -36,6 +37,7 @@ export async function getEvents() {
       images: event.images || [],
       currentRegistrations: event.registeredUsers?.length || 0,
       registeredUsers: event.registeredUsers ? event.registeredUsers.map((id) => id.toString()) : [],
+      registeredChildren: event.registeredChildren ? event.registeredChildren.map((id) => id.toString()) : [],
       fee: event.fee,
     }));
 

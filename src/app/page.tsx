@@ -35,7 +35,11 @@ export default function Home() {
           const userData = await userResponse.json();
           if (!userData?._id) throw new Error("User not Found in MongoDB");
 
-          const categorized = categorizeEvents(formattedEvents, userData._id.toString());
+          const categorized = categorizeEvents(
+            formattedEvents,
+            userData._id.toString(),
+            userData.children.map((child: any) => child._id),
+          );
           setEventSections(categorized);
         } else {
           // If no user, just show all events
@@ -73,16 +77,18 @@ export default function Home() {
 }
 
 // Helper function
-const categorizeEvents = (events: EventInfo[], userId: string) => {
+const categorizeEvents = (events: EventInfo[], userId: string, userChildren: string[]) => {
   const now = new Date();
   const sections = { available: [], registered: [], past: [] } as {
     available: EventInfo[];
     registered: EventInfo[];
     past: EventInfo[];
   };
-
   events.forEach((event) => {
-    if (event.registeredUsers.includes(userId)) {
+    // events for which a child is registered will also appear on the Registered tab
+    const userIsRegistered = event.registeredUsers.includes(userId);
+    const childIsRegistered = event.registeredChildren.some((childId) => userChildren.includes(childId));
+    if (userIsRegistered || childIsRegistered) {
       event.endDateTime && event.endDateTime < now ? sections.past.push(event) : sections.registered.push(event);
     } else {
       sections.available.push(event);
