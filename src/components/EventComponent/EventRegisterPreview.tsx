@@ -33,8 +33,12 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
   const [waiverEmail, setWaiverEmail] = useState("");
   const [waiverSigned, setWaiverSigned] = useState(false);
 
+  const allRegistered = userInfo.alreadyRegistered && userInfo.family.every((member) => member.alreadyRegistered);
+
   const handleClick = () => {
-    onConfirm(selectedAttendees);
+    if (selectedAttendees.length > 0) {
+      onConfirm(selectedAttendees);
+    }
   };
 
   return (
@@ -152,13 +156,21 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
 
         <DialogFooter className="mt-6">
           {!waiverSigned && (
-            <Button className="mx-auto w-2/5 bg-[#488644] text-white hover:bg-[#3a6d37]" onClick={handleClick}>
-              Register for Event
+            <Button
+              className="mx-auto w-2/5 bg-[#488644] text-white hover:bg-[#3a6d37]"
+              onClick={handleClick}
+              disabled={allRegistered}
+            >
+              {allRegistered ? "All Family Members Registered" : "Register for Event"}
             </Button>
           )}
           {waiverSigned && (
-            <Button className="mx-auto w-2/5 bg-[#488644] text-white hover:bg-[#3a6d37]" onClick={handleClick}>
-              Sign and Return to Events
+            <Button
+              className="mx-auto w-2/5 bg-[#488644] text-white hover:bg-[#3a6d37]"
+              onClick={handleClick}
+              disabled={allRegistered}
+            >
+              {allRegistered ? "All Family Members Registered" : "Sign and Return to Events"}
             </Button>
           )}
         </DialogFooter>

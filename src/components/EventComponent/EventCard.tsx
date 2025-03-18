@@ -16,7 +16,6 @@ export interface EventCardProps {
   registrationDeadline: Date | null;
   capacity: number;
   currentRegistrations: number;
-  userRegistered?: boolean;
   onDelete?: (eventId: string) => void;
 }
 
@@ -57,7 +56,6 @@ export default function EventCard(props: EventCardProps) {
     registrationDeadline,
     capacity,
     currentRegistrations,
-    userRegistered,
     onDelete,
   } = props;
 
@@ -100,7 +98,6 @@ export default function EventCard(props: EventCardProps) {
             registrationDeadline,
             capacity,
             currentRegistrations,
-            userRegistered,
             onDelete,
           }}
         />

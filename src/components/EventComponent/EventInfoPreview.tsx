@@ -34,7 +34,6 @@ interface EventInfoProps {
   email?: string;
   capacity?: number;
   currentRegistrations?: number;
-  userRegistered?: boolean;
   onDelete?: (eventId: string) => void;
 }
 
@@ -50,7 +49,6 @@ export function EventInfoPreview({
   email = "info@creeklands.org",
   capacity,
   currentRegistrations,
-  userRegistered,
   onDelete,
 }: EventInfoProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -79,7 +77,7 @@ export function EventInfoPreview({
   const hasRegistrationClosed = registrationDeadline ? new Date() > registrationDeadline : false;
   const isFull = capacity !== undefined && currentRegistrations !== undefined && currentRegistrations >= capacity;
   const [isRegistered, setIsRegistered] = useState(false);
-  const isRegisterDisabled = hasRegistrationClosed || isFull || isRegistered;
+  const isRegisterDisabled = hasRegistrationClosed || isFull;
 
   const eventImages =
     images.length > 0
@@ -305,17 +303,11 @@ export function EventInfoPreview({
           </div>
           <DialogFooter className="flex justify-between">
             <Button
-              className={`text-white ${userRegistered ? "cursor-not-allowed bg-gray-400" : "bg-[#488644] text-white hover:bg-[#3a6d37]"}`}
+              className={"bg-[#488644] text-white hover:bg-[#3a6d37]"}
               onClick={handleOpenRegisterDialog}
               disabled={isRegisterDisabled}
             >
-              {isFull
-                ? "Event Full"
-                : hasRegistrationClosed
-                  ? "Registration Closed"
-                  : userRegistered
-                    ? "Already Registered"
-                    : "Register"}
+              {isFull ? "Event Full" : hasRegistrationClosed ? "Registration Closed" : "Register"}
             </Button>
             {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
@@ -353,7 +345,7 @@ export function EventInfoPreview({
         </AlertDialogContent>
       </AlertDialog>
 
-      {!isFull && !userRegistered && (
+      {!isFull && (
         <EventRegisterPreview
           isOpen={isRegisterDialogOpen}
           onOpenChange={setIsRegisterDialogOpen}

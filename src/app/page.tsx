@@ -69,9 +69,9 @@ export default function Home() {
 
   return (
     <main className="mx-auto mb-8 flex flex-col">
-      <EventSection title="Registered Events" events={eventSections.registered} isRegisteredSection />
+      <EventSection title="Registered Events" events={eventSections.registered} />
       <EventSection title="Available Events" events={eventSections.available} />
-      <EventSection title="Past Events" events={eventSections.past} isRegisteredSection />
+      <EventSection title="Past Events" events={eventSections.past} />
     </main>
   );
 }
