@@ -50,9 +50,9 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Right Section: Profile & Mobile Menu */}
+        {/* Right Section: Profile, Menu & User Avatar */}
         <div className="ml-auto flex h-full items-center space-x-4">
-          {/* Signed In: Show Profile Link & User Avatar */}
+          {/* Signed In: Show "My Profile" Link + User Avatar (Desktop) */}
           <SignedIn>
             <Link
               href="/user"
@@ -69,7 +69,7 @@ const Navbar = () => {
             </div>
           </SignedIn>
 
-          {/* Signed Out: Redirect to Sign-In Page */}
+          {/* Signed Out: Show "My Profile" Link (Desktop) */}
           <SignedOut>
             <SignInButton>
               <Link
@@ -81,17 +81,32 @@ const Navbar = () => {
             </SignInButton>
           </SignedOut>
 
-          {/* Mobile Menu Button (Now Positioned at the Very Right) */}
+          {/* Mobile View: Always Show Clerk Profile Icon */}
+          <SignedIn>
+            <div className="flex h-full items-center md:hidden">
+              <UserButton />
+            </div>
+          </SignedIn>
+
+          <SignedOut>
+            <SignInButton>
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gray-300 transition duration-200 hover:bg-gray-400 md:hidden">
+                <User className="h-6 w-6 text-gray-600" />
+              </div>
+            </SignInButton>
+          </SignedOut>
+
+          {/* Mobile Menu Button (Always Visible on Right) */}
           <button
-            className="ml-auto flex items-center justify-center rounded-md p-2 transition duration-200 hover:bg-gray-200 md:hidden"
+            className="flex items-center justify-center rounded-md p-2 transition duration-200 hover:bg-gray-200 md:hidden"
             onClick={() => setIsOpen(true)}
           >
-            <ChevronRight className="h-6 w-6 text-gray-700" />
+            <Menu className="h-6 w-6 text-gray-700" />
           </button>
         </div>
       </div>
 
-      {/* Mobile Dropdown */}
+      {/* Mobile Dropdown Menu */}
       <div
         className={`fixed right-0 top-0 z-50 h-screen w-64 border-l-2 border-gray-400 bg-white shadow-xl transition-transform duration-300 ease-in-out ${
           isOpen ? "translate-x-0" : "translate-x-full"
@@ -104,8 +119,8 @@ const Navbar = () => {
           </button>
         </div>
 
-        {/* Dropdown Menu Links */}
-        <div className="flex flex-col space-y-6 px-6">
+        {/* Space Before Menu Items */}
+        <div className="mt-16 flex flex-col space-y-6 px-6">
           {[
             { label: "Events", href: "/" },
             { label: "Waivers", href: "/waivers" },
@@ -113,35 +128,41 @@ const Navbar = () => {
             <Link
               key={href}
               href={href}
-              className="text-lg font-semibold text-gray-700 transition duration-200 hover:text-primary"
+              className="flex items-center justify-between text-lg font-semibold text-gray-700 transition duration-200 hover:text-primary"
               onClick={() => setIsOpen(false)}
             >
-              {label}
+              <span>{label}</span>
+              <ChevronRight className="h-5 w-5 text-gray-500" />
             </Link>
           ))}
 
-          {/* Signed In: Show Profile Link */}
-          <SignedIn>
-            <Link
-              href="/user"
-              className="text-lg font-semibold text-gray-700 transition duration-200 hover:text-primary"
-              onClick={() => setIsOpen(false)}
-            >
-              My Profile
-            </Link>
-          </SignedIn>
-
-          {/* Signed Out: Show Sign-In Option */}
-          <SignedOut>
-            <SignInButton>
-              <div
-                className="cursor-pointer text-lg font-semibold text-gray-700 transition duration-200 hover:text-primary"
+          {/* Additional Space Before Profile Links */}
+          <div className="mt-8">
+            {/* Signed In: Show Profile Link in Mobile Menu */}
+            <SignedIn>
+              <Link
+                href="/user"
+                className="flex items-center justify-between text-lg font-semibold text-gray-700 transition duration-200 hover:text-primary"
                 onClick={() => setIsOpen(false)}
               >
-                Sign In
-              </div>
-            </SignInButton>
-          </SignedOut>
+                <span>My Profile</span>
+                <ChevronRight className="h-5 w-5 text-gray-500" />
+              </Link>
+            </SignedIn>
+
+            {/* Signed Out: Show Sign-In Option */}
+            <SignedOut>
+              <SignInButton>
+                <div
+                  className="flex cursor-pointer items-center justify-between text-lg font-semibold text-gray-700 transition duration-200 hover:text-primary"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <span>Sign In</span>
+                  <ChevronRight className="h-5 w-5 text-gray-500" />
+                </div>
+              </SignInButton>
+            </SignedOut>
+          </div>
         </div>
       </div>
     </nav>
