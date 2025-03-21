@@ -50,7 +50,7 @@ const WaiverSignatureComponent: React.FC<WaiverSignatureProps> = ({
           onClick={signed ? onViewWaiver : onSignWaiver}
           variant="default"
           className={`gap-1 rounded-lg px-2 py-3 text-sm font-semibold sm:px-3 sm:py-4 sm:text-base lg:px-4 lg:py-6 lg:text-lg ${
-            signed ? "bg-green-500 text-black" : "bg-red-500 text-white"
+            signed ? "bg-[#558552] hover:bg-[#488644]" : "bg-red-500 text-white"
           }`}
         >
           {signed ? (
@@ -69,7 +69,7 @@ const WaiverSignatureComponent: React.FC<WaiverSignatureProps> = ({
 
         {/* View Waiver Button (Only visible on lg+ screens) */}
         <Button
-          className="hidden rounded-lg bg-gray-500 px-4 py-6 text-base text-white transition hover:bg-gray-600 lg:flex"
+          className="hidden rounded-lg bg-gray-500 px-4 py-6 text-base text-white transition hover:bg-gray-600 lg:flex lg:text-lg"
           onClick={signed ? onViewWaiver : onSignWaiver}
         >
           {signed ? "Click here to View Waiver" : "Click here to View and Sign Waiver"}
