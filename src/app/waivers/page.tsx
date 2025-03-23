@@ -5,7 +5,7 @@ import WaiverSignatureComponent from "@/components/WaiverSignatureComponent/Waiv
 import { useUser } from "@clerk/nextjs";
 import { getEvents } from "@/app/actions/events/actions";
 import { formatEvents } from "@/lib/utils";
-import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import WaiverSignatureSkeleton from "@/components/WaiverSignatureComponent/WaiverSignatureSkeleton";
 
 interface RegisteredEvent {
   id: string;
@@ -17,7 +17,7 @@ interface RegisteredEvent {
 }
 
 export default function WaiversPage() {
-  const [registeredEvents, setRegisteredEvents] = useState<RegisteredEvent[]>([]);
+  const [registeredEvents, setRegisteredEvents] = useState<RegisteredEvent[] | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { isLoaded, user } = useUser();
@@ -68,10 +68,15 @@ export default function WaiversPage() {
     }
   };
 
-  if (isLoading) {
+  if (isLoading || !isLoaded || !user || registeredEvents === null) {
     return (
       <div className="container mx-auto p-6">
-        <LoadingSpinner />
+        <h1 className="mb-6 text-4xl">Past Signed Waivers</h1>
+        <div className="flex flex-col gap-4">
+          {[...Array(3)].map((_, idx) => (
+            <WaiverSignatureSkeleton key={idx} />
+          ))}
+        </div>
       </div>
     );
   }
@@ -83,7 +88,7 @@ export default function WaiversPage() {
       <h1 className="mb-6 text-4xl">Past Signed Waivers</h1>
 
       <div className="flex flex-col gap-4">
-        {registeredEvents.length === 0 ? (
+        {registeredEvents.length === 0 && !isLoading ? (
           <div className="rounded-lg bg-gray-100 p-6 text-center text-gray-500">No signed waivers found</div>
         ) : (
           registeredEvents.map((event) => (
