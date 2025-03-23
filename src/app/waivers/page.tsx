@@ -10,8 +10,8 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 interface RegisteredEvent {
   id: string;
   eventName: string;
-  eventDate: Date;
-  eventTime: string;
+  startDateTime: Date;
+  endDateTime: Date;
   signatureDate: Date;
   waiverId: string;
 }
@@ -42,8 +42,8 @@ export default function WaiversPage() {
           .map((event) => ({
             id: event.id,
             eventName: event.title,
-            eventDate: event.startDateTime ? new Date(event.startDateTime) : new Date(),
-            eventTime: event.startDateTime ? new Date(event.startDateTime).toLocaleTimeString() : "",
+            startDateTime: event.startDateTime ? new Date(event.startDateTime) : new Date(),
+            endDateTime: event.endDateTime ? new Date(event.endDateTime) : new Date(),
             signatureDate: event.startDateTime ? new Date(event.startDateTime) : new Date(),
             waiverId: event.id,
           }));
@@ -90,8 +90,8 @@ export default function WaiversPage() {
             <WaiverSignatureComponent
               key={event.id}
               eventName={event.eventName}
-              eventDate={event.eventDate}
-              eventTime={event.eventTime}
+              startDateTime={event.startDateTime}
+              endDateTime={event.endDateTime}
               signed={true} // All waivers are signed
               signatureDate={event.signatureDate}
               onViewWaiver={() => handleViewWaiver(event.waiverId)}
