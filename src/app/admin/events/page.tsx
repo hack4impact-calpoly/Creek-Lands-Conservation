@@ -46,7 +46,7 @@ export default function AdminPage() {
   const handleDeleteEvent = (eventId: string) => {
     setEventSections((prev) => ({
       active: prev.active.filter((event) => event.id !== eventId),
-      upcoming: prev.active.filter((event) => event.id !== eventId),
+      upcoming: prev.upcoming.filter((event) => event.id !== eventId),
       past: prev.past.filter((event) => event.id !== eventId),
     }));
   };
