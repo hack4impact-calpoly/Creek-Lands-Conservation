@@ -61,39 +61,32 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
 
   try {
     const deletedEvent = await Event.findByIdAndDelete(eventID);
-
     if (!deletedEvent) {
+      console.log(`Event not found: ${eventID}`);
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
+
+    const eventObjectId = new mongoose.Types.ObjectId(eventID);
+
+    // Update top-level registeredEvents
+    const userUpdate = await User.updateMany(
+      { registeredEvents: eventObjectId },
+      { $pull: { registeredEvents: eventObjectId } },
+    );
+    console.log(`User registeredEvents update: ${JSON.stringify(userUpdate)}`);
+
+    // Update children's registeredEvents
+    const childUpdate = await User.updateMany(
+      { "children.registeredEvents": eventObjectId },
+      { $pull: { "children.$[].registeredEvents": eventObjectId } },
+    );
+    console.log(`Children registeredEvents update: ${JSON.stringify(childUpdate)}`);
 
     return NextResponse.json({ message: "Event deleted successfully" }, { status: 200 });
   } catch (error) {
+    console.error("Error during event deletion:", error);
     return NextResponse.json(
       { error: "Error deleting event", details: error instanceof Error ? error.message : error },
-      { status: 500 },
-    );
-  }
-}
-
-// Fetch a single event by ID
-export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
-  await connectDB();
-
-  const { eventID } = params;
-  if (!mongoose.Types.ObjectId.isValid(eventID)) {
-    return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
-  }
-
-  try {
-    const event = await Event.findById(eventID);
-    if (!event) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 });
-    }
-
-    return NextResponse.json(event, { status: 200 });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Error fetching event", details: error instanceof Error ? error.message : error },
       { status: 500 },
     );
   }
