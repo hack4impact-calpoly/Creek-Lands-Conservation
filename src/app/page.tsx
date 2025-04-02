@@ -9,6 +9,15 @@ import EventSection from "@/components/EventComponent/EventSection";
 import SkeletonEventSection from "@/components/EventComponent/EventSectionSkeleton";
 import { formatEvents } from "@/lib/utils";
 
+interface IChild {
+  _id: string;
+}
+
+interface IUserData {
+  _id: string;
+  children: IChild[];
+}
+
 export default function Home() {
   // TODO consider more possibilities (children registered, deadline missed, etc) and how to sort those cases
   const [eventSections, setEventSections] = useState<{
@@ -16,7 +25,7 @@ export default function Home() {
     registered: EventInfo[];
     past: EventInfo[];
   }>({ available: [], registered: [], past: [] });
-  const [userData, setUserData] = useState<any>(null);
+  const [userData, setUserData] = useState<IUserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { isLoaded, user } = useUser();
