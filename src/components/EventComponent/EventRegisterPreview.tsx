@@ -3,9 +3,10 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Calendar, Clock, MapPin, Mail, Check, Download } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 interface RegisterDialogProps {
   isOpen: boolean;
@@ -32,14 +33,30 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
   const [waiverEmail, setWaiverEmail] = useState("");
   const [waiverSigned, setWaiverSigned] = useState(false);
+  const { toast } = useToast();
 
   const allRegistered = userInfo.alreadyRegistered && userInfo.family.every((member) => member.alreadyRegistered);
 
   const handleClick = () => {
     if (selectedAttendees.length > 0) {
       onConfirm(selectedAttendees);
+    } else {
+      // Assuming a toast component exists
+      toast({
+        title: "No Attendees Selected",
+        description: "Please select at least one attendee to register.",
+        variant: "destructive",
+      });
     }
   };
+
+  useEffect(() => {
+    if (!isOpen) {
+      setSelectedAttendees([]);
+      setWaiverEmail("");
+      setWaiverSigned(false);
+    }
+  }, [isOpen]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -89,7 +106,7 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   {userInfo.name}
-                  {userInfo.alreadyRegistered && <span>(already registered)</span>}
+                  {userInfo.alreadyRegistered}
                 </label>
               </div>
               {userInfo.family.map((member) => (
@@ -100,7 +117,7 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
                     checked={selectedAttendees.includes(member.id) || member.alreadyRegistered}
                     onCheckedChange={(checked) => {
                       setSelectedAttendees((prev) =>
-                        checked ? [...prev, member.id] : prev.filter((name) => name !== member.id),
+                        checked ? [...prev, member.id] : prev.filter((id) => id !== member.id),
                       );
                     }}
                     disabled={member.alreadyRegistered}

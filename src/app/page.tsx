@@ -16,9 +16,45 @@ export default function Home() {
     registered: EventInfo[];
     past: EventInfo[];
   }>({ available: [], registered: [], past: [] });
+  const [userData, setUserData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { isLoaded, user } = useUser();
+
+  const handleRegister = (eventId: string, attendees: string[]) => {
+    setEventSections((prev) => {
+      // Update all sections, not just available, to ensure the event is found
+      const allEvents = [...prev.available, ...prev.registered, ...prev.past];
+      const updatedEvents = allEvents.map((event) => {
+        if (event.id === eventId) {
+          const userId = userData?._id || "";
+          const userChildren = userData?.children.map((c: any) => c._id) || [];
+          const userIsRegistered = attendees.includes(userId);
+          const childIsRegistered = attendees.some((id) => userChildren.includes(id));
+          const updatedEvent = {
+            ...event,
+            registeredUsers: userIsRegistered ? [...event.registeredUsers, userId] : event.registeredUsers,
+            registeredChildren: childIsRegistered
+              ? [...event.registeredChildren, ...attendees.filter((id) => userChildren.includes(id))]
+              : event.registeredChildren,
+          };
+          console.log("Updated event:", updatedEvent.id, "registeredUsers:", updatedEvent.registeredUsers);
+          return updatedEvent;
+        }
+        return event;
+      });
+      const newSections = categorizeEvents(
+        updatedEvents,
+        userData?._id || "",
+        userData?.children.map((c) => c._id) || [],
+      );
+      console.log(
+        "New sections - Registered:",
+        newSections.registered.map((e) => e.id),
+      );
+      return newSections;
+    });
+  };
 
   useEffect(() => {
     const fetchAndProcessEvents = async () => {
@@ -32,13 +68,15 @@ export default function Home() {
           const userResponse = await fetch(`/api/users/${user.id}`);
           if (!userResponse.ok) throw new Error("Failed to fetch user data");
 
-          const userData = await userResponse.json();
-          if (!userData?._id) throw new Error("User not Found in MongoDB");
+          const fetchedUserData = await userResponse.json();
+          if (!fetchedUserData?._id) throw new Error("User not Found in MongoDB");
+
+          setUserData(fetchedUserData);
 
           const categorized = categorizeEvents(
             formattedEvents,
-            userData._id.toString(),
-            userData.children.map((child: any) => child._id),
+            fetchedUserData._id.toString(),
+            fetchedUserData.children.map((child: any) => child._id),
           );
           setEventSections(categorized);
         } else {
@@ -69,9 +107,9 @@ export default function Home() {
 
   return (
     <main className="mx-auto mb-8 flex flex-col">
-      <EventSection title="Registered Events" events={eventSections.registered} />
-      <EventSection title="Available Events" events={eventSections.available} />
-      <EventSection title="Past Events" events={eventSections.past} />
+      <EventSection title="Registered Events" events={eventSections.registered} onRegister={handleRegister} />
+      <EventSection title="Available Events" events={eventSections.available} onRegister={handleRegister} />
+      <EventSection title="Past Events" events={eventSections.past} onRegister={handleRegister} />
     </main>
   );
 }

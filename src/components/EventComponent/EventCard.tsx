@@ -17,6 +17,7 @@ export interface EventCardProps {
   capacity: number;
   currentRegistrations: number;
   onDelete?: (eventId: string) => void;
+  onRegister?: (eventId: string, attendees: string[]) => void;
 }
 
 const InfoRow = ({ icon: Icon, children }: { icon: React.ComponentType<LucideProps>; children: React.ReactNode }) => (
@@ -57,6 +58,7 @@ export default function EventCard(props: EventCardProps) {
     capacity,
     currentRegistrations,
     onDelete,
+    onRegister,
   } = props;
 
   const backgroundImage =
@@ -99,6 +101,7 @@ export default function EventCard(props: EventCardProps) {
             capacity,
             currentRegistrations,
             onDelete,
+            onRegister,
           }}
         />
       </CardContent>

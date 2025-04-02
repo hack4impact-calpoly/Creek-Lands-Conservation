@@ -8,11 +8,13 @@ export default function EventSection({
   title,
   events,
   onDelete,
+  onRegister,
   children,
 }: {
   title: string;
   events: EventInfo[];
   onDelete?: (eventId: string) => void;
+  onRegister?: (eventId: string, attendees: string[]) => void;
   children?: React.ReactNode;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -65,6 +67,7 @@ export default function EventSection({
                 // most events do not yet reflect the addition of registeredChildren to the schema
                 currentRegistrations={event.registeredUsers.length + event.registeredChildren.length}
                 onDelete={onDelete}
+                onRegister={onRegister}
               />
             ))}
           </div>
