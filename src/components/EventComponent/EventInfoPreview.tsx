@@ -15,6 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { SignInButton } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/nextjs";
 import { useRouter } from "next/navigation";
@@ -289,13 +290,20 @@ export function EventInfoPreview({
             </div>
           </div>
           <DialogFooter className="flex justify-between">
-            <Button
-              className="bg-[#488644] text-white hover:bg-[#3a6d37]"
-              onClick={handleOpenRegisterDialog}
-              disabled={isRegisterDisabled}
-            >
-              {isFull ? "Event Full" : hasRegistrationClosed ? "Registration Closed" : "Register"}
-            </Button>
+            {user ? (
+              <Button
+                className="bg-[#488644] text-white hover:bg-[#3a6d37]"
+                onClick={handleOpenRegisterDialog}
+                disabled={isRegisterDisabled}
+              >
+                {isFull ? "Event Full" : hasRegistrationClosed ? "Registration Closed" : "Register"}
+              </Button>
+            ) : (
+              <SignInButton redirectUrl="/">
+                <Button className="bg-[#488644] text-white hover:bg-[#3a6d37]">Sign In to Register</Button>
+              </SignInButton>
+            )}
+
             {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
                 <Button variant="outline" onClick={() => handleEditEvent()}>
