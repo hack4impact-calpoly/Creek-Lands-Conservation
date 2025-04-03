@@ -18,6 +18,7 @@ import {
 import { SignInButton } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/nextjs";
+import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { EventRegisterPreview } from "./EventRegisterPreview";
 import DOMPurify from "dompurify";
@@ -72,6 +73,8 @@ export function EventInfoPreview({
   const { user } = useUser();
   const router = useRouter();
   const isAdmin = user?.publicMetadata?.userRole === "admin";
+  const pathname = usePathname();
+  const showRegisterButton = !pathname.startsWith("/admin/events");
   const sanitizedDescription = DOMPurify.sanitize(description);
 
   const hasRegistrationClosed = registrationDeadline ? new Date() > registrationDeadline : false;
@@ -290,19 +293,20 @@ export function EventInfoPreview({
             </div>
           </div>
           <DialogFooter className="flex justify-between">
-            {user ? (
-              <Button
-                className="bg-[#488644] text-white hover:bg-[#3a6d37]"
-                onClick={handleOpenRegisterDialog}
-                disabled={isRegisterDisabled}
-              >
-                {isFull ? "Event Full" : hasRegistrationClosed ? "Registration Closed" : "Register"}
-              </Button>
-            ) : (
-              <SignInButton>
-                <Button className="bg-[#488644] text-white hover:bg-[#3a6d37]">Sign In to Register</Button>
-              </SignInButton>
-            )}
+            {showRegisterButton &&
+              (user ? (
+                <Button
+                  className="bg-[#488644] text-white hover:bg-[#3a6d37]"
+                  onClick={handleOpenRegisterDialog}
+                  disabled={isRegisterDisabled}
+                >
+                  {isFull ? "Event Full" : hasRegistrationClosed ? "Registration Closed" : "Register"}
+                </Button>
+              ) : (
+                <SignInButton>
+                  <Button className="bg-[#488644] text-white hover:bg-[#3a6d37]">Sign In to Register</Button>
+                </SignInButton>
+              ))}
 
             {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
