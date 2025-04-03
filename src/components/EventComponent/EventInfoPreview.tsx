@@ -299,7 +299,7 @@ export function EventInfoPreview({
                 {isFull ? "Event Full" : hasRegistrationClosed ? "Registration Closed" : "Register"}
               </Button>
             ) : (
-              <SignInButton redirectUrl="/">
+              <SignInButton>
                 <Button className="bg-[#488644] text-white hover:bg-[#3a6d37]">Sign In to Register</Button>
               </SignInButton>
             )}
