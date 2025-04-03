@@ -6,6 +6,30 @@ import User from "@/database/userSchema";
 import { authenticateAdmin } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
 
+// GET: Fetch a single event by ID
+export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
+  await connectDB();
+  const { eventID } = params;
+
+  // Validate the event ID
+  if (!mongoose.Types.ObjectId.isValid(eventID)) {
+    return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
+  }
+
+  try {
+    const event = await Event.findById(eventID);
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+    return NextResponse.json(event, { status: 200 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Error fetching event", details: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 },
+    );
+  }
+}
+
 // PUT: Update an Event
 export async function PUT(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
@@ -16,7 +40,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
   }
 
   try {
-    const { userId } = await auth(); // ✅ Get the authenticated user ID
+    const { userId } = await auth(); // Get the authenticated user ID
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized. Please log in." }, { status: 401 });
     }
