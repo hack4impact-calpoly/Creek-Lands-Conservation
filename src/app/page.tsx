@@ -8,6 +8,7 @@ import { EventInfo } from "@/types/events";
 import EventSection from "@/components/EventComponent/EventSection";
 import SkeletonEventSection from "@/components/EventComponent/EventSectionSkeleton";
 import { formatEvents } from "@/lib/utils";
+import SignatureCanvas from "@/components/WaiverSignatureComponent/SignatureCanvas";
 
 export default function Home() {
   // TODO consider more possibilities (children registered, deadline missed, etc) and how to sort those cases
@@ -65,6 +66,7 @@ export default function Home() {
 
   return (
     <main className="mx-auto mb-8 flex flex-col">
+      <SignatureCanvas />
       <EventSection title="Registered Events" events={eventSections.registered} isRegisteredSection />
       <EventSection title="Available Events" events={eventSections.available} />
       <EventSection title="Past Events" events={eventSections.past} isRegisteredSection />
