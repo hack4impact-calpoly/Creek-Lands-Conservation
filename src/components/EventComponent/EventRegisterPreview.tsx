@@ -41,7 +41,6 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
     if (selectedAttendees.length > 0) {
       onConfirm(selectedAttendees);
     } else {
-      // Assuming a toast component exists
       toast({
         title: "No Attendees Selected",
         description: "Please select at least one attendee to register.",
@@ -60,13 +59,13 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[75vw] min-w-[900px] p-8">
+      <DialogContent className="h-auto max-h-[70vh] w-full max-w-[80%] overflow-y-auto rounded-lg md:max-w-[700px] lg:max-w-[900px]">
         <DialogHeader className="items-center">
           <div className="mb-2 flex items-center justify-between">
-            <DialogTitle className="text-3xl font-bold">Register for: {eventInfo.title}</DialogTitle>
+            <DialogTitle className="text-2xl font-bold sm:text-3xl">Register for: {eventInfo.title}</DialogTitle>
           </div>
 
-          <div className="flex gap-6 text-sm text-gray-600">
+          <div className="flex flex-col gap-2 text-xs text-gray-600 sm:flex-row sm:gap-6 sm:text-sm">
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4" />
               {eventInfo.startDate} - {eventInfo.endDate}
@@ -86,7 +85,7 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
           </div>
         </DialogHeader>
 
-        <div className="mt-2 grid grid-cols-2 gap-12">
+        <div className="mt-2 grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="w-full">
             <h3 className="mb-4 font-semibold">Who&apos;s attending?</h3>
             <div className="space-y-3">
@@ -106,13 +105,12 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   {userInfo.name}
-                  {userInfo.alreadyRegistered}
+                  {userInfo.alreadyRegistered && " (Already Registered)"}
                 </label>
               </div>
               {userInfo.family.map((member) => (
-                <div key={member.name} className="flex items-center space-x-3">
+                <div key={member.id} className="flex items-center space-x-3">
                   <Checkbox
-                    key={member.id}
                     id={member.id}
                     checked={selectedAttendees.includes(member.id) || member.alreadyRegistered}
                     onCheckedChange={(checked) => {
@@ -127,6 +125,7 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
                     {member.name}
+                    {member.alreadyRegistered && " (Already Registered)"}
                   </label>
                 </div>
               ))}
@@ -154,7 +153,7 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
                   placeholder="e.g. jameshudson345@gmail.com"
                   value={waiverEmail}
                   onChange={(e) => setWaiverEmail(e.target.value)}
-                  className="mt-1"
+                  className="mt-1 w-full"
                 />
               </div>
 
@@ -174,7 +173,7 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
         <DialogFooter className="mt-6">
           {!waiverSigned && (
             <Button
-              className="mx-auto w-2/5 bg-[#488644] text-white hover:bg-[#3a6d37]"
+              className="mx-auto w-full bg-[#488644] text-white hover:bg-[#3a6d37] sm:w-2/5"
               onClick={handleClick}
               disabled={allRegistered}
             >
@@ -183,7 +182,7 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
           )}
           {waiverSigned && (
             <Button
-              className="mx-auto w-2/5 bg-[#488644] text-white hover:bg-[#3a6d37]"
+              className="mx-auto w-full bg-[#488644] text-white hover:bg-[#3a6d37] sm:w-2/5"
               onClick={handleClick}
               disabled={allRegistered}
             >
