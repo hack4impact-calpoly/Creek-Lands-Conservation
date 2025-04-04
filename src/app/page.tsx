@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, createContext } from "react";
 import EventCard from "@/components/EventComponent/EventCard";
 import { useUser } from "@clerk/nextjs";
 import { getEvents } from "@/app/actions/events/actions";
@@ -8,6 +8,15 @@ import { EventInfo } from "@/types/events";
 import EventSection from "@/components/EventComponent/EventSection";
 import SkeletonEventSection from "@/components/EventComponent/EventSectionSkeleton";
 import { formatEvents } from "@/lib/utils";
+import { loadStripe } from "@stripe/stripe-js";
+import { Stripe } from "@stripe/stripe-js";
+
+export const StripeContext = createContext<Promise<Stripe | null> | undefined>(undefined);
+
+if (process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY === undefined) {
+  throw new Error("STRIPE_PUBLISHABLE_KEY is not defined");
+}
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string);
 
 export default function Home() {
   // TODO consider more possibilities (children registered, deadline missed, etc) and how to sort those cases
@@ -65,9 +74,11 @@ export default function Home() {
 
   return (
     <main className="mx-auto mb-8 flex flex-col">
-      <EventSection title="Registered Events" events={eventSections.registered} isRegisteredSection />
-      <EventSection title="Available Events" events={eventSections.available} />
-      <EventSection title="Past Events" events={eventSections.past} isRegisteredSection />
+      <StripeContext.Provider value={stripePromise}>
+        <EventSection title="Registered Events" events={eventSections.registered} isRegisteredSection />
+        <EventSection title="Available Events" events={eventSections.available} />
+        <EventSection title="Past Events" events={eventSections.past} isRegisteredSection />
+      </StripeContext.Provider>
     </main>
   );
 }

@@ -3,9 +3,14 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Calendar, Clock, MapPin, Mail, Check, Download } from "lucide-react";
-import { useState } from "react";
+import { useState, useContext } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Elements } from "@stripe/react-stripe-js";
+import { Stripe } from "@stripe/stripe-js";
+import Checkout from "@/components/Payment/Checkout";
+import convertToSubcurrency from "@/lib/convertToSubcurrency";
+import { StripeContext } from "@/app/page";
 
 interface RegisterDialogProps {
   isOpen: boolean;
@@ -18,6 +23,7 @@ interface RegisterDialogProps {
     endTime: string;
     location: string;
     contactEmail: string;
+    fee: number;
   };
   userInfo: {
     name: string;
@@ -30,6 +36,7 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
   const [waiverEmail, setWaiverEmail] = useState("");
   const [waiverSigned, setWaiverSigned] = useState(false);
+  const stripePromise = useContext(StripeContext);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -139,6 +146,21 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
             </div>
           </div>
         </div>
+
+        {stripePromise && eventInfo.fee > 0 && (
+          <div>
+            <Elements
+              stripe={stripePromise}
+              options={{
+                mode: "payment",
+                amount: convertToSubcurrency(eventInfo.fee),
+                currency: "usd",
+              }}
+            >
+              <Checkout amount={eventInfo.fee} />
+            </Elements>
+          </div>
+        )}
 
         <DialogFooter className="mt-6">
           {!waiverSigned && (

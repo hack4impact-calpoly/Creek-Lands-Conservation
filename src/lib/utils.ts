@@ -30,5 +30,6 @@ export const formatEvents = (data: any[]): EventInfo[] =>
     images: Array.isArray(event.images) ? event.images : [],
     registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline) : null,
     capacity: event.capacity || 0,
+    fee: event.fee || 0,
     registeredUsers: event.registeredUsers?.map((u: any) => u.toString()) || [],
   }));

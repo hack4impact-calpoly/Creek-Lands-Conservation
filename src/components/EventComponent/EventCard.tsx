@@ -17,6 +17,7 @@ export interface EventCardProps {
   capacity: number;
   currentRegistrations: number;
   userRegistered?: boolean;
+  fee: number;
   onDelete?: (eventId: string) => void;
 }
 
@@ -58,6 +59,7 @@ export default function EventCard(props: EventCardProps) {
     capacity,
     currentRegistrations,
     userRegistered,
+    fee,
     onDelete,
   } = props;
 
@@ -101,6 +103,7 @@ export default function EventCard(props: EventCardProps) {
             capacity,
             currentRegistrations,
             userRegistered,
+            fee,
             onDelete,
           }}
         />

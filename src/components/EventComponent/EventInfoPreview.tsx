@@ -33,6 +33,7 @@ interface EventInfoProps {
   email?: string;
   capacity?: number;
   currentRegistrations?: number;
+  fee: number;
   userRegistered?: boolean;
   onDelete?: (eventId: string) => void;
 }
@@ -50,6 +51,7 @@ export function EventInfoPreview({
   capacity,
   currentRegistrations,
   userRegistered,
+  fee,
   onDelete,
 }: EventInfoProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
@@ -346,6 +348,7 @@ export function EventInfoPreview({
             endTime: endDateTime ? endDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD",
             location: location,
             contactEmail: email || "info@creeklands.org",
+            fee: fee,
           }}
           userInfo={{
             name: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),

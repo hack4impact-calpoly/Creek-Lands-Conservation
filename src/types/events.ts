@@ -22,5 +22,6 @@ export type EventInfo = {
   images: string[];
   registrationDeadline: Date | null;
   capacity: number;
+  fee: number;
   registeredUsers: string[];
 };

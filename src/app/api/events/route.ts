@@ -2,6 +2,7 @@ import connectDB from "@/database/db";
 import Event from "@/database/eventSchema";
 import { NextResponse } from "next/server";
 import { authenticateAdmin } from "@/lib/auth";
+import Stripe from "stripe";
 
 export async function POST(request: Request) {
   try {
