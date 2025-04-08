@@ -7,14 +7,14 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 export default function EventSection({
   title,
   events,
-  isRegisteredSection = false,
   onDelete,
+  onRegister,
   children,
 }: {
   title: string;
   events: EventInfo[];
-  isRegisteredSection?: boolean;
   onDelete?: (eventId: string) => void;
+  onRegister?: (eventId: string, attendees: string[]) => void;
   children?: React.ReactNode;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -64,9 +64,10 @@ export default function EventSection({
                 key={event.id}
                 {...event}
                 eventTitle={event.title}
-                currentRegistrations={event.registeredUsers.length}
-                userRegistered={isRegisteredSection}
+                // most events do not yet reflect the addition of registeredChildren to the schema
+                currentRegistrations={event.registeredUsers.length + event.registeredChildren.length}
                 onDelete={onDelete}
+                onRegister={onRegister}
               />
             ))}
           </div>

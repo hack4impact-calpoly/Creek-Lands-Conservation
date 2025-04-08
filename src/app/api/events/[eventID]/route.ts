@@ -6,6 +6,30 @@ import User from "@/database/userSchema";
 import { authenticateAdmin } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
 
+// GET: Fetch a single event by ID
+export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
+  await connectDB();
+  const { eventID } = params;
+
+  // Validate the event ID
+  if (!mongoose.Types.ObjectId.isValid(eventID)) {
+    return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
+  }
+
+  try {
+    const event = await Event.findById(eventID);
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+    return NextResponse.json(event, { status: 200 });
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Error fetching event", details: error instanceof Error ? error.message : "Unknown error" },
+      { status: 500 },
+    );
+  }
+}
+
 // PUT: Update an Event
 export async function PUT(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
@@ -16,51 +40,12 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
   }
 
   try {
-    const { userId } = await auth(); // ✅ Get the authenticated user ID
+    const { userId } = await auth(); // Get the authenticated user ID
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized. Please log in." }, { status: 401 });
     }
 
-    // Find user in MongoDB using Clerk ID
-    const person = await User.findOne({ clerkID: userId });
-
-    if (!person) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    // get their user id to use for registration
-    const mongoUserId = person._id;
-
     const updatedData = await req.json();
-
-    // Check if user is trying to register for event
-    if (updatedData.registerForEvent) {
-      console.log("PUT - registering for events");
-      const event = await Event.findById(eventID);
-      if (!event) {
-        return NextResponse.json({ error: "Event not found" }, { status: 404 });
-      }
-
-      // Check if user already registered for the event
-      if (event.registeredUsers.includes(mongoUserId)) {
-        return NextResponse.json({ error: "User already registered for this event" }, { status: 400 });
-      }
-
-      // Check if the registration deadline passed
-      if (new Date() > event.registrationDeadline) {
-        return NextResponse.json({ error: "Registration deadline has passed" }, { status: 400 });
-      }
-
-      // Check if event is full
-      if (event.capacity > 0 && event.registeredUsers.length >= event.capacity) {
-        return NextResponse.json({ error: "Event is at full capacity." }, { status: 400 });
-      }
-
-      event.registeredUsers.push(mongoUserId);
-      await event.save();
-
-      return NextResponse.json({ message: "Successfully registered for the event.", event }, { status: 200 });
-    }
 
     // If not registering, check if the user is an admin (to update event details)
     const authError = await authenticateAdmin();
@@ -100,39 +85,32 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
 
   try {
     const deletedEvent = await Event.findByIdAndDelete(eventID);
-
     if (!deletedEvent) {
+      console.log(`Event not found: ${eventID}`);
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
+
+    const eventObjectId = new mongoose.Types.ObjectId(eventID);
+
+    // Update top-level registeredEvents
+    const userUpdate = await User.updateMany(
+      { registeredEvents: eventObjectId },
+      { $pull: { registeredEvents: eventObjectId } },
+    );
+    console.log(`User registeredEvents update: ${JSON.stringify(userUpdate)}`);
+
+    // Update children's registeredEvents
+    const childUpdate = await User.updateMany(
+      { "children.registeredEvents": eventObjectId },
+      { $pull: { "children.$[].registeredEvents": eventObjectId } },
+    );
+    console.log(`Children registeredEvents update: ${JSON.stringify(childUpdate)}`);
 
     return NextResponse.json({ message: "Event deleted successfully" }, { status: 200 });
   } catch (error) {
+    console.error("Error during event deletion:", error);
     return NextResponse.json(
       { error: "Error deleting event", details: error instanceof Error ? error.message : error },
-      { status: 500 },
-    );
-  }
-}
-
-// Fetch a single event by ID
-export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
-  await connectDB();
-
-  const { eventID } = params;
-  if (!mongoose.Types.ObjectId.isValid(eventID)) {
-    return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
-  }
-
-  try {
-    const event = await Event.findById(eventID);
-    if (!event) {
-      return NextResponse.json({ error: "Event not found" }, { status: 404 });
-    }
-
-    return NextResponse.json(event, { status: 200 });
-  } catch (error) {
-    return NextResponse.json(
-      { error: "Error fetching event", details: error instanceof Error ? error.message : error },
       { status: 500 },
     );
   }

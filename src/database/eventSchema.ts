@@ -11,6 +11,7 @@ export interface IEvent extends Document {
   registrationDeadline: Date;
   images: string[];
   registeredUsers: mongoose.Types.ObjectId[];
+  registeredChildren: mongoose.Types.ObjectId[];
   waiverId: mongoose.Types.ObjectId[];
   fee: number;
   stripePaymentId?: string | null;
@@ -78,7 +79,7 @@ const eventSchema = new Schema<IEvent>(
     },
     images: [{ type: String, default: [] }],
     registeredUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Change ObjectId to String
-
+    registeredChildren: [{ type: mongoose.Schema.Types.ObjectId, ref: "User.children" }],
     waiverId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Waiver" }],
     fee: {
       type: Number,

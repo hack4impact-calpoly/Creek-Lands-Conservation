@@ -15,8 +15,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { SignInButton } from "@clerk/nextjs";
 import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/nextjs";
+import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { EventRegisterPreview } from "./EventRegisterPreview";
 import DOMPurify from "dompurify";
@@ -33,8 +35,8 @@ interface EventInfoProps {
   email?: string;
   capacity?: number;
   currentRegistrations?: number;
-  userRegistered?: boolean;
   onDelete?: (eventId: string) => void;
+  onRegister?: (eventId: string, attendees: string[]) => void;
 }
 
 export function EventInfoPreview({
@@ -49,25 +51,36 @@ export function EventInfoPreview({
   email = "info@creeklands.org",
   capacity,
   currentRegistrations,
-  userRegistered,
   onDelete,
+  onRegister,
 }: EventInfoProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [userFamily, setUserFamily] = useState<{ name: string }[]>([]);
+  const [userInfo, setUserInfo] = useState<{
+    id: string;
+    name: string;
+    alreadyRegistered: boolean;
+    family: { id: string; name: string; alreadyRegistered: boolean }[];
+  }>({
+    id: "",
+    name: "",
+    alreadyRegistered: false,
+    family: [],
+  });
   const { toast } = useToast();
   const { user } = useUser();
   const router = useRouter();
   const isAdmin = user?.publicMetadata?.userRole === "admin";
+  const pathname = usePathname();
+  const showRegisterButton = !pathname.startsWith("/admin/events");
   const sanitizedDescription = DOMPurify.sanitize(description);
 
-  // for registration validation
   const hasRegistrationClosed = registrationDeadline ? new Date() > registrationDeadline : false;
   const isFull = capacity !== undefined && currentRegistrations !== undefined && currentRegistrations >= capacity;
   const [isRegistered, setIsRegistered] = useState(false);
-  const isRegisterDisabled = hasRegistrationClosed || isFull || isRegistered;
+  const isRegisterDisabled = hasRegistrationClosed || isFull;
 
   const eventImages =
     images.length > 0
@@ -76,7 +89,6 @@ export function EventInfoPreview({
           "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg",
         ];
 
-  // Fetch user's family information when dialog opens
   const fetchUserFamily = async () => {
     if (!user?.id) return;
 
@@ -85,12 +97,20 @@ export function EventInfoPreview({
       if (!response.ok) throw new Error("Failed to fetch user data");
 
       const userData = await response.json();
-      const familyMembers =
+      const family =
         userData.children?.map((child: any) => ({
+          id: child._id,
           name: `${child.firstName || ""} ${child.lastName || ""}`.trim(),
+          alreadyRegistered: child.registeredEvents.includes(id),
         })) || [];
 
-      setUserFamily(familyMembers);
+      setUserInfo({
+        id: userData._id,
+        name: `${userData?.firstName || ""} ${userData?.lastName || ""}`.trim(),
+        alreadyRegistered: userData.registeredEvents.includes(id),
+        family,
+      });
+      console.log("Fetched user family:", family);
     } catch (error) {
       console.error("Error fetching user family:", error);
       toast({
@@ -101,7 +121,6 @@ export function EventInfoPreview({
     }
   };
 
-  // Fetch family data when register dialog opens
   const handleOpenRegisterDialog = () => {
     fetchUserFamily();
     setIsRegisterDialogOpen(true);
@@ -110,25 +129,18 @@ export function EventInfoPreview({
   const handleDeleteEvent = async () => {
     setIsDeleting(true);
     try {
-      console.log(id);
-      console.log(title);
       const response = await fetch(`/api/events/${id}`, {
         method: "DELETE",
       });
 
-      if (!response.ok) {
-        throw new Error("Failed to delete event");
-      }
+      if (!response.ok) throw new Error("Failed to delete event");
 
       toast({
         title: "Event deleted successfully",
         description: "The event has been removed from the system.",
       });
 
-      // Calls onDelete to remove deleted events from events instead of full reload
-      if (onDelete) {
-        onDelete(id);
-      }
+      if (onDelete) onDelete(id);
     } catch (error) {
       toast({
         title: "Error",
@@ -141,8 +153,7 @@ export function EventInfoPreview({
     }
   };
 
-  const handleRegisterEvent = async () => {
-    // make sure you are logged in to register
+  const handleRegisterEvent = async (attendees: string[]) => {
     if (!user) {
       toast({
         title: "Error",
@@ -155,28 +166,33 @@ export function EventInfoPreview({
     setIsRegistering(true);
 
     try {
-      console.log(id);
-      console.log(title);
-      const response = await fetch(`/api/events/${id}`, {
+      console.log("Registering attendees:", attendees, "User ID:", userInfo.id);
+      const response = await fetch(`/api/events/${id}/registrations`, {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ registerForEvent: true }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attendees }),
       });
 
-      // Parse the response body as JSON and handle errors accordingly
       const responseData = await response.json();
+      if (!response.ok) throw new Error(responseData.error || "Failed to register for event.");
 
-      if (!response.ok) {
-        throw new Error(responseData.error || "Failed to register for event.");
-      }
+      // Update local state
+      setIsRegistered(true);
+      setUserInfo((prev) => {
+        const userIsAttendee = attendees.includes(prev.id);
+        console.log("User is attendee:", userIsAttendee);
+        return {
+          ...prev,
+          alreadyRegistered: userIsAttendee ? true : prev.alreadyRegistered,
+          family: prev.family.map((member) => ({
+            ...member,
+            alreadyRegistered: attendees.includes(member.id) ? true : member.alreadyRegistered,
+          })),
+        };
+      });
 
-      // Wait for 3 seconds before reloading the page
-      setTimeout(() => {
-        window.location.reload(); // This will reload the page after the specified delay
-      }, 3000);
-
+      console.log("Parent Signup");
+      onRegister?.(id, attendees);
       toast({
         title: "Registration successful",
         description: "You have been registered for the event.",
@@ -184,7 +200,7 @@ export function EventInfoPreview({
     } catch (error) {
       toast({
         title: "Error",
-        description: error instanceof Error ? error.message : "Failed to register for the event. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to register for the event.",
         variant: "destructive",
       });
     } finally {
@@ -194,7 +210,7 @@ export function EventInfoPreview({
   };
 
   const handleEditEvent = () => {
-    router.push(`/admin/events/edit/${id}`); // Redirect user to the edit page
+    router.push(`/admin/events/edit/${id}`);
   };
 
   return (
@@ -209,13 +225,7 @@ export function EventInfoPreview({
           <DialogHeader>
             <DialogTitle className="text-center text-4xl">{title}</DialogTitle>
           </DialogHeader>
-          <div
-            className="max-h-[60vh] overflow-y-auto px-4 md:px-6 
-            [&::-webkit-scrollbar-thumb]:rounded-full 
-            [&::-webkit-scrollbar-thumb]:bg-slate-300 
-            [&::-webkit-scrollbar-track]:bg-slate-100 
-            [&::-webkit-scrollbar]:w-2"
-          >
+          <div className="max-h-[60vh] overflow-y-auto px-4 md:px-6">
             <div className="grid grid-cols-1 gap-6 py-4 sm:grid-cols-2">
               <div className="grid grid-cols-[auto_1fr] items-center gap-4">
                 <Calendar className="h-5 w-5" />
@@ -283,19 +293,21 @@ export function EventInfoPreview({
             </div>
           </div>
           <DialogFooter className="flex justify-between">
-            <Button
-              className={`text-white ${userRegistered ? "cursor-not-allowed bg-gray-400" : "bg-[#488644] text-white hover:bg-[#3a6d37]"}`}
-              onClick={handleOpenRegisterDialog}
-              disabled={isRegisterDisabled}
-            >
-              {isFull
-                ? "Event Full"
-                : hasRegistrationClosed
-                  ? "Registration Closed"
-                  : userRegistered
-                    ? "Already Registered"
-                    : "Register"}
-            </Button>
+            {showRegisterButton &&
+              (user ? (
+                <Button
+                  className="bg-[#488644] text-white hover:bg-[#3a6d37]"
+                  onClick={handleOpenRegisterDialog}
+                  disabled={isRegisterDisabled}
+                >
+                  {isFull ? "Event Full" : hasRegistrationClosed ? "Registration Closed" : "Register"}
+                </Button>
+              ) : (
+                <SignInButton>
+                  <Button className="bg-[#488644] text-white hover:bg-[#3a6d37]">Sign In to Register</Button>
+                </SignInButton>
+              ))}
+
             {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
                 <Button variant="outline" onClick={() => handleEditEvent()}>
@@ -332,7 +344,7 @@ export function EventInfoPreview({
         </AlertDialogContent>
       </AlertDialog>
 
-      {!isFull && !userRegistered && (
+      {!isFull && (
         <EventRegisterPreview
           isOpen={isRegisterDialogOpen}
           onOpenChange={setIsRegisterDialogOpen}
@@ -347,10 +359,7 @@ export function EventInfoPreview({
             location: location,
             contactEmail: email || "info@creeklands.org",
           }}
-          userInfo={{
-            name: `${user?.firstName || ""} ${user?.lastName || ""}`.trim(),
-            family: userFamily,
-          }}
+          userInfo={userInfo}
           onConfirm={handleRegisterEvent}
         />
       )}

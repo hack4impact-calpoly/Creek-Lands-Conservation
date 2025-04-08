@@ -23,6 +23,7 @@ export async function POST(request: Request) {
     const newEvent = await Event.create({
       ...body,
       registeredUsers: [],
+      registeredChildren: [],
     });
 
     return NextResponse.json(newEvent, { status: 201 });
