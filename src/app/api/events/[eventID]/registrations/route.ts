@@ -82,8 +82,18 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
       return NextResponse.json({ error: "Selected attendees are already registered." }, { status: 400 });
     }
 
-    await event.save();
-    await user.save();
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      await event.save({ session });
+      await user.save({ session });
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      // Handle error
+    } finally {
+      session.endSession();
+    }
 
     return NextResponse.json(
       {
@@ -180,8 +190,18 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
       return NextResponse.json({ error: "Selected attendees were not registered." }, { status: 400 });
     }
 
-    await event.save();
-    await user.save();
+    const session = await mongoose.startSession();
+    session.startTransaction();
+    try {
+      await event.save({ session });
+      await user.save({ session });
+      await session.commitTransaction();
+    } catch (error) {
+      await session.abortTransaction();
+      // Handle error
+    } finally {
+      session.endSession();
+    }
 
     return NextResponse.json(
       {
