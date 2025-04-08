@@ -22,8 +22,8 @@ interface LeanEvent {
 export async function getEvents() {
   try {
     await connectDB();
-
     const events = await Event.find().sort({ startDate: 1 }).lean<LeanEvent[]>();
+    console.log("Raw events from DB:", events);
 
     const formattedEvents = events.map((event) => ({
       _id: event._id.toString(),

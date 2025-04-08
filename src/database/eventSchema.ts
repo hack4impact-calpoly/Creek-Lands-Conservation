@@ -1,6 +1,23 @@
 // Importing Mongoose
 import mongoose, { Schema, Document } from "mongoose";
 
+interface IEventRegisteredChild {
+  parent: mongoose.Types.ObjectId; // references the User doc
+  childId: mongoose.Types.ObjectId; // references the child's subdoc _id
+  waiversSigned: {
+    waiverId: mongoose.Types.ObjectId;
+    signed: boolean;
+  }[];
+}
+
+interface IEventRegisteredUser {
+  user: mongoose.Types.ObjectId; // references the User doc
+  waiversSigned: {
+    waiverId: mongoose.Types.ObjectId;
+    signed: boolean;
+  }[];
+}
+
 export interface IEvent extends Document {
   title: string;
   description?: string;
@@ -10,8 +27,12 @@ export interface IEvent extends Document {
   capacity: number;
   registrationDeadline: Date;
   images: string[];
-  registeredUsers: mongoose.Types.ObjectId[];
-  registeredChildren: mongoose.Types.ObjectId[];
+  registeredUsers: IEventRegisteredUser[];
+  registeredChildren: IEventRegisteredChild[];
+  eventWaiverTemplates: {
+    waiverId: mongoose.Types.ObjectId;
+    required: boolean;
+  }[];
   waiverId: mongoose.Types.ObjectId[];
   fee: number;
   stripePaymentId?: string | null;
@@ -78,9 +99,53 @@ const eventSchema = new Schema<IEvent>(
       required: true,
     },
     images: [{ type: String, default: [] }],
-    registeredUsers: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }], // Change ObjectId to String
-    registeredChildren: [{ type: mongoose.Schema.Types.ObjectId, ref: "User.children" }],
-    waiverId: [{ type: mongoose.Schema.Types.ObjectId, ref: "Waiver" }],
+
+    /**
+     * Array of adult (main user) registrations
+     */
+    registeredUsers: [
+      {
+        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // "User" to match userModel
+        waiversSigned: [
+          {
+            waiverId: { type: mongoose.Schema.Types.ObjectId, ref: "Waiver" },
+            signed: { type: Boolean, default: false },
+          },
+        ],
+      },
+    ],
+
+    /**
+     * Array of children registrations:
+     * - `parent` references the user's _id
+     * - `childId` is the subdocument _id from the user's `children` array
+     */
+    registeredChildren: [
+      {
+        parent: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+        childId: { type: mongoose.Schema.Types.ObjectId }, // No "ref" because it's an embedded subdoc
+        waiversSigned: [
+          {
+            waiverId: { type: mongoose.Schema.Types.ObjectId, ref: "Waiver" },
+            signed: { type: Boolean, default: false },
+          },
+        ],
+      },
+    ],
+
+    /**
+     * Event-level waiver templates (for reference)
+     */
+    eventWaiverTemplates: [
+      {
+        waiverId: { type: mongoose.Schema.Types.ObjectId, ref: "Waiver" },
+        required: { type: Boolean, default: true },
+      },
+    ],
+
+    /**
+     * Fee and optional Stripe payment info
+     */
     fee: {
       type: Number,
       required: true,
@@ -97,5 +162,9 @@ const eventSchema = new Schema<IEvent>(
   },
 );
 
-// Exporting the Event model
+/**
+ * Export the Event model.
+ * The model name here is "Event".
+ * Event collections are created in the database with the name "events".
+ */
 export default mongoose.models.Event || mongoose.model<IEvent>("Event", eventSchema);
