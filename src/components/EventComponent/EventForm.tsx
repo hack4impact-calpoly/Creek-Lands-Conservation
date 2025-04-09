@@ -133,7 +133,6 @@ export default function CreateEventForm() {
           <PDFUpload type="template" onPDFsUploaded={handlePDFsUploaded} resetFiles={resetUploader} />
         </div>
       </div>
-
       <form onSubmit={handleSubmit((data) => onSubmit(data, false))} className="mx-auto max-w-4xl space-y-6 p-6">
         <h1 className="text-3xl font-medium">Basic Information</h1>
         <div className="flex space-x-4">
