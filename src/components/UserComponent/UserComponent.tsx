@@ -69,7 +69,12 @@ export default function PersonalInfo() {
       try {
         setLoading(true);
 
-        const response = await fetch(`/api/users/${user.id}`);
+        const response = await fetch(`/api/users/${user.id}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
         if (!response.ok) {
           throw new Error(`Failed to fetch user data: ${response.status}`);
         }
