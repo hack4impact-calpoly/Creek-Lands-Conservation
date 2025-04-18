@@ -1,7 +1,6 @@
 "use client";
 
-import * as React from "react";
-import { useState, useRef } from "react";
+import React, { useState, useRef, useImperativeHandle, forwardRef, useEffect } from "react";
 import Image from "next/image";
 import { CloudUploadIcon, FileIcon, X } from "lucide-react";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -15,13 +14,17 @@ interface FileWithPreview extends File {
   preview: string;
 }
 
-export default function FileUpload({
-  onImagesUploaded,
-  resetFiles,
-}: {
+export interface FileUploadHandle {
+  uploadFiles: () => Promise<string[]>;
+  clear: () => void;
+}
+
+export interface FileUploadProps {
   onImagesUploaded: (urls: string[]) => void;
   resetFiles?: boolean;
-}) {
+}
+
+const FileUpload = forwardRef<FileUploadHandle, FileUploadProps>(({ onImagesUploaded, resetFiles }, ref) => {
   const [files, setFiles] = useState<FileWithPreview[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState<number | null>(null);
@@ -30,128 +33,91 @@ export default function FileUpload({
   const { toast } = useToast();
 
   const uploadFile = async (file: File): Promise<string> => {
-    try {
-      const fileName = `${Date.now()}-${file.name}`;
-      const presignedRes = await fetch(
-        `/api/s3-presigned-event?fileName=${encodeURIComponent(fileName)}&mimetype=${file.type}`,
-      );
-      const { uploadUrl, fileUrl } = await presignedRes.json();
-
-      await fetch(uploadUrl, {
-        method: "PUT",
-        body: file,
-        headers: {
-          "Content-Type": file.type,
-        },
-      });
-
-      console.log("Uploaded file URL:", fileUrl);
-      return fileUrl;
-    } catch (error) {
-      console.error("Error uploading file:", error);
-      throw error;
-    }
+    const fileName = `${Date.now()}-${file.name}`;
+    const presignedRes = await fetch(
+      `/api/s3-presigned-event?fileName=${encodeURIComponent(fileName)}&mimetype=${file.type}`,
+    );
+    const { uploadUrl, fileUrl } = await presignedRes.json();
+    await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
+    return fileUrl;
   };
 
-  const handleUpload = async () => {
-    try {
+  useImperativeHandle(ref, () => ({
+    uploadFiles: async () => {
       const imageFiles = files.filter((file) => file.type.startsWith("image/"));
-      if (imageFiles.length === 0) return;
-
-      const uploadPromises = imageFiles.map((file) => uploadFile(file));
-      const uploadedUrls = await Promise.all(uploadPromises);
-
-      console.log("All uploaded URLs:", uploadedUrls);
+      const uploadedUrls = await Promise.all(imageFiles.map((f) => uploadFile(f)));
       onImagesUploaded(uploadedUrls);
-
-      toast({
-        title: "Images uploaded successfully",
-        variant: "success",
+      toast({ title: "Images uploaded successfully", variant: "success" });
+      return uploadedUrls;
+    },
+    clear: () => {
+      files.forEach((file) => {
+        if (file.preview.startsWith("blob:")) URL.revokeObjectURL(file.preview);
       });
-    } catch (error) {
-      console.error("Error uploading images:", error);
-      toast({
-        title: "Error uploading images",
-        variant: "destructive",
-      });
-    }
-  };
-
-  React.useEffect(() => {
-    if (files.length > 0) {
-      handleUpload();
-    }
-  }, [files]);
+      setFiles([]);
+    },
+  }));
 
   const processFiles = (selectedFiles: File[]) => {
-    // Filter out duplicates based on file name and size
-    const newFiles = selectedFiles.filter((newFile) => {
-      const isDuplicate = files.some(
-        (existingFile) => existingFile.name === newFile.name && existingFile.size === newFile.size,
-      );
-      return !isDuplicate;
-    });
-
-    const filesWithPreviews = newFiles.map((file) =>
+    const newFiles = selectedFiles.filter(
+      (newFile) => !files.some((existing) => existing.name === newFile.name && existing.size === newFile.size),
+    );
+    const withPreviews = newFiles.map((file) =>
       Object.assign(file, {
         preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : "/placeholder.svg?height=400&width=300",
       }),
     );
-
-    setFiles((prev) => [...prev, ...filesWithPreviews]);
+    setFiles((prev) => [...prev, ...withPreviews]);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(true);
   };
-
   const handleDragLeave = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
   };
-
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     setIsDragging(false);
-    const droppedFiles = Array.from(e.dataTransfer.files).filter(
+    const dropped = Array.from(e.dataTransfer.files).filter(
       (file) => file.type.startsWith("image/") || file.type === "application/pdf",
     );
-    processFiles(droppedFiles);
+    processFiles(dropped);
   };
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files).filter(
-        (file) => file.type.startsWith("image/") || file.type === "application/pdf",
-      );
-      processFiles(selectedFiles);
-      e.target.value = "";
-    }
+    if (!e.target.files) return;
+    const selected = Array.from(e.target.files).filter(
+      (file) => file.type.startsWith("image/") || file.type === "application/pdf",
+    );
+    processFiles(selected);
+    e.target.value = "";
   };
-
   const removeFile = (fileToRemove: FileWithPreview) => {
-    setFiles((prevFiles) => prevFiles.filter((file) => file !== fileToRemove));
-    // Only revoke the URL when actually removing the file
-    if (fileToRemove.preview.startsWith("blob:")) {
-      URL.revokeObjectURL(fileToRemove.preview);
-    }
+    setFiles((prev) => prev.filter((f) => f !== fileToRemove));
+    if (fileToRemove.preview.startsWith("blob:")) URL.revokeObjectURL(fileToRemove.preview);
   };
 
-  // Clean up object URLs when component unmounts
-  React.useEffect(() => {
-    const previousFiles = files; // Store the previous state reference
+  useEffect(() => {
+    if (resetFiles) {
+      files.forEach((file) => {
+        if (file.preview.startsWith("blob:")) URL.revokeObjectURL(file.preview);
+      });
+      setFiles([]);
+    }
+  }, [resetFiles]);
 
+  useEffect(() => {
+    const prev = files;
     return () => {
-      previousFiles.forEach((file) => {
-        if (file.preview.startsWith("blob:")) {
-          URL.revokeObjectURL(file.preview);
-        }
+      prev.forEach((file) => {
+        if (file.preview.startsWith("blob:")) URL.revokeObjectURL(file.preview);
       });
     };
   }, []);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (carouselApi && selectedImageIndex !== null) {
       carouselApi.scrollTo(selectedImageIndex);
     }
@@ -159,25 +125,12 @@ export default function FileUpload({
 
   const imageFiles = files.filter((file) => file.type.startsWith("image/"));
 
-  // Add effect to watch for reset signal
-  React.useEffect(() => {
-    if (resetFiles) {
-      setFiles([]);
-    }
-  }, [resetFiles]);
-
-  // Add a function to handle manual upload and clear files
-  const handleManualUpload = async () => {
-    await handleUpload();
-    setFiles([]); // Clear files after successful upload
-  };
-
   return (
     <>
       <Card className="mx-auto w-full max-w-3xl">
         <CardHeader>
           <CardTitle>Upload Event Images</CardTitle>
-          <CardDescription>Drag and drop your images or click the button below to select files.</CardDescription>
+          <CardDescription>Drag and drop your images or click to select files.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div
@@ -192,7 +145,6 @@ export default function FileUpload({
           >
             <input
               type="file"
-              id="file-upload"
               multiple
               accept="image/*,.pdf"
               onChange={handleFileChange}
@@ -200,7 +152,7 @@ export default function FileUpload({
               ref={fileInputRef}
             />
             <CloudUploadIcon className="h-16 w-16 text-zinc-500 dark:text-zinc-400" />
-            <Button variant="outline" className="cursor-pointer" onClick={() => fileInputRef.current?.click()}>
+            <Button variant="outline" onClick={() => fileInputRef.current?.click()}>
               Select Files
             </Button>
           </div>
@@ -210,28 +162,20 @@ export default function FileUpload({
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-semibold">Preview</h3>
                 <div className="flex gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setSelectedImageIndex(0)} className="text-sm">
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedImageIndex(0)}>
                     View All
-                  </Button>
-                  <Button variant="default" size="sm" onClick={handleManualUpload}>
-                    Upload Images
                   </Button>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4">
-                {files.map((file, index) => (
+                {files.map((file, idx) => (
                   <div
-                    key={file.name + file.size} // More unique key
+                    key={file.name + file.size}
                     className="group relative aspect-square cursor-pointer"
-                    onClick={() => file.type.startsWith("image/") && setSelectedImageIndex(index)}
+                    onClick={() => file.type.startsWith("image/") && setSelectedImageIndex(idx)}
                   >
                     {file.type.startsWith("image/") ? (
-                      <Image
-                        src={file.preview || "/placeholder.svg"}
-                        alt={file.name}
-                        fill
-                        className="rounded-lg object-cover"
-                      />
+                      <Image src={file.preview} alt={file.name} fill className="rounded-lg object-cover" />
                     ) : (
                       <div className="flex h-full w-full items-center justify-center rounded-lg bg-muted">
                         <FileIcon className="h-10 w-10 text-muted-foreground" />
@@ -261,10 +205,10 @@ export default function FileUpload({
         <DialogContent className="p-4 sm:max-w-[800px] md:max-w-[900px]">
           <Carousel setApi={setCarouselApi}>
             <CarouselContent>
-              {imageFiles.map((file, index) => (
+              {imageFiles.map((file) => (
                 <CarouselItem key={file.name + file.size}>
                   <div className="relative aspect-[4/3] max-h-[600px] w-full">
-                    <Image src={file.preview || "/placeholder.svg"} alt={file.name} fill className="object-contain" />
+                    <Image src={file.preview} alt={file.name} fill className="object-contain" />
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent p-2">
                       <p className="truncate text-center text-sm text-white">{file.name}</p>
                     </div>
@@ -279,4 +223,7 @@ export default function FileUpload({
       </Dialog>
     </>
   );
-}
+});
+
+FileUpload.displayName = "FileUpload";
+export default FileUpload;

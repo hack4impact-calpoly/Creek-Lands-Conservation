@@ -1,16 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { Content } from "@tiptap/react";
 import { MinimalTiptapEditor } from "@/components/minimal-tiptap";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { LoadingSpinner } from "../ui/loading-spinner";
-import FileUpload from "@/components/EventComponent/FileUploader";
-import PDFUpload from "@/components/EventComponent/PDFUploader";
+import FileUpload, { FileUploadHandle } from "@/components/EventComponent/FileUploader";
+import PDFUpload, { PDFUploadHandle, PDFInfo } from "@/components/EventComponent/PDFUploader";
+import { Button } from "@/components/ui/button";
 
-type EventFormData = {
+export type EventFormData = {
   title: string;
   description: string;
   startDate: string;
@@ -25,17 +24,19 @@ type EventFormData = {
   images: string[];
 };
 
-type WaiverTemplateInfo = {
-  fileUrl: string;
-  fileKey: string;
-  fileName: string;
-};
-
 export default function CreateEventForm() {
+  const fileUploadRef = useRef<FileUploadHandle>(null);
+  const pdfUploadRef = useRef<PDFUploadHandle>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resetUploader, setResetUploader] = useState(false);
-  const [waiverTemplates, setWaiverTemplates] = useState<WaiverTemplateInfo[]>([]);
   const { toast } = useToast();
+  const [waiverTemplates, setWaiverTemplates] = useState<PDFInfo[]>([]);
+
+  // collect the uploaded PDF infos here
+  const handlePDFsUploaded = (pdfs: PDFInfo[]) => {
+    setWaiverTemplates((prev) => [...prev, ...pdfs]);
+  };
+
   const {
     register,
     handleSubmit,
@@ -43,94 +44,120 @@ export default function CreateEventForm() {
     control,
     setValue,
     formState: { errors },
-  } = useForm<EventFormData>();
-
-  const handleImagesUploaded = (urls: string[]) => {
-    setValue("images", urls);
-  };
-
-  const handlePDFsUploaded = (pdfInfos: WaiverTemplateInfo[]) => {
-    setWaiverTemplates((prev) => [...prev, ...pdfInfos]);
-  };
+  } = useForm<EventFormData>({
+    defaultValues: {
+      title: "",
+      description: "",
+      startDate: "",
+      startTime: "",
+      endDate: "",
+      endTime: "",
+      location: "",
+      maxParticipants: 0,
+      registrationDeadline: "",
+      fee: 0,
+      paymentNote: "",
+      images: [],
+    },
+  });
 
   const onSubmit = async (data: EventFormData, isDraft: boolean) => {
-    // Combine date and time into ISO 8601 format for MongoDB
-    const startDateTime = new Date(`${data.startDate}T${data.startTime}:00`).toISOString();
-    const endDateTime = new Date(`${data.endDate}T${data.endTime}:00`).toISOString();
-    const registrationDeadline = new Date(data.registrationDeadline).toISOString();
-
-    // Validate start and end times
-    if (new Date(endDateTime) <= new Date(startDateTime)) {
-      toast({
-        title: "Unable to Create Event!",
-        variant: "destructive",
-        description: "End Time and Date Must Be After Start Time and Date!",
-        duration: 5000,
-      });
-      return;
-    }
-
-    // Prepare data for MongoDB
-    const eventData = {
-      title: data.title,
-      description: data.description,
-      startDate: startDateTime,
-      endDate: endDateTime,
-      location: data.location,
-      capacity: Number(data.maxParticipants),
-      registrationDeadline: registrationDeadline,
-      fee: Number(data.fee),
-      images: data.images ?? [],
-      waiverTemplates, // from your local state
-      paymentNote: data.paymentNote, // if the backend is prepared to store it
-      isDraft,
-    };
-
     setIsSubmitting(true);
-    console.log(data, isDraft ? "Saved as Draft" : "Published");
+    try {
+      // 1. Upload images and PDFs via refs
+      const imageUrls = fileUploadRef.current ? await fileUploadRef.current.uploadFiles() : [];
+      setValue("images", imageUrls);
 
-    // send post request if not draft
-    if (!isDraft) {
-      try {
-        const response = await fetch("/api/events", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(eventData),
-        });
-        if (!response.ok) throw new Error("Event Creation Failed");
+      const pdfInfos: PDFInfo[] = pdfUploadRef.current ? await pdfUploadRef.current.uploadFiles() : [];
 
-        const createdEvent = await response.json();
+      // 2. Validate times
+      const startISO = new Date(`${data.startDate}T${data.startTime}:00`).toISOString();
+      const endISO = new Date(`${data.endDate}T${data.endTime}:00`).toISOString();
+      const deadlineISO = new Date(data.registrationDeadline).toISOString();
 
-        // 5) If success, reset form, clear uploaders, show success toast
-        reset();
-        setResetUploader(true);
-        setWaiverTemplates([]); // clear local PDF info
+      if (new Date(endISO) <= new Date(startISO)) {
         toast({
-          title: "Event Created Successfully!",
-          description: "Your Event Has Been Published!",
-          variant: "success",
-        });
-      } catch (error) {
-        console.error("Error submitting form:", error);
-        toast({
-          title: "Event Creation Failed!",
+          title: "Unable to Create Event!",
           variant: "destructive",
-          description: "An Error Occurred While Creating the Event.",
-          duration: 5000,
+          description: "End time must be after start time.",
         });
+        setIsSubmitting(false);
+        return;
       }
+      if (new Date(deadlineISO) >= new Date(startISO)) {
+        toast({
+          title: "Unable to Create Event!",
+          variant: "destructive",
+          description: "Registration deadline must be before start.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // 3. Build payload
+      const eventData = {
+        title: data.title,
+        description: data.description,
+        startDate: startISO,
+        endDate: endISO,
+        location: data.location,
+        capacity: Number(data.maxParticipants),
+        registrationDeadline: deadlineISO,
+        fee: Number(data.fee),
+        images: imageUrls,
+        waiverTemplates: pdfInfos,
+        paymentNote: data.paymentNote,
+        isDraft,
+      };
+
+      // 4. Send to backend
+      const response = await fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(eventData),
+      });
+      if (!response.ok) throw new Error("Event Creation Failed");
+
+      // 5. On success
+      reset();
+      fileUploadRef.current?.clear();
+      pdfUploadRef.current?.clear();
+      setResetUploader(true);
+      toast({
+        title: isDraft ? "Draft Saved Successfully!" : "Event Created Successfully!",
+        description: isDraft ? "Your event has been saved as a draft." : "Your event has been published!",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: isDraft ? "Draft Save Failed!" : "Event Creation Failed!",
+        variant: "destructive",
+        description: "An error occurred while processing your request.",
+      });
+    } finally {
+      setIsSubmitting(false);
+      setResetUploader(false);
     }
-    setIsSubmitting(false);
   };
 
   return (
     <div>
-      <div className="mb-6 flex w-full flex-wrap gap-4">
+      <div className="mx-auto mb-6 flex w-full max-w-4xl flex-wrap gap-4 p-6">
         <div className="min-w-[250px] flex-1">
-          <FileUpload onImagesUploaded={handleImagesUploaded} resetFiles={resetUploader} />
+          <FileUpload
+            ref={fileUploadRef}
+            onImagesUploaded={(urls) => setValue("images", urls)}
+            resetFiles={resetUploader}
+          />
         </div>
         <div className="min-w-[250px] flex-1">
-          <PDFUpload type="template" onPDFsUploaded={handlePDFsUploaded} resetFiles={resetUploader} />
+          <PDFUpload
+            type="template"
+            ref={pdfUploadRef}
+            onPDFsUploaded={handlePDFsUploaded}
+            resetFiles={resetUploader}
+          />
         </div>
       </div>
       <form onSubmit={handleSubmit((data) => onSubmit(data, false))} className="mx-auto max-w-4xl space-y-6 p-6">
