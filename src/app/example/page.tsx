@@ -1,3 +1,8 @@
+"use client";
+import WaiverSignatureForm from "@/components/WaiverSignatureComponent/WaiverSignatureForm";
+
+function testfunc() {}
+
 export default function Page() {
-  return <div>This is an example page using App Router!</div>;
+  return <WaiverSignatureForm participantType="child" waiverId="1" onSigned={testfunc}></WaiverSignatureForm>;
 }
