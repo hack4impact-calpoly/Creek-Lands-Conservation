@@ -5,8 +5,11 @@ import { useForm, Controller } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
 import { MinimalTiptapEditor } from "@/components/minimal-tiptap";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import FileUpload, { FileUploadHandle } from "@/components/EventComponent/FileUploader";
-import PDFUpload, { PDFUploadHandle, PDFInfo } from "@/components/EventComponent/PDFUploader";
+import EnhancedImageSelector, { type EnhancedImageSelectorHandle } from "@/components/EventComponent/FileUploader";
+import EnhancedPDFSelector, {
+  type EnhancedPDFSelectorHandle,
+  type PDFInfo,
+} from "@/components/EventComponent/PDFUploader";
 import { Button } from "@/components/ui/button";
 
 export type EventFormData = {
@@ -25,17 +28,11 @@ export type EventFormData = {
 };
 
 export default function CreateEventForm() {
-  const fileUploadRef = useRef<FileUploadHandle>(null);
-  const pdfUploadRef = useRef<PDFUploadHandle>(null);
+  const fileUploadRef = useRef<EnhancedImageSelectorHandle>(null);
+  const pdfUploadRef = useRef<EnhancedPDFSelectorHandle>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resetUploader, setResetUploader] = useState(false);
   const { toast } = useToast();
-  const [waiverTemplates, setWaiverTemplates] = useState<PDFInfo[]>([]);
-
-  // collect the uploaded PDF infos here
-  const handlePDFsUploaded = (pdfs: PDFInfo[]) => {
-    setWaiverTemplates((prev) => [...prev, ...pdfs]);
-  };
 
   const {
     register,
@@ -64,13 +61,11 @@ export default function CreateEventForm() {
   const onSubmit = async (data: EventFormData, isDraft: boolean) => {
     setIsSubmitting(true);
     try {
-      // 1. Upload images and PDFs via refs
+      // Upload images and PDFs via refs
       const imageUrls = fileUploadRef.current ? await fileUploadRef.current.uploadFiles() : [];
-      setValue("images", imageUrls);
+      const pdfInfos = pdfUploadRef.current ? await pdfUploadRef.current.uploadFiles() : [];
 
-      const pdfInfos: PDFInfo[] = pdfUploadRef.current ? await pdfUploadRef.current.uploadFiles() : [];
-
-      // 2. Validate times
+      // Validate times
       const startISO = new Date(`${data.startDate}T${data.startTime}:00`).toISOString();
       const endISO = new Date(`${data.endDate}T${data.endTime}:00`).toISOString();
       const deadlineISO = new Date(data.registrationDeadline).toISOString();
@@ -94,7 +89,7 @@ export default function CreateEventForm() {
         return;
       }
 
-      // 3. Build payload
+      // Build payload
       const eventData = {
         title: data.title,
         description: data.description,
@@ -110,7 +105,7 @@ export default function CreateEventForm() {
         isDraft,
       };
 
-      // 4. Send to backend
+      // Send to backend
       const response = await fetch("/api/events", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -118,7 +113,7 @@ export default function CreateEventForm() {
       });
       if (!response.ok) throw new Error("Event Creation Failed");
 
-      // 5. On success
+      // On success
       reset();
       fileUploadRef.current?.clear();
       pdfUploadRef.current?.clear();
@@ -145,17 +140,13 @@ export default function CreateEventForm() {
     <div>
       <div className="mx-auto mb-6 flex w-full max-w-4xl flex-wrap gap-4 p-6">
         <div className="min-w-[250px] flex-1">
-          <FileUpload
-            ref={fileUploadRef}
-            onImagesUploaded={(urls) => setValue("images", urls)}
-            resetFiles={resetUploader}
-          />
+          <EnhancedImageSelector ref={fileUploadRef} resetFiles={resetUploader} />
         </div>
         <div className="min-w-[250px] flex-1">
-          <PDFUpload
+          <EnhancedPDFSelector
             type="template"
             ref={pdfUploadRef}
-            onPDFsUploaded={handlePDFsUploaded}
+            onPDFsSelected={() => {}}
             resetFiles={resetUploader}
           />
         </div>
