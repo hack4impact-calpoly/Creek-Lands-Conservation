@@ -77,8 +77,6 @@ export async function POST(request: Request) {
     }
   }
 
-  await connectDB();
-
   let eventWaiverTemplates: { waiverId: mongoose.Types.ObjectId; required: boolean }[] = [];
   if (Array.isArray(body.waiverTemplates)) {
     const created = await Promise.all(
