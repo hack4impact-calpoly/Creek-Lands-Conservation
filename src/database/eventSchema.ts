@@ -33,9 +33,10 @@ export interface IEvent extends Document {
     waiverId: mongoose.Types.ObjectId;
     required: boolean;
   }[];
-  waiverId: mongoose.Types.ObjectId[];
   fee: number;
   stripePaymentId?: string | null;
+  paymentNote?: string;
+  isDraft: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -49,8 +50,15 @@ export interface IEventCreate {
   capacity?: number;
   registrationDeadline: Date;
   images?: string[];
+  eventWaiverTemplates: {
+    waiverId: mongoose.Types.ObjectId;
+    required: boolean;
+  }[];
   fee?: number;
   stripePaymentId?: string;
+  isDraft?: boolean;
+  waiverTemplates?: { fileUrl: string; fileKey: string; fileName: string }[];
+  paymentNote?: string;
 }
 
 export interface IEventUpdate {
@@ -62,8 +70,15 @@ export interface IEventUpdate {
   capacity?: number;
   registrationDeadline?: Date;
   images?: string[];
+  eventWaiverTemplates?: {
+    waiverId: mongoose.Types.ObjectId;
+    required: boolean;
+  }[];
   fee?: number;
   stripePaymentId?: string | null;
+  paymentNote?: string;
+  waiverTemplates?: { fileUrl: string; fileKey: string; fileName: string }[];
+  isDraft?: boolean;
 }
 
 // Defining the Event Schema
@@ -89,6 +104,7 @@ const eventSchema = new Schema<IEvent>(
     location: {
       type: String,
       trim: true,
+      required: true,
     },
     capacity: {
       type: Number,
@@ -156,11 +172,23 @@ const eventSchema = new Schema<IEvent>(
       default: null,
       sparse: true,
     },
+    paymentNote: {
+      type: String,
+      trim: true,
+    },
+    isDraft: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
   },
 );
+
+eventSchema.index({ startDate: 1 });
+eventSchema.index({ "registeredUsers.user": 1 });
+eventSchema.index({ "registeredChildren.childId": 1 });
 
 /**
  * Export the Event model.

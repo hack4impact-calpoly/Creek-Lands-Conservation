@@ -53,7 +53,7 @@ export interface IUser extends Document {
   /** Top-level events this user is registered for (e.g., adult events) */
   registeredEvents: mongoose.Types.ObjectId[];
   /** Waivers the user (adult) has signed */
-  waiversSigned: IWaiver[];
+  waiversSigned: mongoose.Types.ObjectId[];
 }
 
 /**
@@ -165,6 +165,14 @@ userSchema.pre("save", function (next) {
   if (this.address?.zipCode) {
     this.address.zipCode = this.address.zipCode.trim();
   }
+
+  // Trim fields in children
+  this.children.forEach((child) => {
+    child.firstName = child.firstName.trim();
+    child.lastName = child.lastName.trim();
+    if (child.imageUrl) child.imageUrl = child.imageUrl.trim();
+    if (child.imageKey) child.imageKey = child.imageKey.trim();
+  });
 
   next();
 });

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import EventCard from "@/components/EventComponent/EventCard";
 import { useUser } from "@clerk/nextjs";
 import { getEvents } from "@/app/actions/events/actions";
 import { EventInfo } from "@/types/events";
@@ -30,38 +29,49 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const { isLoaded, user } = useUser();
 
+  // inside Home()
   const handleRegister = (eventId: string, attendees: string[]) => {
+    if (!userData) return;
+    const userId = userData._id;
+    const childIds = userData.children.map((c) => c._id);
+
     setEventSections((prev) => {
-      // Update all sections, not just available, to ensure the event is found
+      // flatten all sections into one array
       const allEvents = [...prev.available, ...prev.registered, ...prev.past];
+
       const updatedEvents = allEvents.map((event) => {
-        if (event.id === eventId) {
-          const userId = userData?._id || "";
-          const userChildren = userData?.children.map((c: any) => c._id) || [];
-          const userIsRegistered = attendees.includes(userId);
-          const childIsRegistered = attendees.some((id) => userChildren.includes(id));
-          const updatedEvent = {
-            ...event,
-            registeredUsers: userIsRegistered ? [...event.registeredUsers, userId] : event.registeredUsers,
-            registeredChildren: childIsRegistered
-              ? [...event.registeredChildren, ...attendees.filter((id) => userChildren.includes(id))]
-              : event.registeredChildren,
-          };
-          console.log("Updated event:", updatedEvent.id, "registeredUsers:", updatedEvent.registeredUsers);
-          return updatedEvent;
-        }
-        return event;
+        if (event.id !== eventId) return event;
+
+        const userAttending = attendees.includes(userId);
+        const kidsAttending = attendees.filter((id) => childIds.includes(id));
+
+        // append a new registeredUser object if needed
+        const newRegisteredUsers = userAttending
+          ? [...event.registeredUsers, { user: userId, waiversSigned: [] }]
+          : event.registeredUsers;
+
+        // append new registeredChildren objects if needed
+        const newRegisteredChildren =
+          kidsAttending.length > 0
+            ? [
+                ...event.registeredChildren,
+                ...kidsAttending.map((childId) => ({
+                  parent: userId,
+                  childId,
+                  waiversSigned: [],
+                })),
+              ]
+            : event.registeredChildren;
+
+        return {
+          ...event,
+          registeredUsers: newRegisteredUsers,
+          registeredChildren: newRegisteredChildren,
+        };
       });
-      const newSections = categorizeEvents(
-        updatedEvents,
-        userData?._id || "",
-        userData?.children.map((c) => c._id) || [],
-      );
-      console.log(
-        "New sections - Registered:",
-        newSections.registered.map((e) => e.id),
-      );
-      return newSections;
+
+      // re-categorize based on the freshly updated arrays
+      return categorizeEvents(updatedEvents, userId, childIds);
     });
   };
 
@@ -71,7 +81,9 @@ export default function Home() {
         if (!isLoaded) return; // Ensure user state is loaded before proceeding
 
         const events = await getEvents();
+        console.log("Fetched Events:", events);
         const formattedEvents = formatEvents(events);
+        console.log("Formatted Events:", formattedEvents);
 
         if (user) {
           const userResponse = await fetch(`/api/users/${user.id}`);
@@ -124,6 +136,7 @@ export default function Home() {
 }
 
 // Helper function
+// Helper at bottom of page.tsx
 const categorizeEvents = (events: EventInfo[], userId: string, userChildren: string[]) => {
   const now = new Date();
   const sections = { available: [], registered: [], past: [] } as {
@@ -131,12 +144,19 @@ const categorizeEvents = (events: EventInfo[], userId: string, userChildren: str
     registered: EventInfo[];
     past: EventInfo[];
   };
+
   events.forEach((event) => {
-    // events for which a child is registered will also appear on the Registered tab
-    const userIsRegistered = event.registeredUsers.includes(userId);
-    const childIsRegistered = event.registeredChildren.some((childId) => userChildren.includes(childId));
+    // look for a matching user field, not a raw string
+    const userIsRegistered = event.registeredUsers.some((ru) => ru.user === userId);
+    // look for childId in the child objects
+    const childIsRegistered = event.registeredChildren.some((rc) => userChildren.includes(rc.childId));
+
     if (userIsRegistered || childIsRegistered) {
-      event.endDateTime && event.endDateTime < now ? sections.past.push(event) : sections.registered.push(event);
+      if (event.endDateTime && event.endDateTime < now) {
+        sections.past.push(event);
+      } else {
+        sections.registered.push(event);
+      }
     } else {
       sections.available.push(event);
     }

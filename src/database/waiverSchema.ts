@@ -13,7 +13,7 @@ export interface IWaiver extends Document {
   uploadedAt: Date;
   type: "template" | "completed"; // Waiver type
   templateRef?: mongoose.Types.ObjectId; // Reference to the waiver template
-  eventId?: mongoose.Types.ObjectId;
+  eventId?: mongoose.Types.ObjectId; // always present for templates, optional for “generic” completed forms
 }
 
 /**
@@ -30,18 +30,18 @@ const waiverSchema = new Schema<IWaiver>({
 
   // Null or undefined if the waiver is for the user themselves,
   // otherwise this is the _id of the child subdoc within that user
-  childSubdocId: { type: mongoose.Schema.Types.ObjectId, required: false },
+  childSubdocId: { type: mongoose.Schema.Types.ObjectId },
 
   // A simple boolean to indicate user vs. child waiver
-  isForChild: { type: Boolean, default: false },
+  isForChild: { type: Boolean, default: true },
   uploadedAt: { type: Date, default: Date.now },
   type: {
     type: String,
     enum: ["template", "completed"],
     required: true,
   },
-  templateRef: { type: mongoose.Schema.Types.ObjectId, ref: "Waiver", required: false },
-  eventId: { type: mongoose.Schema.Types.ObjectId, ref: "Event", required: false },
+  templateRef: { type: mongoose.Schema.Types.ObjectId, ref: "Waiver" },
+  eventId: { type: mongoose.Schema.Types.ObjectId, ref: "Event" },
 });
 
 /**
