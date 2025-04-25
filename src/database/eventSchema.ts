@@ -119,45 +119,54 @@ const eventSchema = new Schema<IEvent>(
     /**
      * Array of adult (main user) registrations
      */
-    registeredUsers: [
-      {
-        user: { type: mongoose.Schema.Types.ObjectId, ref: "User" }, // "User" to match userModel
-        waiversSigned: [
-          {
-            waiverId: { type: mongoose.Schema.Types.ObjectId, ref: "Waiver" },
-            signed: { type: Boolean, default: false },
-          },
-        ],
-      },
-    ],
+    registeredUsers: {
+      type: [
+        {
+          user: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+          waiversSigned: [
+            {
+              waiverId: { type: mongoose.Schema.Types.ObjectId, ref: "Waiver" },
+              signed: { type: Boolean, default: false },
+            },
+          ],
+        },
+      ],
+      default: [],
+    },
 
     /**
      * Array of children registrations:
      * - `parent` references the user's _id
      * - `childId` is the subdocument _id from the user's `children` array
      */
-    registeredChildren: [
-      {
-        parent: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
-        childId: { type: mongoose.Schema.Types.ObjectId }, // No "ref" because it's an embedded subdoc
-        waiversSigned: [
-          {
-            waiverId: { type: mongoose.Schema.Types.ObjectId, ref: "Waiver" },
-            signed: { type: Boolean, default: false },
-          },
-        ],
-      },
-    ],
+    registeredChildren: {
+      type: [
+        {
+          parent: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+          childId: { type: mongoose.Schema.Types.ObjectId },
+          waiversSigned: [
+            {
+              waiverId: { type: mongoose.Schema.Types.ObjectId, ref: "Waiver" },
+              signed: { type: Boolean, default: false },
+            },
+          ],
+        },
+      ],
+      default: [],
+    },
 
     /**
      * Event-level waiver templates (for reference)
      */
-    eventWaiverTemplates: [
-      {
-        waiverId: { type: mongoose.Schema.Types.ObjectId, ref: "Waiver" },
-        required: { type: Boolean, default: true },
-      },
-    ],
+    eventWaiverTemplates: {
+      type: [
+        {
+          waiverId: { type: mongoose.Schema.Types.ObjectId, ref: "Waiver" },
+          required: { type: Boolean, default: true },
+        },
+      ],
+      default: [],
+    },
 
     /**
      * Fee and optional Stripe payment info

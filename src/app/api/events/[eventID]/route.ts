@@ -70,7 +70,7 @@ function formatEvent(doc: any) {
 /** POST: Create a new event */
 export async function POST(request: Request) {
   const authError = await authenticateAdmin();
-  if (authError !== true) return authError;
+  if (authError !== true) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body: EventPayload = await request.json();
   for (const f of ["title", "startDate", "endDate"] as const) {
@@ -153,7 +153,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
 
   // Authenticate the user as an admin
   const authError = await authenticateAdmin();
-  if (authError !== true) return authError;
+  if (authError !== true) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const { eventID } = params;
   // Validate the event ID
@@ -204,7 +204,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
 
   // make sure caller is an admin
   const authError = await authenticateAdmin();
-  if (authError !== true) return authError;
+  if (authError !== true) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   let updates;
   try {

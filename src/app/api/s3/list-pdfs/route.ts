@@ -4,7 +4,7 @@ import { authenticateAdmin } from "@/lib/auth";
 export async function GET(request: Request) {
   try {
     const authError = await authenticateAdmin();
-    if (authError !== true) return authError;
+    if (authError !== true) return Response.json({ error: "Unauthorized" }, { status: 401 });
     // Get pagination parameters from URL
     const { searchParams } = new URL(request.url);
     const page = Number.parseInt(searchParams.get("page") || "1");

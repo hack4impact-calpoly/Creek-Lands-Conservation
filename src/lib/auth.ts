@@ -20,8 +20,8 @@ async function checkUserCanAccessEvent(userId: string, eventId: string): Promise
   if (event.isDraft) return await authenticateAdmin(); // Only admins for drafts
   const userObjId = (await User.findOne({ clerkID: userId }))?._id;
   return (
-    event.registeredUsers.some((u) => u.user.equals(userObjId)) ||
-    event.registeredChildren.some((c) => c.parent.equals(userObjId)) ||
+    event.registeredUsers.some((u: any) => u.user.equals(userObjId)) ||
+    event.registeredChildren.some((c: any) => c.parent.equals(userObjId)) ||
     (await authenticateAdmin())
   );
 }

@@ -55,7 +55,7 @@ function formatEvent(doc: any) {
 
 export async function POST(request: Request) {
   const authError = await authenticateAdmin();
-  if (authError !== true) return authError;
+  if (authError !== true) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const body: EventPayload = await request.json();
   console.log("Received Request Body:", body);

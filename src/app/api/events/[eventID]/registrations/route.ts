@@ -51,14 +51,14 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
 
   for (const id of attendees) {
     if (id === mongoUserId) {
-      if (!event.registeredUsers.some((ru) => ru.user.toString() === id)) {
+      if (!event.registeredUsers.some((ru: any) => ru.user.toString() === id)) {
         event.registeredUsers.push({ user: user._id, waiversSigned: [] });
         user.registeredEvents.push(eventID);
         newRegisteredUsers.push(user._id);
       }
     } else {
       const child = user.children.find((c: any) => c._id.toString() === id);
-      if (child && !event.registeredChildren.some((rc) => rc.childId.toString() === id)) {
+      if (child && !event.registeredChildren.some((rc: any) => rc.childId.toString() === id)) {
         event.registeredChildren.push({
           parent: user._id,
           childId: child._id,
@@ -142,16 +142,16 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
 
   for (const id of attendees) {
     if (id === mongoUserId) {
-      if (event.registeredUsers.some((ru) => ru.user.toString() === mongoUserId)) {
-        event.registeredUsers = event.registeredUsers.filter((ru) => ru.user.toString() !== mongoUserId);
-        user.registeredEvents = user.registeredEvents.filter((eId) => eId.toString() !== eventID);
+      if (event.registeredUsers.some((ru: any) => ru.user.toString() === mongoUserId)) {
+        event.registeredUsers = event.registeredUsers.filter((ru: any) => ru.user.toString() !== mongoUserId);
+        user.registeredEvents = user.registeredEvents.filter((eId: any) => eId.toString() !== eventID);
         removedUsers.push(user._id);
       }
     } else {
       const child = user.children.find((c: any) => c._id.toString() === id);
-      if (child && event.registeredChildren.some((rc) => rc.childId.toString() === id)) {
-        event.registeredChildren = event.registeredChildren.filter((rc) => rc.childId.toString() !== id);
-        child.registeredEvents = child.registeredEvents.filter((eId) => eId.toString() !== eventID);
+      if (child && event.registeredChildren.some((rc: any) => rc.childId.toString() === id)) {
+        event.registeredChildren = event.registeredChildren.filter((rc: any) => rc.childId.toString() !== id);
+        child.registeredEvents = child.registeredEvents.filter((eId: any) => eId.toString() !== eventID);
         removedChildren.push(child._id);
       }
     }

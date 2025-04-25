@@ -32,7 +32,7 @@ export default function UploadTestPage() {
         fileName: file.name,
         mimetype: file.type,
       });
-      const presignRes = await fetch(`/api/s3-presigned?${params.toString()}`);
+      const presignRes = await fetch(`/api/s3/presigned?${params.toString()}`);
       if (!presignRes.ok) {
         const err = await presignRes.json();
         throw new Error(err.error || "Failed to get presigned URL");
@@ -85,7 +85,7 @@ export default function UploadTestPage() {
     async function fetchImage() {
       if (!fileKey) return;
       const params = new URLSearchParams({ fileKey });
-      const res = await fetch(`/api/s3-get?${params.toString()}`);
+      const res = await fetch(`/api/s3/presigned-download?${params.toString()}`);
       if (!res.ok) {
         console.error("Failed to fetch image URL");
         return;

@@ -49,3 +49,18 @@ export interface EventInfo {
 
   currentRegistrations: number;
 }
+
+export interface RegisteredUserInfo {
+  user: string;
+  waiversSigned: { waiverId: string; signed: boolean }[];
+}
+
+export interface RegisteredChildInfo {
+  parent: string;
+  childId: string;
+  waiversSigned: { waiverId: string; signed: boolean }[];
+}
+export interface EventWaiverTemplateInfo {
+  waiverId: string;
+  required: boolean;
+}
