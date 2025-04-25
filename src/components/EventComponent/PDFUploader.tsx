@@ -79,7 +79,7 @@ const EnhancedPDFSelector = forwardRef<EnhancedPDFSelectorHandle, EnhancedPDFSel
     const fetchS3PDFs = async (page = 1) => {
       setIsLoadingS3PDFs(true);
       try {
-        const response = await fetch(`/api/s3-list-pdfs?page=${page}&limit=${pdfsPerPage}&type=${type}`);
+        const response = await fetch(`/api/s3/list-pdfs?page=${page}&limit=${pdfsPerPage}&type=${type}`);
         if (!response.ok) throw new Error("Failed to fetch PDFs");
         const data = await response.json();
         setS3PDFs(data.pdfs || []);
@@ -107,10 +107,9 @@ const EnhancedPDFSelector = forwardRef<EnhancedPDFSelectorHandle, EnhancedPDFSel
 
     // 1) Get presigned URL → 2) PUT to S3 → 3) return final URL + key + name
     const uploadPDF = async (file: File): Promise<PDFInfo> => {
-      const fileName = `${Date.now()}-${file.name}`;
       const presigned = await fetch(
-        `/api/s3-presigned-waiver?fileName=${encodeURIComponent(
-          fileName,
+        `/api/s3/presigned-waiver?fileName=${encodeURIComponent(
+          file.name,
         )}&mimetype=${encodeURIComponent(file.type)}&type=${type}`,
       );
       if (!presigned.ok) throw new Error("Presign failed");
@@ -143,20 +142,21 @@ const EnhancedPDFSelector = forwardRef<EnhancedPDFSelectorHandle, EnhancedPDFSel
       onPDFsSelected(allInfos);
 
       if (uploadedInfos.length > 0) {
-        toast({
+        /*toast({
           title: "PDFs processed successfully",
           description: `${uploadedInfos.length} PDFs uploaded and ${existingInfos.length} existing PDFs selected`,
           variant: "success",
-        });
+        });*/
 
         // Refresh the list after upload
         fetchS3PDFs();
       } else if (existingInfos.length > 0) {
+        /*
         toast({
           title: "PDFs selected successfully",
           description: `${existingInfos.length} existing PDFs selected`,
           variant: "success",
-        });
+        });*/
       }
 
       return allInfos;

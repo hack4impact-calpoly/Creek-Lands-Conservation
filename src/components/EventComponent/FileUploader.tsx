@@ -67,7 +67,7 @@ const EnhancedImageSelector = forwardRef<EnhancedImageSelectorHandle, EnhancedIm
     const fetchS3Images = async (page = 1) => {
       setIsLoadingS3Images(true);
       try {
-        const response = await fetch(`/api/s3-list-images?page=${page}&limit=${imagesPerPage}`);
+        const response = await fetch(`/api/s3/list-images?page=${page}&limit=${imagesPerPage}`);
         if (!response.ok) throw new Error("Failed to fetch images");
         const data = await response.json();
         console.log("S3 Images Response:", data);
@@ -95,9 +95,8 @@ const EnhancedImageSelector = forwardRef<EnhancedImageSelectorHandle, EnhancedIm
     }, [activeTab, currentPage, imagesPerPage]);
 
     const uploadFile = async (file: File): Promise<string> => {
-      const fileName = `${Date.now()}-${file.name}`;
       const presignedRes = await fetch(
-        `/api/s3-presigned-event?fileName=${encodeURIComponent(fileName)}&mimetype=${file.type}`,
+        `/api/s3/presigned-event-images?fileName=${encodeURIComponent(file.name)}&mimetype=${file.type}`,
       );
       const { uploadUrl, fileUrl } = await presignedRes.json();
       await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
@@ -161,9 +160,7 @@ const EnhancedImageSelector = forwardRef<EnhancedImageSelectorHandle, EnhancedIm
 
     const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (!e.target.files) return;
-      const selected = Array.from(e.target.files).filter(
-        (file) => file.type.startsWith("image/") || file.type === "application/pdf",
-      );
+      const selected = Array.from(e.target.files).filter((file) => file.type.startsWith("image/"));
       processFiles(selected);
       e.target.value = "";
     };
@@ -255,7 +252,7 @@ const EnhancedImageSelector = forwardRef<EnhancedImageSelectorHandle, EnhancedIm
                   <input
                     type="file"
                     multiple
-                    accept="image/*,.pdf"
+                    accept="image/*"
                     onChange={handleFileChange}
                     className="hidden"
                     ref={fileInputRef}
@@ -380,7 +377,7 @@ const EnhancedImageSelector = forwardRef<EnhancedImageSelectorHandle, EnhancedIm
                       })}
                     </div>
 
-                    {totalPages > 1 && (
+                    {totalPages > 0 && (
                       <div className="mt-6 flex flex-col space-y-4">
                         <div className="flex items-center justify-between">
                           <div className="text-sm text-muted-foreground">
