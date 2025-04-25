@@ -48,7 +48,7 @@ export function EventInfoPreview({
   description,
   images,
   registrationDeadline,
-  email = "info@creeklands.org",
+  email = "marysia@creeklands.org",
   capacity,
   currentRegistrations,
   onDelete,
@@ -357,7 +357,7 @@ export function EventInfoPreview({
               : "TBD",
             endTime: endDateTime ? endDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD",
             location: location,
-            contactEmail: email || "info@creeklands.org",
+            contactEmail: email || "marysia@creeklands.org",
           }}
           userInfo={userInfo}
           onConfirm={handleRegisterEvent}

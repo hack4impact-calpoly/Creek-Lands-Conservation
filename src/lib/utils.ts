@@ -20,16 +20,45 @@ export const validateEventDates = (startDate: Date, endDate: Date, registrationD
 };
 
 export const formatEvents = (data: any[]): EventInfo[] =>
-  data.map((event) => ({
-    id: event._id.toString(),
-    title: event.title || "Untitled Event",
-    startDateTime: event.startDate ? new Date(event.startDate) : null,
-    endDateTime: event.endDate ? new Date(event.endDate) : null,
-    location: event.location || "Location not available",
-    description: event.description || "No description provided",
-    images: Array.isArray(event.images) ? event.images : [],
-    registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline) : null,
-    capacity: event.capacity || 0,
-    registeredUsers: event.registeredUsers?.map((u: any) => u.toString()) || [],
-    registeredChildren: event.registeredChildren?.map((c: any) => c.toString()) || [],
+  data.map((evt) => ({
+    id: evt.id,
+    title: evt.title,
+    description: evt.description || "",
+    startDateTime: evt.startDate ? new Date(evt.startDate) : null,
+    endDateTime: evt.endDate ? new Date(evt.endDate) : null,
+    location: evt.location,
+    images: Array.isArray(evt.images) ? evt.images : [],
+    registrationDeadline: evt.registrationDeadline ? new Date(evt.registrationDeadline) : null,
+    capacity: evt.capacity,
+    fee: evt.fee,
+    stripePaymentId: evt.stripePaymentId ?? null,
+    paymentNote: evt.paymentNote ?? "",
+    isDraft: evt.isDraft,
+    // these two must match your objects, not be string[]
+    registeredUsers: Array.isArray(evt.registeredUsers)
+      ? evt.registeredUsers.map((u: any) => ({
+          user: u.user,
+          waiversSigned: u.waiversSigned.map((w: any) => ({
+            waiverId: w.waiverId,
+            signed: w.signed,
+          })),
+        }))
+      : [],
+    registeredChildren: Array.isArray(evt.registeredChildren)
+      ? evt.registeredChildren.map((c: any) => ({
+          parent: c.parent,
+          childId: c.childId,
+          waiversSigned: c.waiversSigned.map((w: any) => ({
+            waiverId: w.waiverId,
+            signed: w.signed,
+          })),
+        }))
+      : [],
+    eventWaiverTemplates: Array.isArray(evt.eventWaiverTemplates)
+      ? evt.eventWaiverTemplates.map((t: any) => ({
+          waiverId: t.waiverId,
+          required: t.required,
+        }))
+      : [],
+    currentRegistrations: (evt.registeredUsers?.length || 0) + (evt.registeredChildren?.length || 0),
   }));

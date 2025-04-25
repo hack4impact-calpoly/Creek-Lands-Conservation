@@ -66,9 +66,17 @@ export default function CreateEventForm() {
       const pdfInfos = pdfUploadRef.current ? await pdfUploadRef.current.uploadFiles() : [];
 
       // Validate times
+      console.log("Start Date:", data.startDate);
+      console.log("Start Time:", data.startTime);
+      console.log("End Date:", data.endDate);
+      console.log("End Time:", data.endTime);
+      console.log("Registration Deadline:", data.registrationDeadline);
       const startISO = new Date(`${data.startDate}T${data.startTime}:00`).toISOString();
       const endISO = new Date(`${data.endDate}T${data.endTime}:00`).toISOString();
       const deadlineISO = new Date(data.registrationDeadline).toISOString();
+      console.log("Start ISO:", startISO);
+      console.log("End ISO:", endISO);
+      console.log("Deadline ISO:", deadlineISO);
 
       if (new Date(endISO) <= new Date(startISO)) {
         toast({
@@ -105,6 +113,7 @@ export default function CreateEventForm() {
         isDraft,
       };
 
+      console.log("Event Data:", eventData);
       // Send to backend
       const response = await fetch("/api/events", {
         method: "POST",
@@ -138,7 +147,7 @@ export default function CreateEventForm() {
 
   return (
     <div>
-      <div className="mx-auto mb-6 flex w-full max-w-4xl flex-wrap gap-4 p-6">
+      <div className="mx-auto mb-6 flex w-full max-w-6xl flex-wrap gap-4 p-2">
         <div className="min-w-[250px] flex-1">
           <EnhancedImageSelector ref={fileUploadRef} resetFiles={resetUploader} />
         </div>
@@ -151,7 +160,7 @@ export default function CreateEventForm() {
           />
         </div>
       </div>
-      <form onSubmit={handleSubmit((data) => onSubmit(data, false))} className="mx-auto max-w-4xl space-y-6 p-6">
+      <form onSubmit={handleSubmit((data) => onSubmit(data, false))} className="mx-auto max-w-6xl space-y-6 p-2">
         <h1 className="text-3xl font-medium">Basic Information</h1>
         <div className="flex space-x-4">
           <div className="flex-1">

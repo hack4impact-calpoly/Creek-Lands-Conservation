@@ -70,7 +70,7 @@ export default function EventCard(props: EventCardProps) {
       <BackgroundImageLayer imageUrl={backgroundImage} altText={eventTitle} />
 
       <CardContent className="relative flex flex-col gap-4 p-6 text-white">
-        <h2 className="text-2xl font-medium">{eventTitle}</h2>
+        <h2 className="line-clamp-2 h-16 overflow-hidden text-2xl font-medium">{eventTitle}</h2>
 
         <div className="space-y-2 text-base lg:text-lg">
           <InfoRow icon={Calendar}>

@@ -64,6 +64,7 @@ export default function EventSection({
                 key={event.id}
                 {...event}
                 eventTitle={event.title}
+                description={event.description ?? "There is no description for this event."}
                 // most events do not yet reflect the addition of registeredChildren to the schema
                 currentRegistrations={event.registeredUsers.length + event.registeredChildren.length}
                 onDelete={onDelete}
