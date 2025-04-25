@@ -1,6 +1,12 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import crypto from "crypto";
+
+interface S3File {
+  url: string;
+  key: string;
+  lastModified?: string;
+}
 
 export const s3 = new S3Client({
   region: process.env.AWS_REGION,
@@ -48,4 +54,40 @@ export async function deleteFileFromS3(fileKey: string) {
   });
   await s3.send(command);
   console.log("Deleted file from S3:", fileKey);
+}
+
+export async function listFilesFromS3(prefix: string): Promise<S3File[]> {
+  const bucketName = process.env.AWS_BUCKET_NAME!;
+  const region = process.env.AWS_REGION!;
+  let continuationToken: string | undefined;
+  const allFiles: S3File[] = [];
+
+  do {
+    const cmd = new ListObjectsV2Command({
+      Bucket: bucketName,
+      Prefix: prefix,
+      ContinuationToken: continuationToken,
+    });
+    const res = await s3.send(cmd);
+
+    // filter out “directories” (and/or only allow real image extensions)
+    const files = (res.Contents || [])
+      .filter((item) => {
+        if (!item.Key) return false;
+        // skip the folder itself
+        if (item.Key.endsWith("/")) return false;
+        // optional: only allow certain extensions
+        return /\.(jpe?g|png|gif|webp|svg)$/i.test(item.Key);
+      })
+      .map((item) => ({
+        url: `https://${bucketName}.s3.${region}.amazonaws.com/${item.Key}`,
+        key: item.Key!,
+        lastModified: item.LastModified?.toISOString(),
+      }));
+
+    allFiles.push(...files);
+    continuationToken = res.NextContinuationToken;
+  } while (continuationToken);
+
+  return allFiles;
 }
