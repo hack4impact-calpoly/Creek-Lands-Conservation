@@ -4,7 +4,9 @@ import Event from "@/database/eventSchema";
 import Waiver from "@/database/waiverSchema";
 import { NextResponse } from "next/server";
 import { authenticateAdmin } from "@/lib/auth";
-import mongoose from "mongoose";
+import mongoose, { mongo } from "mongoose";
+import { auth } from "@clerk/nextjs/server";
+import User from "@/database/userSchema";
 
 interface EventWaiverTemplateInput {
   fileUrl?: string;
@@ -54,6 +56,15 @@ function formatEvent(doc: any) {
 }
 
 export async function POST(request: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  await connectDB();
+  const mongoUser = await User.findOne({ clerkID: userId });
+  if (!mongoUser) {
+    return NextResponse.json({ error: "User record not found" }, { status: 404 });
+  }
   const authError = await authenticateAdmin();
   if (authError !== true) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -76,8 +87,8 @@ export async function POST(request: Request) {
           fileKey: pdf.fileKey || pdf.fileUrl,
           fileName: pdf.fileName || "template.pdf",
           type: "template",
-          uploadedBy: new mongoose.Types.ObjectId(),
-          belongsToUser: new mongoose.Types.ObjectId(),
+          uploadedBy: mongoUser._id,
+          belongsToUser: mongoUser._id,
         });
         return {
           waiverId: w._id,

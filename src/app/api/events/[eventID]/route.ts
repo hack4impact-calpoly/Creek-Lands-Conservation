@@ -6,6 +6,7 @@ import User from "@/database/userSchema"; // Import User schema for updates
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateAdmin } from "@/lib/auth";
 import mongoose from "mongoose";
+import { auth } from "@clerk/nextjs/server";
 
 interface EventWaiverTemplateInput {
   fileUrl?: string;
@@ -69,6 +70,15 @@ function formatEvent(doc: any) {
 
 /** POST: Create a new event */
 export async function POST(request: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  await connectDB();
+  const mongoUser = await User.findOne({ clerkID: userId });
+  if (!mongoUser) {
+    return NextResponse.json({ error: "User record not found" }, { status: 404 });
+  }
   const authError = await authenticateAdmin();
   if (authError !== true) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
@@ -79,8 +89,6 @@ export async function POST(request: Request) {
     }
   }
 
-  await connectDB();
-
   // Build waiver templates array
   let eventWaiverTemplates: { waiverId: mongoose.Types.ObjectId; required: boolean }[] = [];
   if (Array.isArray(body.waiverTemplates)) {
@@ -90,8 +98,8 @@ export async function POST(request: Request) {
           fileKey: pdf.fileKey || pdf.fileUrl,
           fileName: pdf.fileName || "template.pdf",
           type: "template",
-          uploadedBy: new mongoose.Types.ObjectId(/* system ID */),
-          belongsToUser: new mongoose.Types.ObjectId(/* system ID */),
+          uploadedBy: mongoUser._id,
+          belongsToUser: mongoUser._id,
         });
         return {
           waiverId: doc._id,
