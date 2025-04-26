@@ -10,13 +10,10 @@ interface BackButtonProps {
 }
 
 export default function BackButton({ className = "", size = "icon" }: BackButtonProps) {
-  const router = useRouter();
-
   return (
     <Button
       variant="ghost"
       size={size}
-      onClick={() => router.back()}
       className={`group rounded-full ${className}`}
       aria-label="Go back to previous page"
     >
