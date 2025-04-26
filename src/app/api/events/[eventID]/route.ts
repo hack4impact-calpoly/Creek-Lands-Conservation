@@ -6,7 +6,7 @@ import User from "@/database/userSchema"; // Import User schema for updates
 import { NextRequest, NextResponse } from "next/server";
 import { authenticateAdmin } from "@/lib/auth";
 import mongoose from "mongoose";
-import { auth } from "@clerk/nextjs/server";
+import { auth, getAuth } from "@clerk/nextjs/server";
 
 interface EventWaiverTemplateInput {
   fileUrl?: string;
@@ -232,4 +232,55 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
 
   // return the updated event so res.json() succeeds
   return NextResponse.json(updated, { status: 200 });
+}
+
+export async function PATCH(req: NextRequest, { params }: { params: { eventID: string } }) {
+  const { userId } = getAuth(req);
+  if (!userId || !(await authenticateAdmin())) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
+  await connectDB();
+
+  const { eventID } = params;
+  console.log("Event ID in Patch:", eventID);
+  const { images, waiverTemplates } = await req.json();
+
+  try {
+    // Create waiver documents if waiverTemplates are provided
+    let eventWaiverTemplates: { waiverId: mongoose.Types.ObjectId; required: boolean }[] = [];
+    if (Array.isArray(waiverTemplates)) {
+      const mongoUser = await User.findOne({ clerkID: userId });
+      if (!mongoUser) {
+        return NextResponse.json({ error: "User record not found" }, { status: 404 });
+      }
+
+      eventWaiverTemplates = await Promise.all(
+        waiverTemplates.map(async (pdf) => {
+          const doc = await Waiver.create({
+            fileKey: pdf.fileKey,
+            fileName: pdf.fileName || "template.pdf",
+            type: "template",
+            uploadedBy: mongoUser._id,
+            belongsToUser: mongoUser._id,
+          });
+          return {
+            waiverId: doc._id,
+            required: true, // Adjust as needed
+          };
+        }),
+      );
+    }
+
+    const event = await Event.findByIdAndUpdate(eventID, { $set: { images, eventWaiverTemplates } }, { new: true });
+
+    if (!event) {
+      return NextResponse.json({ error: "Event not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(event);
+  } catch (error) {
+    console.error("Error updating event:", error);
+    return NextResponse.json({ error: "Failed to update event" }, { status: 500 });
+  }
 }
