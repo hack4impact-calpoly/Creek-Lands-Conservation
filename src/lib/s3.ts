@@ -27,7 +27,12 @@ function generateUniqueFileName(originalName: string) {
  * Generates a pre-signed URL for PUT uploads.
  * e.g. folder = "user", "waiver/completed", etc.
  */
-export async function getUploadPresignedUrl(folder: string, originalName: string, mimetype: string, clerkId?: string) {
+export async function getUserUploadPresignedUrl(
+  folder: string,
+  originalName: string,
+  mimetype: string,
+  clerkId?: string,
+) {
   const fileName = generateUniqueFileName(originalName);
   // If you want subfolders by user ID:
   const subPath = clerkId ? `${folder}/${clerkId}` : folder;
@@ -90,4 +95,35 @@ export async function listFilesFromS3(prefix: string): Promise<S3File[]> {
   } while (continuationToken);
 
   return allFiles;
+}
+
+/**
+ * Generates a pre-signed URL for PUT uploads.
+ * e.g. folder = "event-images", etc.
+ */
+export async function getImageUploadPresignedUrl(
+  folder: string,
+  originalName: string,
+  mimetype: string,
+  eventId: string,
+) {
+  if (!eventId) throw new Error("eventId is required for event images");
+
+  const allowedMimeTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+  if (!allowedMimeTypes.includes(mimetype)) {
+    throw new Error("Invalid file type");
+  }
+
+  const fileName = generateUniqueFileName(originalName);
+  const key = `${folder}/${eventId}/${fileName}`;
+
+  // Generate presigned URL (e.g., for AWS S3)
+  const command = new PutObjectCommand({
+    Bucket: process.env.AWS_BUCKET_NAME!,
+    Key: key,
+    ContentType: mimetype,
+  });
+  const uploadUrl = await getSignedUrl(s3, command, { expiresIn: 300 });
+  const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${key}`;
+  return { uploadUrl, fileUrl, key };
 }
