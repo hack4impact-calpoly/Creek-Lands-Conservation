@@ -10,7 +10,6 @@ import EnhancedPDFSelector, {
   type EnhancedPDFSelectorHandle,
   type PDFInfo,
 } from "@/components/EventComponent/PDFUploader";
-import { Button } from "@/components/ui/button";
 
 export type EventFormData = {
   title: string;
@@ -61,22 +60,10 @@ export default function CreateEventForm() {
   const onSubmit = async (data: EventFormData, isDraft: boolean) => {
     setIsSubmitting(true);
     try {
-      // Upload images and PDFs via refs
-      const imageUrls = fileUploadRef.current ? await fileUploadRef.current.uploadFiles() : [];
-      const pdfInfos = pdfUploadRef.current ? await pdfUploadRef.current.uploadFiles() : [];
-
       // Validate times
-      console.log("Start Date:", data.startDate);
-      console.log("Start Time:", data.startTime);
-      console.log("End Date:", data.endDate);
-      console.log("End Time:", data.endTime);
-      console.log("Registration Deadline:", data.registrationDeadline);
       const startISO = new Date(`${data.startDate}T${data.startTime}:00`).toISOString();
       const endISO = new Date(`${data.endDate}T${data.endTime}:00`).toISOString();
       const deadlineISO = new Date(data.registrationDeadline).toISOString();
-      console.log("Start ISO:", startISO);
-      console.log("End ISO:", endISO);
-      console.log("Deadline ISO:", deadlineISO);
 
       if (new Date(endISO) <= new Date(startISO)) {
         toast({
@@ -107,13 +94,10 @@ export default function CreateEventForm() {
         capacity: Number(data.maxParticipants),
         registrationDeadline: deadlineISO,
         fee: Number(data.fee),
-        images: imageUrls,
-        waiverTemplates: pdfInfos,
         paymentNote: data.paymentNote,
         isDraft,
       };
 
-      console.log("Event Data:", eventData);
       // Send to backend
       const response = await fetch("/api/events", {
         method: "POST",
@@ -121,6 +105,31 @@ export default function CreateEventForm() {
         body: JSON.stringify(eventData),
       });
       if (!response.ok) throw new Error("Event Creation Failed");
+      const createdEvent = await response.json();
+      console.log("Event created:", createdEvent);
+      const eventId = createdEvent.id;
+      console.log("Event ID in Form:", eventId);
+      const imageUrls = fileUploadRef.current
+        ? await fileUploadRef.current.uploadFiles(eventId) // Pass eventId
+        : [];
+      const pdfInfos = pdfUploadRef.current
+        ? await pdfUploadRef.current.uploadFiles(eventId) // Pass eventId
+        : [];
+      console.log("Uploaded image URLs:", imageUrls);
+      console.log("Uploaded PDF Infos:", pdfInfos);
+
+      // Step 3: Update the event with uploaded files
+      const updateResponse = await fetch(`/api/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: imageUrls, waiverTemplates: pdfInfos }),
+      });
+
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        console.error("PATCH failed:", errorData);
+        throw new Error("Failed to update event with files");
+      }
 
       // On success
       reset();
@@ -185,9 +194,10 @@ export default function CreateEventForm() {
               id="location"
               type="text"
               placeholder="Enter the event location"
-              {...register("location")}
+              {...register("location", { required: "Location is required" })}
               className="w-full rounded border p-2"
             />
+            {errors.location && <p className="text-sm text-red-500">{errors.location.message}</p>}
           </div>
         </div>
 

@@ -46,11 +46,12 @@ export interface EnhancedPDFSelectorProps {
   onPDFsSelected: (pdfs: PDFInfo[]) => void;
   resetFiles?: boolean;
   maxSelection?: number;
+  eventId?: string;
 }
 
 export interface EnhancedPDFSelectorHandle {
   /** Uploads all staged PDFs to S3 and returns their info */
-  uploadFiles: () => Promise<PDFInfo[]>;
+  uploadFiles: (eventId: string) => Promise<PDFInfo[]>;
   /** Gets info for all selected existing PDFs */
   getSelectedPDFs: () => PDFInfo[];
   /** Clears all staged PDFs (revoking previews) and selections */
@@ -58,7 +59,7 @@ export interface EnhancedPDFSelectorHandle {
 }
 
 const EnhancedPDFSelector = forwardRef<EnhancedPDFSelectorHandle, EnhancedPDFSelectorProps>(
-  ({ type, onPDFsSelected, resetFiles, maxSelection = Number.POSITIVE_INFINITY }, ref) => {
+  ({ type, onPDFsSelected, resetFiles, maxSelection = Number.POSITIVE_INFINITY, eventId }, ref) => {
     const [files, setFiles] = useState<FileWithPreview[]>([]);
     const [s3PDFs, setS3PDFs] = useState<S3PDF[]>([]);
     const [totalPDFs, setTotalPDFs] = useState(0);
@@ -106,11 +107,9 @@ const EnhancedPDFSelector = forwardRef<EnhancedPDFSelectorHandle, EnhancedPDFSel
     }, [currentPage, pdfsPerPage, activeTab, type]);
 
     // 1) Get presigned URL → 2) PUT to S3 → 3) return final URL + key + name
-    const uploadPDF = async (file: File): Promise<PDFInfo> => {
+    const uploadPDF = async (file: File, eventId: string): Promise<PDFInfo> => {
       const presigned = await fetch(
-        `/api/s3/presigned-waiver?fileName=${encodeURIComponent(
-          file.name,
-        )}&mimetype=${encodeURIComponent(file.type)}&type=${type}`,
+        `/api/s3/presigned-pdfs?fileName=${encodeURIComponent(file.name)}&mimetype=${file.type}&eventId=${eventId}`,
       );
       if (!presigned.ok) throw new Error("Presign failed");
       const { uploadUrl, fileUrl, key } = await presigned.json();
@@ -123,11 +122,12 @@ const EnhancedPDFSelector = forwardRef<EnhancedPDFSelectorHandle, EnhancedPDFSel
     };
 
     // Batch‑upload callable by parent
-    const handleUpload = async (): Promise<PDFInfo[]> => {
+    const handleUpload = async (eventId: string): Promise<PDFInfo[]> => {
+      if (!eventId) throw new Error("eventId is required for uploading PDFs");
       if (files.length === 0 && selectedS3PDFs.length === 0) return [];
 
       // Upload new files
-      const uploadedInfos = files.length > 0 ? await Promise.all(files.map(uploadPDF)) : [];
+      const uploadedInfos = files.length > 0 ? await Promise.all(files.map((file) => uploadPDF(file, eventId))) : [];
 
       // Convert selected existing PDFs to PDFInfo format
       const existingInfos = selectedS3PDFs.map((pdf) => ({
@@ -142,21 +142,7 @@ const EnhancedPDFSelector = forwardRef<EnhancedPDFSelectorHandle, EnhancedPDFSel
       onPDFsSelected(allInfos);
 
       if (uploadedInfos.length > 0) {
-        /*toast({
-          title: "PDFs processed successfully",
-          description: `${uploadedInfos.length} PDFs uploaded and ${existingInfos.length} existing PDFs selected`,
-          variant: "success",
-        });*/
-
-        // Refresh the list after upload
         fetchS3PDFs();
-      } else if (existingInfos.length > 0) {
-        /*
-        toast({
-          title: "PDFs selected successfully",
-          description: `${existingInfos.length} existing PDFs selected`,
-          variant: "success",
-        });*/
       }
 
       return allInfos;

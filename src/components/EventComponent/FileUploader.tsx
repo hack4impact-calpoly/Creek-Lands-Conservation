@@ -34,7 +34,7 @@ interface S3Image {
 }
 
 export interface EnhancedImageSelectorHandle {
-  uploadFiles: () => Promise<string[]>;
+  uploadFiles: (eventId: string) => Promise<string[]>;
   getSelectedImages: () => string[];
   clear: () => void;
 }
@@ -42,10 +42,11 @@ export interface EnhancedImageSelectorHandle {
 export interface EnhancedImageSelectorProps {
   resetFiles?: boolean;
   maxSelection?: number;
+  eventId?: string;
 }
 
 const EnhancedImageSelector = forwardRef<EnhancedImageSelectorHandle, EnhancedImageSelectorProps>(
-  ({ resetFiles, maxSelection = Number.POSITIVE_INFINITY }, ref) => {
+  ({ resetFiles, maxSelection = Number.POSITIVE_INFINITY, eventId }, ref) => {
     const [files, setFiles] = useState<FileWithPreview[]>([]);
     const [s3Images, setS3Images] = useState<S3Image[]>([]);
     const [totalImages, setTotalImages] = useState(0);
@@ -67,7 +68,10 @@ const EnhancedImageSelector = forwardRef<EnhancedImageSelectorHandle, EnhancedIm
     const fetchS3Images = async (page = 1) => {
       setIsLoadingS3Images(true);
       try {
-        const response = await fetch(`/api/s3/list-images?page=${page}&limit=${imagesPerPage}`);
+        const url = eventId
+          ? `/api/s3/list-images?eventId=${eventId}&page=${page}&limit=${imagesPerPage}`
+          : `/api/s3/list-images?page=${page}&limit=${imagesPerPage}`;
+        const response = await fetch(url);
         if (!response.ok) throw new Error("Failed to fetch images");
         const data = await response.json();
         console.log("S3 Images Response:", data);
@@ -94,19 +98,21 @@ const EnhancedImageSelector = forwardRef<EnhancedImageSelectorHandle, EnhancedIm
       }
     }, [activeTab, currentPage, imagesPerPage]);
 
-    const uploadFile = async (file: File): Promise<string> => {
+    const uploadFile = async (file: File, eventId: string): Promise<string> => {
+      if (!eventId) throw new Error("eventId is required for uploading event images");
       const presignedRes = await fetch(
-        `/api/s3/presigned-event-images?fileName=${encodeURIComponent(file.name)}&mimetype=${file.type}`,
+        `/api/s3/presigned-event-images?fileName=${encodeURIComponent(file.name)}&mimetype=${file.type}&eventId=${eventId}`,
       );
+      if (!presignedRes.ok) throw new Error("Failed to get presigned URL");
       const { uploadUrl, fileUrl } = await presignedRes.json();
       await fetch(uploadUrl, { method: "PUT", body: file, headers: { "Content-Type": file.type } });
       return fileUrl;
     };
 
     useImperativeHandle(ref, () => ({
-      uploadFiles: async () => {
+      uploadFiles: async (eventId: string) => {
         const imageFiles = files.filter((file) => file.type.startsWith("image/"));
-        const uploadedUrls = await Promise.all(imageFiles.map((f) => uploadFile(f)));
+        const uploadedUrls = await Promise.all(imageFiles.map((f) => uploadFile(f, eventId)));
         const allSelectedUrls = [...uploadedUrls, ...selectedS3Images.map((img) => img.url)];
 
         if (uploadedUrls.length > 0) {
