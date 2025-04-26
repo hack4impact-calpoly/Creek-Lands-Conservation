@@ -3,7 +3,9 @@
 
 import connectDB from "@/database/db";
 import Event from "@/database/eventSchema";
+import { authenticateAdmin } from "@/lib/auth";
 import mongoose from "mongoose";
+import { NextRequest } from "next/server";
 
 export interface EventInfo {
   id: string;
@@ -35,20 +37,62 @@ export interface EventInfo {
   currentRegistrations: number;
 }
 
-export async function getEvents(): Promise<EventInfo[]> {
+interface LimitedEventInfo {
+  id: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  capacity: number;
+  registrationDeadline?: string;
+  images: string[];
+  fee: number;
+  stripePaymentId?: string | null;
+  paymentNote?: string;
+  eventWaiverTemplates: {
+    waiverId: string;
+    required: boolean;
+  }[];
+  currentRegistrations: number;
+}
+
+const toLimitedEventInfo = (event: EventInfo): LimitedEventInfo => ({
+  id: event.id,
+  title: event.title,
+  description: event.description,
+  startDate: event.startDate,
+  endDate: event.endDate,
+  location: event.location,
+  capacity: event.capacity,
+  registrationDeadline: event.registrationDeadline,
+  images: event.images,
+  fee: event.fee,
+  stripePaymentId: event.stripePaymentId,
+  paymentNote: event.paymentNote,
+  eventWaiverTemplates: event.eventWaiverTemplates,
+  currentRegistrations: event.currentRegistrations,
+});
+
+export async function getEvents(req?: NextRequest): Promise<(EventInfo | LimitedEventInfo)[]> {
   await connectDB();
 
   // Fetch raw documents as plain objects
-  const docs: any[] = await Event.find().sort({ startDate: 1 }).lean(); // no generic here!
+  const isAdmin = await authenticateAdmin();
 
-  return docs.map((doc) => {
-    // Basic sanity check
+  // Fetch raw documents as plain objects
+  const docs: any[] = await Event.find().sort({ startDate: 1 }).lean();
+
+  // Filter out draft events for normal users
+  const filteredDocs = isAdmin ? docs : docs.filter((doc) => !doc.isDraft);
+  // If admin, return full event info
+  // Map documents to EventInfo or LimitedEventInfo
+  const events = filteredDocs.map((doc) => {
     if (!doc._id || !mongoose.Types.ObjectId.isValid(doc._id)) {
       console.error("Invalid or missing _id on event doc:", doc);
       throw new Error("Corrupt event in database");
     }
 
-    // Stringify IDs and dates
     const id = doc._id.toString();
     const startDate = new Date(doc.startDate).toISOString();
     const endDate = new Date(doc.endDate).toISOString();
@@ -88,7 +132,7 @@ export async function getEvents(): Promise<EventInfo[]> {
         }))
       : [];
 
-    return {
+    const fullEvent: EventInfo = {
       id,
       title: String(doc.title),
       description: typeof doc.description === "string" ? doc.description : undefined,
@@ -107,5 +151,10 @@ export async function getEvents(): Promise<EventInfo[]> {
       eventWaiverTemplates,
       currentRegistrations: registeredUsers.length + registeredChildren.length,
     };
+
+    // Return limited fields for normal users, full fields for admins
+    return isAdmin ? fullEvent : toLimitedEventInfo(fullEvent);
   });
+
+  return events;
 }
