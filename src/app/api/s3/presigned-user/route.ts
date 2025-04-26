@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getUploadPresignedUrl } from "@/lib/s3";
+import { getUserUploadPresignedUrl } from "@/lib/s3";
 import { getAuth } from "@clerk/nextjs/server";
 
 export async function GET(req: NextRequest) {
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     }
 
     // Use the authenticated userId as the clerkID for folder structure in S3
-    const { uploadUrl, fileUrl, key } = await getUploadPresignedUrl("user-profiles", fileName, mimetype, userId);
+    const { uploadUrl, fileUrl, key } = await getUserUploadPresignedUrl("user-profiles", fileName, mimetype, userId);
 
     return NextResponse.json({ uploadUrl, fileUrl, key });
   } catch (error) {

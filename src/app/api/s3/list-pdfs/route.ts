@@ -1,10 +1,14 @@
 import { S3Client, ListObjectsV2Command } from "@aws-sdk/client-s3";
 import { authenticateAdmin } from "@/lib/auth";
+import { getAuth } from "@clerk/nextjs/server";
+import { NextRequest, NextResponse } from "next/server";
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
+  const { userId } = getAuth(request);
+  if (!userId || !(await authenticateAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
   try {
-    const authError = await authenticateAdmin();
-    if (authError !== true) return Response.json({ error: "Unauthorized" }, { status: 401 });
     // Get pagination parameters from URL
     const { searchParams } = new URL(request.url);
     const page = Number.parseInt(searchParams.get("page") || "1");
@@ -16,12 +20,12 @@ export async function GET(request: Request) {
     });
 
     // Determine the prefix based on the type
-    const prefix = type === "template" ? "waivers/templates/" : "waivers/completed/";
+    const prefix = `waivers/${type === "template" ? "templates" : "completed"}/`;
 
     const command = new ListObjectsV2Command({
       Bucket: process.env.AWS_BUCKET_NAME,
       Prefix: prefix,
-      MaxKeys: 1000, // Get a larger set to paginate from
+      MaxKeys: 1000,
     });
 
     const response = await s3Client.send(command);
@@ -51,7 +55,7 @@ export async function GET(request: Request) {
     // Get the current page of PDFs
     const paginatedPDFs = allPDFs.slice(startIndex, endIndex);
 
-    return Response.json({
+    return NextResponse.json({
       pdfs: paginatedPDFs,
       page,
       limit,
@@ -60,6 +64,6 @@ export async function GET(request: Request) {
     });
   } catch (error) {
     console.error("Error listing S3 PDFs:", error);
-    return Response.json({ error: "Failed to list PDFs from S3" }, { status: 500 });
+    return NextResponse.json({ error: "Failed to list PDFs from S3" }, { status: 500 });
   }
 }
