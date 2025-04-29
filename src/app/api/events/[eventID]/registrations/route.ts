@@ -1,3 +1,4 @@
+// src/app/api/events/[eventID]/registration/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import connectDB from "@/database/db";
