@@ -109,7 +109,7 @@ const EnhancedPDFSelector = forwardRef<EnhancedPDFSelectorHandle, EnhancedPDFSel
     // 1) Get presigned URL → 2) PUT to S3 → 3) return final URL + key + name
     const uploadPDF = async (file: File, eventId: string): Promise<PDFInfo> => {
       const presigned = await fetch(
-        `/api/s3/presigned-pdfs?fileName=${encodeURIComponent(file.name)}&mimetype=${file.type}&eventId=${eventId}`,
+        `/api/s3/presigned-waiver?fileName=${encodeURIComponent(file.name)}&mimetype=${file.type}&type=${type}&eventId=${eventId}`,
       );
       if (!presigned.ok) throw new Error("Presign failed");
       const { uploadUrl, fileUrl, key } = await presigned.json();
