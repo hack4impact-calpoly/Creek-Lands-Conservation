@@ -7,6 +7,7 @@ import { authenticateAdmin } from "@/lib/auth";
 import User from "@/database/userSchema";
 import Event from "@/database/eventSchema";
 import Waiver from "@/database/waiverSchema";
+import { RawRegisteredUser, RawRegisteredChild } from "@/types/events";
 
 export async function GET(req: NextRequest) {
   const { userId } = getAuth(req);
@@ -37,13 +38,15 @@ export async function GET(req: NextRequest) {
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
+    // Allow access to published events for all users (already implemented)
     if (!event.isDraft) {
-    }
-    const isRegistered =
-      event.registeredUsers.some((u: any) => u.user.equals(user._id)) ||
-      event.registeredChildren.some((c: any) => c.parent.equals(user._id));
-    if (!isRegistered && !isAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    } else {
+      const isRegistered =
+        event.registeredUsers.some((u: RawRegisteredUser) => u.user.equals(user._id)) ||
+        event.registeredChildren.some((c: RawRegisteredChild) => c.parent.equals(user._id));
+      if (!isRegistered && !isAdmin) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
     }
   } else if (fileKey.startsWith("user-profiles/")) {
     const profileClerkId = fileKey.split("/")[1];
