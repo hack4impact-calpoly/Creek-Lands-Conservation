@@ -8,8 +8,8 @@ import Image from "next/image";
 export interface EventCardProps {
   id: string;
   eventTitle: string;
-  startDateTime: Date | null;
-  endDateTime: Date | null;
+  startDateTime: string | null;
+  endDateTime: string | null;
   location: string;
   description: string;
   images: string[];
@@ -74,11 +74,22 @@ export default function EventCard(props: EventCardProps) {
 
         <div className="space-y-2 text-base lg:text-lg">
           <InfoRow icon={Calendar}>
-            {formatDate(startDateTime)} - {formatDate(endDateTime)}
+            <h1>
+              {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
+              {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"}
+            </h1>
           </InfoRow>
 
           <InfoRow icon={Clock}>
-            {formatTime(startDateTime)} - {formatTime(endDateTime)}
+            <h1>
+              {startDateTime
+                ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                : "TBD"}{" "}
+              -{" "}
+              {endDateTime
+                ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                : "TBD"}
+            </h1>
           </InfoRow>
 
           <InfoRow icon={CalendarClock}>Deadline: {registrationDeadline?.toLocaleString() || "TBD"}</InfoRow>

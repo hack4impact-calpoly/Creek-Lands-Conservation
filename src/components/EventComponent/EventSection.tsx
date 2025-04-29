@@ -1,4 +1,4 @@
-import { EventInfo } from "@/types/events";
+import { LimitedEventInfo } from "@/types/events";
 import EventCard from "./EventCard";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
@@ -12,7 +12,7 @@ export default function EventSection({
   children,
 }: {
   title: string;
-  events: EventInfo[];
+  events: LimitedEventInfo[];
   onDelete?: (eventId: string) => void;
   onRegister?: (eventId: string, attendees: string[]) => void;
   children?: React.ReactNode;
@@ -62,11 +62,16 @@ export default function EventSection({
             {visibleEvents.map((event) => (
               <EventCard
                 key={event.id}
-                {...event}
+                id={event.id}
                 eventTitle={event.title}
+                startDateTime={event.startDate} // Rename startDate to startDateTime
+                endDateTime={event.endDate} // Rename endDate to endDateTime
+                location={event.location}
                 description={event.description ?? "There is no description for this event."}
-                // most events do not yet reflect the addition of registeredChildren to the schema
-                currentRegistrations={event.registeredUsers.length + event.registeredChildren.length}
+                images={event.images}
+                registrationDeadline={event.registrationDeadline ? new Date(event.registrationDeadline) : null}
+                capacity={event.capacity}
+                currentRegistrations={event.currentRegistrations}
                 onDelete={onDelete}
                 onRegister={onRegister}
               />
