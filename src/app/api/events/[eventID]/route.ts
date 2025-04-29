@@ -1,4 +1,4 @@
-// src/app/api/events/route.ts
+// src/app/api/events/[eventID]/route.ts
 import connectDB from "@/database/db";
 import Event from "@/database/eventSchema";
 import Waiver from "@/database/waiverSchema";
@@ -205,6 +205,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { eventID: s
             type: "template",
             uploadedBy: mongoUser._id,
             belongsToUser: mongoUser._id,
+            eventId: new mongoose.Types.ObjectId(eventID),
           });
           return {
             waiverId: doc._id,
