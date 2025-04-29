@@ -1,10 +1,8 @@
 // src/app/api/events/route.ts
 import connectDB from "@/database/db";
 import Event from "@/database/eventSchema";
-import Waiver from "@/database/waiverSchema";
 import { NextResponse } from "next/server";
 import { authenticateAdmin } from "@/lib/auth";
-import mongoose from "mongoose";
 import { auth } from "@clerk/nextjs/server";
 import User from "@/database/userSchema";
 import { formatEvents } from "@/lib/utils";
@@ -32,26 +30,6 @@ export async function POST(request: Request) {
     }
   }
 
-  let eventWaiverTemplates: { waiverId: mongoose.Types.ObjectId; required: boolean }[] = [];
-  if (Array.isArray(body.waiverTemplates)) {
-    const created = await Promise.all(
-      body.waiverTemplates.map(async (pdf) => {
-        const w = await Waiver.create({
-          fileKey: pdf.fileKey || pdf.fileUrl,
-          fileName: pdf.fileName || "template.pdf",
-          type: "template",
-          uploadedBy: mongoUser._id,
-          belongsToUser: mongoUser._id,
-        });
-        return {
-          waiverId: w._id,
-          required: pdf.required ?? true,
-        };
-      }),
-    );
-    eventWaiverTemplates = created;
-  }
-
   const toCreate = {
     title: body.title,
     description: body.description,
@@ -67,7 +45,7 @@ export async function POST(request: Request) {
     isDraft: body.isDraft ?? false,
     registeredUsers: [],
     registeredChildren: [],
-    eventWaiverTemplates,
+    eventWaiverTemplates: [],
   };
 
   const newEvent = await Event.create(toCreate);
