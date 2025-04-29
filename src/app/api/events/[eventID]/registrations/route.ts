@@ -4,7 +4,14 @@ import connectDB from "@/database/db";
 import Event from "@/database/eventSchema";
 import User from "@/database/userSchema";
 import mongoose from "mongoose";
+import { RawRegisteredUser, RawRegisteredChild } from "@/types/events";
 
+interface RawChild {
+  _id: mongoose.Types.ObjectId;
+  registeredEvents: mongoose.Types.ObjectId[];
+}
+
+// PUT: Register for an event
 export async function PUT(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
   const { eventID } = params;
@@ -36,7 +43,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
 
   // Only allow user and their children
   const mongoUserId = user._id.toString();
-  const validAttendees = [mongoUserId, ...user.children.map((c: any) => c._id.toString())];
+  const validAttendees = [mongoUserId, ...(user.children as RawChild[]).map((c) => c._id.toString())];
   if (!attendees.every((id) => validAttendees.includes(id))) {
     return NextResponse.json({ error: "You can only register yourself or your children." }, { status: 403 });
   }
@@ -51,20 +58,20 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
 
   for (const id of attendees) {
     if (id === mongoUserId) {
-      if (!event.registeredUsers.some((ru: any) => ru.user.toString() === id)) {
+      if (!event.registeredUsers.some((ru: RawRegisteredUser) => ru.user.toString() === id)) {
         event.registeredUsers.push({ user: user._id, waiversSigned: [] });
         user.registeredEvents.push(eventID);
         newRegisteredUsers.push(user._id);
       }
     } else {
-      const child = user.children.find((c: any) => c._id.toString() === id);
-      if (child && !event.registeredChildren.some((rc: any) => rc.childId.toString() === id)) {
+      const child = (user.children as RawChild[]).find((c) => c._id.toString() === id);
+      if (child && !event.registeredChildren.some((rc: RawRegisteredChild) => rc.childId.toString() === id)) {
         event.registeredChildren.push({
           parent: user._id,
           childId: child._id,
           waiversSigned: [],
         });
-        child.registeredEvents.push(eventID);
+        child.registeredEvents.push(new mongoose.Types.ObjectId(eventID));
         newRegisteredChildren.push(child._id);
       }
     }
@@ -79,7 +86,11 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
   session.startTransaction();
   try {
     await event.save({ session });
-    await user.save({ session });
+    await User.findByIdAndUpdate(
+      user._id,
+      { $set: { registeredEvents: user.registeredEvents, children: user.children } },
+      { session },
+    );
     await session.commitTransaction();
   } catch {
     await session.abortTransaction();
@@ -97,6 +108,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
   );
 }
 
+// DELETE: Unregister from an event
 export async function DELETE(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
   const { eventID } = params;
@@ -127,7 +139,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
 
   // Only allow user and their children
   const mongoUserId = user._id.toString();
-  const validAttendees = [mongoUserId, ...user.children.map((c: any) => c._id.toString())];
+  const validAttendees = [mongoUserId, ...(user.children as RawChild[]).map((c) => c._id.toString())];
   if (!attendees.every((id) => validAttendees.includes(id))) {
     return NextResponse.json({ error: "You can only unregister yourself or your children." }, { status: 403 });
   }
@@ -142,16 +154,24 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
 
   for (const id of attendees) {
     if (id === mongoUserId) {
-      if (event.registeredUsers.some((ru: any) => ru.user.toString() === mongoUserId)) {
-        event.registeredUsers = event.registeredUsers.filter((ru: any) => ru.user.toString() !== mongoUserId);
-        user.registeredEvents = user.registeredEvents.filter((eId: any) => eId.toString() !== eventID);
+      if (event.registeredUsers.some((ru: RawRegisteredUser) => ru.user.toString() === mongoUserId)) {
+        event.registeredUsers = event.registeredUsers.filter(
+          (ru: RawRegisteredUser) => ru.user.toString() !== mongoUserId,
+        );
+        user.registeredEvents = user.registeredEvents.filter(
+          (eId: mongoose.Types.ObjectId) => eId.toString() !== eventID,
+        );
         removedUsers.push(user._id);
       }
     } else {
-      const child = user.children.find((c: any) => c._id.toString() === id);
-      if (child && event.registeredChildren.some((rc: any) => rc.childId.toString() === id)) {
-        event.registeredChildren = event.registeredChildren.filter((rc: any) => rc.childId.toString() !== id);
-        child.registeredEvents = child.registeredEvents.filter((eId: any) => eId.toString() !== eventID);
+      const child = (user.children as RawChild[]).find((c) => c._id.toString() === id);
+      if (child && event.registeredChildren.some((rc: RawRegisteredChild) => rc.childId.toString() === id)) {
+        event.registeredChildren = event.registeredChildren.filter(
+          (rc: RawRegisteredChild) => rc.childId.toString() !== id,
+        );
+        child.registeredEvents = child.registeredEvents.filter(
+          (eId: mongoose.Types.ObjectId) => eId.toString() !== eventID,
+        );
         removedChildren.push(child._id);
       }
     }
@@ -165,7 +185,11 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
   session.startTransaction();
   try {
     await event.save({ session });
-    await user.save({ session });
+    await User.findByIdAndUpdate(
+      user._id,
+      { $set: { registeredEvents: user.registeredEvents, children: user.children } },
+      { session },
+    );
     await session.commitTransaction();
   } catch {
     await session.abortTransaction();

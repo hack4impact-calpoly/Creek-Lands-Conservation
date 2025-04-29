@@ -7,66 +7,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticateAdmin } from "@/lib/auth";
 import mongoose from "mongoose";
 import { auth, getAuth } from "@clerk/nextjs/server";
-
-interface EventWaiverTemplateInput {
-  fileUrl?: string;
-  fileKey?: string;
-  fileName?: string;
-  required?: boolean;
-}
-
-interface EventPayload {
-  title: string;
-  description?: string;
-  startDate: string;
-  endDate: string;
-  location: string;
-  capacity?: number;
-  registrationDeadline: string;
-  images?: string[];
-  waiverTemplates?: EventWaiverTemplateInput[];
-  fee?: number;
-  stripePaymentId?: string;
-  isDraft?: boolean;
-  paymentNote?: string;
-}
-
-function formatEvent(doc: any) {
-  return {
-    id: doc._id.toString(),
-    title: doc.title,
-    description: doc.description,
-    startDate: doc.startDate.toISOString(),
-    endDate: doc.endDate.toISOString(),
-    location: doc.location,
-    capacity: doc.capacity,
-    registrationDeadline: doc.registrationDeadline.toISOString(),
-    images: doc.images,
-    fee: doc.fee,
-    stripePaymentId: doc.stripePaymentId,
-    paymentNote: doc.paymentNote,
-    isDraft: doc.isDraft,
-    eventWaiverTemplates: doc.eventWaiverTemplates.map((w: any) => ({
-      waiverId: w.waiverId.toString(),
-      required: w.required,
-    })),
-    registeredUsers: doc.registeredUsers.map((u: any) => ({
-      user: u.user.toString(),
-      waiversSigned: u.waiversSigned.map((s: any) => ({
-        waiverId: s.waiverId.toString(),
-        signed: s.signed,
-      })),
-    })),
-    registeredChildren: doc.registeredChildren.map((c: any) => ({
-      parent: c.parent.toString(),
-      childId: c.childId.toString(),
-      waiversSigned: c.waiversSigned.map((s: any) => ({
-        waiverId: s.waiverId.toString(),
-        signed: s.signed,
-      })),
-    })),
-  };
-}
+import { EventPayload, EventWaiverTemplateInput, RawEvent } from "@/types/events";
+import { formatEvents } from "@/lib/utils";
 
 /** POST: Create a new event */
 export async function POST(request: Request) {
@@ -129,7 +71,7 @@ export async function POST(request: Request) {
   };
 
   const newEvent = await Event.create(toCreate);
-  return NextResponse.json(formatEvent(newEvent), { status: 201 });
+  return NextResponse.json(formatEvents(newEvent), { status: 201 });
 }
 // GET: Fetch a single event by ID
 export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
@@ -142,11 +84,11 @@ export async function GET(req: NextRequest, { params }: { params: { eventID: str
   }
 
   try {
-    const event = await Event.findById(eventID);
+    const event = (await Event.findById(eventID).lean()) as RawEvent | null;
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
-    return NextResponse.json(event, { status: 200 });
+    return NextResponse.json(formatEvents(event), { status: 200 });
   } catch (error) {
     return NextResponse.json(
       { error: "Error fetching event", details: error instanceof Error ? error.message : "Unknown error" },
@@ -171,7 +113,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
 
   try {
     // Delete the event
-    const deletedEvent = await Event.findByIdAndDelete(eventID);
+    const deletedEvent = (await Event.findByIdAndDelete(eventID).lean()) as RawEvent | null;
     if (!deletedEvent) {
       console.log(`Event not found: ${eventID}`);
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
@@ -203,6 +145,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
   }
 }
 
+// PUT: Update an event
 export async function PUT(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
   const { eventID } = params;
@@ -214,26 +157,26 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
   const authError = await authenticateAdmin();
   if (authError !== true) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  let updates;
+  let updates: Partial<EventPayload>;
   try {
     updates = await req.json();
   } catch {
     return NextResponse.json({ error: "Malformed JSON" }, { status: 400 });
   }
 
-  const updated = await Event.findByIdAndUpdate(eventID, updates, {
+  const updated = (await Event.findByIdAndUpdate(eventID, updates, {
     new: true,
     runValidators: true,
-  });
+  }).lean()) as RawEvent | null;
 
   if (!updated) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  // return the updated event so res.json() succeeds
-  return NextResponse.json(updated, { status: 200 });
+  return NextResponse.json(formatEvents(updated), { status: 200 });
 }
 
+// PATCH: Update event images and waivers
 export async function PATCH(req: NextRequest, { params }: { params: { eventID: string } }) {
   const { userId } = getAuth(req);
   if (!userId || !(await authenticateAdmin())) {
@@ -243,7 +186,6 @@ export async function PATCH(req: NextRequest, { params }: { params: { eventID: s
   await connectDB();
 
   const { eventID } = params;
-  console.log("Event ID in Patch:", eventID);
   const { images, waiverTemplates } = await req.json();
 
   try {
@@ -256,7 +198,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { eventID: s
       }
 
       eventWaiverTemplates = await Promise.all(
-        waiverTemplates.map(async (pdf) => {
+        waiverTemplates.map(async (pdf: EventWaiverTemplateInput) => {
           const doc = await Waiver.create({
             fileKey: pdf.fileKey,
             fileName: pdf.fileName || "template.pdf",
@@ -272,13 +214,17 @@ export async function PATCH(req: NextRequest, { params }: { params: { eventID: s
       );
     }
 
-    const event = await Event.findByIdAndUpdate(eventID, { $set: { images, eventWaiverTemplates } }, { new: true });
+    const event = (await Event.findByIdAndUpdate(
+      eventID,
+      { $set: { images, eventWaiverTemplates } },
+      { new: true },
+    ).lean()) as RawEvent | null;
 
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    return NextResponse.json(event);
+    return NextResponse.json(formatEvents(event));
   } catch (error) {
     console.error("Error updating event:", error);
     return NextResponse.json({ error: "Failed to update event" }, { status: 500 });

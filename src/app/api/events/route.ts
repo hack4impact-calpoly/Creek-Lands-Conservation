@@ -4,56 +4,11 @@ import Event from "@/database/eventSchema";
 import Waiver from "@/database/waiverSchema";
 import { NextResponse } from "next/server";
 import { authenticateAdmin } from "@/lib/auth";
-import mongoose, { mongo } from "mongoose";
+import mongoose from "mongoose";
 import { auth } from "@clerk/nextjs/server";
 import User from "@/database/userSchema";
-
-interface EventWaiverTemplateInput {
-  fileUrl?: string;
-  fileKey?: string;
-  fileName?: string;
-  required?: boolean;
-}
-
-interface EventPayload {
-  title: string;
-  description?: string;
-  startDate: string; // ISO string from client
-  endDate: string; // ISO string from client
-  location: string;
-  capacity?: number;
-  registrationDeadline: string; // ISO string from client
-  images?: string[];
-  waiverTemplates?: EventWaiverTemplateInput[];
-  fee?: number;
-  stripePaymentId?: string;
-  isDraft?: boolean;
-  paymentNote?: string;
-}
-
-/** Turn your Mongoose doc into a nice JSON-friendly object */
-function formatEvent(doc: any) {
-  return {
-    id: doc._id.toString(),
-    title: doc.title,
-    description: doc.description,
-    startDate: doc.startDate.toISOString(),
-    endDate: doc.endDate.toISOString(),
-    location: doc.location,
-    capacity: doc.capacity,
-    registrationDeadline: doc.registrationDeadline.toISOString(),
-    images: doc.images,
-    fee: doc.fee,
-    stripePaymentId: doc.stripePaymentId,
-    paymentNote: doc.paymentNote,
-    isDraft: doc.isDraft,
-    eventWaiverTemplates: doc.eventWaiverTemplates.map((w: any) => ({
-      waiverId: w.waiverId.toString(),
-      required: w.required,
-    })),
-    // etc…
-  };
-}
+import { formatEvents } from "@/lib/utils";
+import { EventPayload } from "@/types/events";
 
 export async function POST(request: Request) {
   const { userId } = await auth();
@@ -115,7 +70,6 @@ export async function POST(request: Request) {
     eventWaiverTemplates,
   };
 
-  console.log("toCreate Object:", toCreate); // Debug log
   const newEvent = await Event.create(toCreate);
-  return NextResponse.json(formatEvent(newEvent), { status: 201 });
+  return NextResponse.json(formatEvents(newEvent), { status: 201 });
 }
