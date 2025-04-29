@@ -3,26 +3,54 @@
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { getEvents } from "@/app/actions/events/actions";
-import { EventInfo } from "@/types/events";
+import { EventInfo, LimitedEventInfo } from "@/types/events";
 import EventSection from "@/components/EventComponent/EventSection";
 import SkeletonEventSection from "@/components/EventComponent/EventSectionSkeleton";
 import { formatEvents } from "@/lib/utils";
 
-interface IChild {
+interface IChildData {
   _id: string;
+  firstName: string;
+  lastName: string;
+  birthday?: string; // ISO string from Date
+  gender: "Male" | "Female" | "Non-binary" | "Prefer Not to Say" | "";
+  imageUrl?: string;
+  imageKey?: string;
+  registeredEvents: string[]; // ObjectIds as strings
+  waiversSigned: string[]; // ObjectIds as strings
 }
 
 interface IUserData {
   _id: string;
-  children: IChild[];
+  clerkID: string;
+  userRole: "user" | "admin" | "donator";
+  firstName: string;
+  lastName: string;
+  email: string;
+  gender: "Male" | "Female" | "Non-binary" | "Prefer Not to Say" | "";
+  birthday?: string | null; // ISO string or null
+  address?: {
+    home?: string;
+    city?: string;
+    zipCode?: string;
+  };
+  phoneNumbers?: {
+    cell?: string;
+    work?: string;
+  };
+  imageUrl?: string;
+  imageKey?: string;
+  children: IChildData[];
+  registeredEvents: string[]; // ObjectIds as strings
+  waiversSigned: string[]; // ObjectIds as strings
 }
 
 export default function Home() {
   // TODO consider more possibilities (children registered, deadline missed, etc) and how to sort those cases
   const [eventSections, setEventSections] = useState<{
-    available: EventInfo[];
-    registered: EventInfo[];
-    past: EventInfo[];
+    available: LimitedEventInfo[];
+    registered: LimitedEventInfo[];
+    past: LimitedEventInfo[];
   }>({ available: [], registered: [], past: [] });
   const [userData, setUserData] = useState<IUserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -30,79 +58,74 @@ export default function Home() {
   const { isLoaded, user } = useUser();
 
   // inside Home()
-  const handleRegister = (eventId: string, attendees: string[]) => {
+  const handleRegister = async (eventId: string, attendees: string[]) => {
     if (!userData) return;
-    const userId = userData._id;
-    const childIds = userData.children.map((c) => c._id);
 
-    setEventSections((prev) => {
-      // flatten all sections into one array
-      const allEvents = [...prev.available, ...prev.registered, ...prev.past];
-
-      const updatedEvents = allEvents.map((event) => {
-        if (event.id !== eventId) return event;
-
-        const userAttending = attendees.includes(userId);
-        const kidsAttending = attendees.filter((id) => childIds.includes(id));
-
-        // append a new registeredUser object if needed
-        const newRegisteredUsers = userAttending
-          ? [...event.registeredUsers, { user: userId, waiversSigned: [] }]
-          : event.registeredUsers;
-
-        // append new registeredChildren objects if needed
-        const newRegisteredChildren =
-          kidsAttending.length > 0
-            ? [
-                ...event.registeredChildren,
-                ...kidsAttending.map((childId) => ({
-                  parent: userId,
-                  childId,
-                  waiversSigned: [],
-                })),
-              ]
-            : event.registeredChildren;
-
-        return {
-          ...event,
-          registeredUsers: newRegisteredUsers,
-          registeredChildren: newRegisteredChildren,
-        };
+    try {
+      // Step 1: Register via API
+      const response = await fetch(`/api/events/${eventId}/registrations`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attendees }),
       });
+      if (!response.ok) throw new Error("Failed to register");
 
-      // re-categorize based on the freshly updated arrays
-      return categorizeEvents(updatedEvents, userId, childIds);
-    });
+      // Step 2: Optimistically update userData
+      const updatedUserData = { ...userData };
+      if (attendees.includes(userData._id)) {
+        updatedUserData.registeredEvents = [...(updatedUserData.registeredEvents || []), eventId];
+      }
+      updatedUserData.children = updatedUserData.children.map((child) => {
+        if (attendees.includes(child._id)) {
+          return {
+            ...child,
+            registeredEvents: [...(child.registeredEvents || []), eventId],
+          };
+        }
+        return child;
+      });
+      setUserData(updatedUserData);
+
+      // Step 3: Update event sections
+      const registeredEventIds = [
+        ...(updatedUserData.registeredEvents || []),
+        ...(updatedUserData.children || []).flatMap((child) => child.registeredEvents || []),
+      ];
+      const allEvents = [...eventSections.available, ...eventSections.registered, ...eventSections.past];
+      const categorized = categorizeEvents(allEvents, registeredEventIds);
+      setEventSections(categorized);
+    } catch (error: any) {
+      console.error("Registration failed:", error);
+      setError("Failed to register for the event");
+    }
   };
 
   useEffect(() => {
     const fetchAndProcessEvents = async () => {
-      try {
-        if (!isLoaded) return; // Ensure user state is loaded before proceeding
+      if (!isLoaded) return;
+      setIsLoading(true);
 
-        const events = await getEvents();
-        console.log("Fetched Events:", events);
-        const formattedEvents = formatEvents(events);
-        console.log("Formatted Events:", formattedEvents);
+      try {
+        const events = (await getEvents()) as LimitedEventInfo[];
 
         if (user) {
           const userResponse = await fetch(`/api/users/${user.id}`);
           if (!userResponse.ok) throw new Error("Failed to fetch user data");
 
-          const fetchedUserData = await userResponse.json();
-          if (!fetchedUserData?._id) throw new Error("User not Found in MongoDB");
+          const fetchedUserData: IUserData = await userResponse.json();
+          if (!fetchedUserData?._id) throw new Error("User not found in MongoDB");
 
           setUserData(fetchedUserData);
 
-          const categorized = categorizeEvents(
-            formattedEvents,
-            fetchedUserData._id.toString(),
-            fetchedUserData.children.map((child: any) => child._id),
-          );
+          const registeredEventIds = [
+            ...(fetchedUserData.registeredEvents || []),
+            ...(fetchedUserData.children || []).flatMap((child) => child.registeredEvents || []),
+          ];
+
+          const categorized = categorizeEvents(events, registeredEventIds);
           setEventSections(categorized);
         } else {
-          // If no user, just show all events
-          setEventSections({ available: formattedEvents, registered: [], past: [] });
+          setEventSections({ available: events, registered: [], past: [] });
         }
 
         setIsLoading(false);
@@ -137,22 +160,21 @@ export default function Home() {
 
 // Helper function
 // Helper at bottom of page.tsx
-const categorizeEvents = (events: EventInfo[], userId: string, userChildren: string[]) => {
+// Categorize events using LimitedEventInfo and user's registered event IDs
+const categorizeEvents = (events: LimitedEventInfo[], registeredEventIds: string[]) => {
   const now = new Date();
-  const sections = { available: [], registered: [], past: [] } as {
-    available: EventInfo[];
-    registered: EventInfo[];
-    past: EventInfo[];
+  const sections = {
+    available: [] as LimitedEventInfo[],
+    registered: [] as LimitedEventInfo[],
+    past: [] as LimitedEventInfo[],
   };
 
   events.forEach((event) => {
-    // look for a matching user field, not a raw string
-    const userIsRegistered = event.registeredUsers.some((ru) => ru.user === userId);
-    // look for childId in the child objects
-    const childIsRegistered = event.registeredChildren.some((rc) => userChildren.includes(rc.childId));
+    const endDateTime = new Date(event.endDate);
+    const isRegistered = registeredEventIds.includes(event.id);
 
-    if (userIsRegistered || childIsRegistered) {
-      if (event.endDateTime && event.endDateTime < now) {
+    if (isRegistered) {
+      if (endDateTime < now) {
         sections.past.push(event);
       } else {
         sections.registered.push(event);
