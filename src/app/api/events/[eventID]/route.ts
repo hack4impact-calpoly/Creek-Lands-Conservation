@@ -10,69 +10,6 @@ import { auth, getAuth } from "@clerk/nextjs/server";
 import { EventPayload, EventWaiverTemplateInput, RawEvent } from "@/types/events";
 import { formatEvents } from "@/lib/utils";
 
-/** POST: Create a new event */
-export async function POST(request: Request) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-  await connectDB();
-  const mongoUser = await User.findOne({ clerkID: userId });
-  if (!mongoUser) {
-    return NextResponse.json({ error: "User record not found" }, { status: 404 });
-  }
-  const authError = await authenticateAdmin();
-  if (authError !== true) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-
-  const body: EventPayload = await request.json();
-  for (const f of ["title", "startDate", "endDate"] as const) {
-    if (!body[f]) {
-      return NextResponse.json({ error: `Missing required field: ${f}` }, { status: 400 });
-    }
-  }
-
-  // Build waiver templates array
-  let eventWaiverTemplates: { waiverId: mongoose.Types.ObjectId; required: boolean }[] = [];
-  if (Array.isArray(body.waiverTemplates)) {
-    const created = await Promise.all(
-      body.waiverTemplates.map(async (pdf) => {
-        const doc = await Waiver.create({
-          fileKey: pdf.fileKey || pdf.fileUrl,
-          fileName: pdf.fileName || "template.pdf",
-          type: "template",
-          uploadedBy: mongoUser._id,
-          belongsToUser: mongoUser._id,
-        });
-        return {
-          waiverId: doc._id,
-          required: pdf.required ?? true,
-        };
-      }),
-    );
-    eventWaiverTemplates = created;
-  }
-
-  const toCreate = {
-    title: body.title,
-    description: body.description,
-    startDate: new Date(body.startDate),
-    endDate: new Date(body.endDate),
-    location: body.location,
-    capacity: body.capacity ?? 0,
-    registrationDeadline: new Date(body.registrationDeadline),
-    images: body.images ?? [],
-    fee: body.fee ?? 0,
-    stripePaymentId: body.stripePaymentId ?? null,
-    paymentNote: body.paymentNote ?? "",
-    isDraft: body.isDraft ?? false,
-    registeredUsers: [],
-    registeredChildren: [],
-    eventWaiverTemplates,
-  };
-
-  const newEvent = await Event.create(toCreate);
-  return NextResponse.json(formatEvents(newEvent), { status: 201 });
-}
 // GET: Fetch a single event by ID
 export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
