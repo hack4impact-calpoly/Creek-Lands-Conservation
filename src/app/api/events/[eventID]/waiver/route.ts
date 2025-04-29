@@ -37,34 +37,28 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
   }
 
   try {
-    const pdfPath = path.join(process.cwd(), "public", "waiver.pdf");
+    const waiverName = "waiver2";
+    const pdfPath = path.join(process.cwd(), "public", `${waiverName}.pdf`);
     const pdfBytes = fs.readFileSync(pdfPath);
 
-    // Use pdfreader to extract text and find the word 'Signature'
+    // Use pdfreader to extract text and find the word 'SIGNATURE' first, then fall back to 'sign'
     const positions = await extractTextAndFindSign(pdfPath);
 
-    if (positions.length === 0) {
-      return NextResponse.json({ error: "No 'Signature' found in the document" }, { status: 400 });
-    }
+    // Choose the first position to place the signature (can be refined based on the business logic)
+    const signPosition = positions[0];
 
     const pdfDoc = await PDFDocument.load(pdfBytes);
-
-    // Use the position of the first "Signature" found
-    const signPosition = positions[0]; // Assume the first occurrence is where you want to place the signature
-
     const page = pdfDoc.getPages()[signPosition.page - 1];
     const pdfWidth = page.getWidth();
     const pdfHeight = page.getHeight();
-    console.log("PDF dimensions:", pdfWidth, pdfHeight);
+
     const pngImage = await pdfDoc.embedPng(signatureBase64);
-    const { width, height } = pngImage.scale(0.35); // or use .scaleToFit(maxWidth, maxHeight)
+    const { width, height } = pngImage.scale(0.35); // Scale signature image
 
     // Scale reader's x/y into PDF's coordinate space
     const scaledX = (signPosition.x / 100) * 2 * pdfWidth;
-    const scaledY = pdfHeight - (signPosition.y / 100) * 2 * pdfHeight; // invert y-axis
-    console.log("Scaled coords:", { x: scaledX, y: scaledY, pdfHeight });
+    const scaledY = pdfHeight - (signPosition.y / 100) * 2 * pdfHeight; // Invert y-axis
 
-    // Adjust the position to ensure the signature is placed properly (you can fine-tune this)
     page.drawImage(pngImage, {
       x: scaledX,
       y: scaledY,
@@ -74,7 +68,7 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
 
     const modifiedPdf = await pdfDoc.save();
 
-    const signedFilename = `waiver-signed-${eventID}-${user._id}.pdf`;
+    const signedFilename = `${waiverName}-signed-${eventID}-${user._id}.pdf`;
     const outputPath = path.join(process.cwd(), "public", "signed-waivers", signedFilename);
     const outputDir = path.join(process.cwd(), "public", "signed-waivers");
 
@@ -91,34 +85,36 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
   }
 }
 
-// Function to extract text and find position of the word "Sign"
-async function extractTextAndFindSign(pdfPath) {
+// Function to extract text and find positions for exact 'SIGNATURE' or fallback to 'sign'
+async function extractTextAndFindSign(pdfPath: string) {
   return new Promise((resolve, reject) => {
-    const positions = [];
+    const exactMatches: any[] = [];
+    const fallbackMatches: any[] = [];
     let currentPage = 0;
+
     new PdfReader().parseFileItems(pdfPath, (err, item) => {
-      if (err) reject(err);
+      if (err) return reject(err);
 
       if (item?.page) {
         currentPage = item.page;
       }
 
       if (item && item.text) {
-        const regex = /\bSignature\b/i; // Look for the word 'Signature'
-        if (regex.test(item.text)) {
-          console.log(`Found text: "${item.text}" at x=${item.x}, y=${item.y}`);
-          // Capture position of the word 'Sign'
-          positions.push({
-            x: item.x,
-            y: item.y,
-            page: currentPage,
-            text: item.text,
-          });
+        const text = item.text.trim();
+        const normalized = text.replace(/\s+/g, "").toLowerCase(); // Remove spaces for matching
+
+        if (/^signature$/.test(normalized)) {
+          console.log(`[MATCH: EXACT] Page ${currentPage}: "${text}"`);
+          exactMatches.push({ x: item.x, y: item.y, page: currentPage, text });
+        } else if (/^signa/.test(normalized)) {
+          console.log(`[MATCH: FALLBACK] Page ${currentPage}: "${text}"`);
+          fallbackMatches.push({ x: item.x, y: item.y, page: currentPage, text });
         }
       }
 
       if (!item) {
-        resolve(positions);
+        const finalMatches = exactMatches.length > 0 ? exactMatches : fallbackMatches;
+        resolve(finalMatches);
       }
     });
   });
