@@ -62,15 +62,7 @@ export default function Home() {
     if (!userData) return;
 
     try {
-      // Step 1: Register via API
-      const response = await fetch(`/api/events/${eventId}/registrations`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attendees }),
-      });
-      if (!response.ok) throw new Error("Failed to register");
-
-      // Step 2: Optimistically update userData
+      // Step 1: Optimistically update userData
       const updatedUserData = { ...userData };
       if (attendees.includes(userData._id)) {
         updatedUserData.registeredEvents = [...(updatedUserData.registeredEvents || []), eventId];
@@ -86,7 +78,7 @@ export default function Home() {
       });
       setUserData(updatedUserData);
 
-      // Step 3: Update event sections
+      // Step 2: Update event sections
       const registeredEventIds = [
         ...(updatedUserData.registeredEvents || []),
         ...(updatedUserData.children || []).flatMap((child) => child.registeredEvents || []),
