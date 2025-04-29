@@ -37,27 +37,13 @@ export default function AdminPage() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleDeleteEvent = async (eventId: string) => {
-    try {
-      // Call backend to delete the event
-      const response = await fetch(`/api/events/${eventId}`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-      });
-      if (!response.ok) throw new Error("Failed to delete event");
-
-      setEventSections((prev) => ({
-        unpublished: prev.unpublished.filter((event) => event.id !== eventId),
-        active: prev.active.filter((event) => event.id !== eventId),
-        upcoming: prev.upcoming.filter((event) => event.id !== eventId), // Fixed syntax
-        past: prev.past.filter((event) => event.id !== eventId),
-      }));
-    } catch (error: any) {
-      console.error("Deletion failed:", error);
-      setError("Failed to delete event");
-      // Refetch events to sync with backend
-      fetchAndProcessEvents();
-    }
+  const handleDeleteEvent = (eventId: string) => {
+    setEventSections((prev) => ({
+      unpublished: prev.unpublished.filter((event) => event.id !== eventId),
+      active: prev.active.filter((event) => event.id !== eventId),
+      upcoming: prev.upcoming.filter((event) => event.id !== eventId),
+      past: prev.past.filter((event) => event.id !== eventId),
+    }));
   };
 
   if (isLoading) {
