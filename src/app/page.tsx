@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { getEvents } from "@/app/actions/events/actions";
-import { EventInfo, LimitedEventInfo } from "@/types/events";
+import type { LimitedEventInfo } from "@/types/events";
 import EventSection from "@/components/EventComponent/EventSection";
 import SkeletonEventSection from "@/components/EventComponent/EventSectionSkeleton";
-import { formatEvents } from "@/lib/utils";
 
 interface IChildData {
   _id: string;
@@ -92,6 +91,47 @@ export default function Home() {
     }
   };
 
+  // Add a new handler for cancellation
+  const handleCancelRegistration = async (eventId: string, cancelledAttendees: string[]) => {
+    if (!userData) return;
+
+    try {
+      // Step 1: Optimistically update userData
+      const updatedUserData = { ...userData };
+
+      // Remove event from user's registeredEvents if user was cancelled
+      if (cancelledAttendees.includes(userData._id)) {
+        updatedUserData.registeredEvents = updatedUserData.registeredEvents.filter((id) => id !== eventId);
+      }
+
+      // Remove event from children's registeredEvents if any children were cancelled
+      updatedUserData.children = updatedUserData.children.map((child) => {
+        if (cancelledAttendees.includes(child._id)) {
+          return {
+            ...child,
+            registeredEvents: child.registeredEvents.filter((id) => id !== eventId),
+          };
+        }
+        return child;
+      });
+
+      setUserData(updatedUserData);
+
+      // Step 2: Update event sections
+      const registeredEventIds = [
+        ...(updatedUserData.registeredEvents || []),
+        ...(updatedUserData.children || []).flatMap((child) => child.registeredEvents || []),
+      ];
+
+      const allEvents = [...eventSections.available, ...eventSections.registered, ...eventSections.past];
+      const categorized = categorizeEvents(allEvents, registeredEventIds);
+      setEventSections(categorized);
+    } catch (error: any) {
+      console.error("Cancellation failed:", error);
+      setError("Failed to cancel registration for the event");
+    }
+  };
+
   useEffect(() => {
     const fetchAndProcessEvents = async () => {
       if (!isLoaded) return;
@@ -125,6 +165,7 @@ export default function Home() {
         setError(error.message || "Failed to load events");
         setIsLoading(false);
       }
+      setIsLoading(false);
     };
 
     fetchAndProcessEvents();
@@ -143,9 +184,24 @@ export default function Home() {
 
   return (
     <main className="mx-auto mb-8 flex flex-col">
-      <EventSection title="Registered Events" events={eventSections.registered} onRegister={handleRegister} />
-      <EventSection title="Available Events" events={eventSections.available} onRegister={handleRegister} />
-      <EventSection title="Past Events" events={eventSections.past} onRegister={handleRegister} />
+      <EventSection
+        title="Registered Events"
+        events={eventSections.registered}
+        onRegister={handleRegister}
+        onCancelRegistration={handleCancelRegistration}
+      />
+      <EventSection
+        title="Available Events"
+        events={eventSections.available}
+        onRegister={handleRegister}
+        onCancelRegistration={handleCancelRegistration}
+      />
+      <EventSection
+        title="Past Events"
+        events={eventSections.past}
+        onRegister={handleRegister}
+        onCancelRegistration={handleCancelRegistration}
+      />
     </main>
   );
 }

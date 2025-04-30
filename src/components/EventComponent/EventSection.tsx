@@ -1,4 +1,8 @@
-import { LimitedEventInfo } from "@/types/events";
+"use client";
+
+import type React from "react";
+
+import type { LimitedEventInfo } from "@/types/events";
 import EventCard from "./EventCard";
 import { useEffect, useRef, useState } from "react";
 import { Button } from "../ui/button";
@@ -9,12 +13,14 @@ export default function EventSection({
   events,
   onDelete,
   onRegister,
+  onCancelRegistration,
   children,
 }: {
   title: string;
   events: LimitedEventInfo[];
   onDelete?: (eventId: string) => void;
   onRegister?: (eventId: string, attendees: string[]) => void;
+  onCancelRegistration?: (eventId: string, attendees: string[]) => void;
   children?: React.ReactNode;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -74,6 +80,7 @@ export default function EventSection({
                 currentRegistrations={event.currentRegistrations}
                 onDelete={onDelete}
                 onRegister={onRegister}
+                onCancelRegistration={onCancelRegistration}
               />
             ))}
           </div>
