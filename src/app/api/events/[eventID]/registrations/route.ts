@@ -62,9 +62,17 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
     return NextResponse.json({ error: "Registration deadline has passed" }, { status: 400 });
   }
 
-  const totalRegistered = event.registeredUsers.length + event.registeredChildren.length;
-  const newRegistrations = newRegisteredUsers.length + newRegisteredChildren.length;
-  if (event.capacity > 0 && totalRegistered + newRegistrations > event.capacity) {
+  if (newRegisteredUsers.length + newRegisteredChildren.length === 0) {
+    return NextResponse.json({ error: "Selected attendees are already registered." }, { status: 400 });
+  }
+
+  const totalRegistered =
+    event.registeredUsers.length +
+    event.registeredChildren.length +
+    newRegisteredUsers.length +
+    newRegisteredChildren.length;
+
+  if (event.capacity > 0 && totalRegistered > event.capacity) {
     return NextResponse.json({ error: "Event is at full capacity" }, { status: 400 });
   }
 
