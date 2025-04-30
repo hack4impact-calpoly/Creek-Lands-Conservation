@@ -165,12 +165,10 @@ const categorizeEvents = (events: LimitedEventInfo[], registeredEventIds: string
     const endDateTime = new Date(event.endDate);
     const isRegistered = registeredEventIds.includes(event.id);
 
-    if (isRegistered) {
-      if (endDateTime < now) {
-        sections.past.push(event);
-      } else {
-        sections.registered.push(event);
-      }
+    if (endDateTime < now) {
+      sections.past.push(event);
+    } else if (isRegistered) {
+      sections.registered.push(event);
     } else {
       sections.available.push(event);
     }
