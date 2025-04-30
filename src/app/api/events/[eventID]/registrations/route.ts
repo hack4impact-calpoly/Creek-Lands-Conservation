@@ -57,6 +57,17 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
   const newRegisteredUsers: mongoose.Types.ObjectId[] = [];
   const newRegisteredChildren: mongoose.Types.ObjectId[] = [];
 
+  const now = new Date();
+  if (event.registrationDeadline && now > new Date(event.registrationDeadline)) {
+    return NextResponse.json({ error: "Registration deadline has passed" }, { status: 400 });
+  }
+
+  const totalRegistered = event.registeredUsers.length + event.registeredChildren.length;
+  const newRegistrations = newRegisteredUsers.length + newRegisteredChildren.length;
+  if (event.capacity > 0 && totalRegistered + newRegistrations > event.capacity) {
+    return NextResponse.json({ error: "Event is at full capacity" }, { status: 400 });
+  }
+
   for (const id of attendees) {
     if (id === mongoUserId) {
       if (!event.registeredUsers.some((ru: RawRegisteredUser) => ru.user.toString() === id)) {
