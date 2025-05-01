@@ -54,27 +54,13 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  const newRegisteredUsers: mongoose.Types.ObjectId[] = [];
-  const newRegisteredChildren: mongoose.Types.ObjectId[] = [];
-
   const now = new Date();
   if (event.registrationDeadline && now > new Date(event.registrationDeadline)) {
     return NextResponse.json({ error: "Registration deadline has passed" }, { status: 400 });
   }
 
-  if (newRegisteredUsers.length + newRegisteredChildren.length === 0) {
-    return NextResponse.json({ error: "Selected attendees are already registered." }, { status: 400 });
-  }
-
-  const totalRegistered =
-    event.registeredUsers.length +
-    event.registeredChildren.length +
-    newRegisteredUsers.length +
-    newRegisteredChildren.length;
-
-  if (event.capacity > 0 && totalRegistered > event.capacity) {
-    return NextResponse.json({ error: "Event is at full capacity" }, { status: 400 });
-  }
+  const newRegisteredUsers: mongoose.Types.ObjectId[] = [];
+  const newRegisteredChildren: mongoose.Types.ObjectId[] = [];
 
   for (const id of attendees) {
     if (id === mongoUserId) {
@@ -99,6 +85,13 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
 
   if (newRegisteredUsers.length + newRegisteredChildren.length === 0) {
     return NextResponse.json({ error: "Selected attendees are already registered." }, { status: 400 });
+  }
+
+  // Capacity check
+  const totalRegistered = event.registeredUsers.length + event.registeredChildren.length;
+
+  if (event.capacity > 0 && totalRegistered > event.capacity) {
+    return NextResponse.json({ error: "Event is at full capacity" }, { status: 400 });
   }
 
   // Save in transaction
