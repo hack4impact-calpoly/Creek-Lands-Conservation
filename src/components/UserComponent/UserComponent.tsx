@@ -13,6 +13,34 @@ interface Child {
   gender: string;
 }
 
+interface Guardian {
+  name: string;
+  relationship: string;
+  phone: string;
+  work: string;
+  email: string;
+  canPickup: boolean;
+}
+
+interface EmergencyContact {
+  name: string;
+  phone: string;
+  work: string;
+  relationship: string;
+  canPickup: boolean;
+}
+
+interface MedicalInfo {
+  photoRelease: boolean;
+  allergies: string;
+  insurance: string;
+  doctorName: string;
+  doctorPhone: string;
+  behaviorNotes: string;
+  dietaryRestrictions: string;
+  otherNotes: string;
+}
+
 const genderOptions = ["Male", "Female", "Non-binary", "Prefer not to say"];
 let localChildCounter = 0;
 
@@ -52,6 +80,24 @@ export default function PersonalInfo() {
     zipCode: "",
   });
   const [originalChildren, setOriginalChildren] = useState<Child[]>([]);
+
+  const [guardians, setGuardians] = useState<Guardian[]>([]);
+
+  const [emergencyContacts, setEmergencyContacts] = useState<EmergencyContact[]>([
+    { name: "", phone: "", work: "", relationship: "", canPickup: false },
+    { name: "", phone: "", work: "", relationship: "", canPickup: false },
+  ]);
+
+  const [medicalInfo, setMedicalInfo] = useState<MedicalInfo>({
+    photoRelease: false,
+    allergies: "",
+    insurance: "",
+    doctorName: "",
+    doctorPhone: "",
+    behaviorNotes: "",
+    dietaryRestrictions: "",
+    otherNotes: "",
+  });
 
   // Validation errors
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
@@ -594,6 +640,256 @@ export default function PersonalInfo() {
             </button>
           </div>
         )}
+      </section>
+
+      {/* Emergency Contacts Section */}
+      <section className="mt-10">
+        <h3 className="mb-4 text-xl font-semibold">Emergency Contacts</h3>
+
+        {emergencyContacts.map((contact, index) => (
+          <div key={index} className="mb-4 space-y-4 border-b pb-4">
+            <div className="text-lg font-semibold">Contact #{index + 1}</div>
+
+            {/* Name */}
+            <div className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">Name</label>
+              <input
+                type="text"
+                value={contact.name}
+                onChange={(e) => {
+                  const updated = [...emergencyContacts];
+                  updated[index].name = e.target.value;
+                  setEmergencyContacts(updated);
+                }}
+                disabled={!isEditing}
+                placeholder="Matthew Graymer"
+                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+              />
+            </div>
+
+            {/* Phone */}
+            <div className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">Phone Number</label>
+              <input
+                type="text"
+                value={contact.phone}
+                onChange={(e) => {
+                  const updated = [...emergencyContacts];
+                  updated[index].phone = e.target.value;
+                  setEmergencyContacts(updated);
+                }}
+                disabled={!isEditing}
+                placeholder="(805) 123-4567"
+                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+              />
+            </div>
+
+            {/* Work Number */}
+            <div className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">Work Number</label>
+              <input
+                type="text"
+                value={contact.work}
+                onChange={(e) => {
+                  const updated = [...emergencyContacts];
+                  updated[index].work = e.target.value;
+                  setEmergencyContacts(updated);
+                }}
+                disabled={!isEditing}
+                placeholder="(805) 123-4567"
+                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+              />
+            </div>
+
+            {/* Relationship */}
+            <div className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">Relationship</label>
+              <input
+                type="text"
+                value={contact.relationship}
+                onChange={(e) => {
+                  const updated = [...emergencyContacts];
+                  updated[index].relationship = e.target.value;
+                  setEmergencyContacts(updated);
+                }}
+                disabled={!isEditing}
+                placeholder="Father, aunt, etc"
+                className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+              />
+            </div>
+
+            {/* Can Pick Up */}
+            <div className="grid grid-cols-3 items-center gap-4">
+              <label className="text-sm font-medium text-gray-700">Can Pick Up?</label>
+              <div className="col-span-2 flex gap-6">
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    checked={contact.canPickup === true}
+                    disabled={!isEditing}
+                    onChange={() => {
+                      const updated = [...emergencyContacts];
+                      updated[index].canPickup = true;
+                      setEmergencyContacts(updated);
+                    }}
+                  />
+                  Yes
+                </label>
+                <label className="flex items-center gap-2">
+                  <input
+                    type="radio"
+                    checked={contact.canPickup === false}
+                    disabled={!isEditing}
+                    onChange={() => {
+                      const updated = [...emergencyContacts];
+                      updated[index].canPickup = false;
+                      setEmergencyContacts(updated);
+                    }}
+                  />
+                  No
+                </label>
+              </div>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      {/* Medical & Photo Release Section */}
+      <section className="mt-10">
+        <h3 className="mb-4 text-xl font-semibold text-gray-800">Important Note</h3>
+        <p className="mb-2 text-sm text-gray-700">
+          In an emergency, sudden illness or unwellness, or serious behavior violation, students who cannot be
+          immediately picked up by a guardian or emergency contact may stay on our bus or other vehicle with a chaperone
+          until they can be picked up. In an emergency where serious medical attention is needed, parents or guardians
+          will be notified immediately of student’s location. If a parent or guardian cannot be reached, the emergency
+          contacts will be notified in the order listed above.
+        </p>
+
+        <h3 className="mb-2 mt-8 text-xl font-semibold text-gray-800">Photo Release</h3>
+        <p className="mb-4 text-sm text-gray-700">
+          I hereby further consent that any photograph in which my child or ward appears that is taken during his or her
+          participation in a Program or other Creek Lands Conservation activity may be used by Creek Lands Conservation,
+          its funders, and partners without compensation to me for purposes of publicity or advertising in catalogs,
+          flyers, news stories, etc.
+        </p>
+        <h3 className="mb-4 text-xl font-semibold text-gray-800">Medical & Photo Release</h3>
+        <div className="space-y-4">
+          {/* Photo Release */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Photo Release</label>
+            <div className="col-span-2 flex gap-6">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={medicalInfo.photoRelease === true}
+                  disabled={!isEditing}
+                  onChange={() => setMedicalInfo((prev) => ({ ...prev, photoRelease: true }))}
+                />
+                Yes
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={medicalInfo.photoRelease === false}
+                  disabled={!isEditing}
+                  onChange={() => setMedicalInfo((prev) => ({ ...prev, photoRelease: false }))}
+                />
+                No
+              </label>
+            </div>
+          </div>
+
+          {/* Allergies / Medications */}
+          <div className="grid grid-cols-3 items-start gap-4">
+            <label className="text-sm font-medium text-gray-700">Allergies or Medications</label>
+            <textarea
+              rows={2}
+              value={medicalInfo.allergies}
+              onChange={(e) => setMedicalInfo((prev) => ({ ...prev, allergies: e.target.value }))}
+              disabled={!isEditing}
+              placeholder="E.g. Allergic to bees and peanut butter, carries an epipen."
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Insurance Provider */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Health Insurance Provider</label>
+            <input
+              type="text"
+              value={medicalInfo.insurance}
+              onChange={(e) => setMedicalInfo((prev) => ({ ...prev, insurance: e.target.value }))}
+              disabled={!isEditing}
+              placeholder="E.g. Cigna, Anthem Blue Cross"
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Doctor Name */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Doctor Name</label>
+            <input
+              type="text"
+              value={medicalInfo.doctorName}
+              onChange={(e) => setMedicalInfo((prev) => ({ ...prev, doctorName: e.target.value }))}
+              disabled={!isEditing}
+              placeholder="Dr. John Kim"
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Doctor Phone */}
+          <div className="grid grid-cols-3 items-center gap-4">
+            <label className="text-sm font-medium text-gray-700">Doctor Phone Number</label>
+            <input
+              type="text"
+              value={medicalInfo.doctorPhone}
+              onChange={(e) => setMedicalInfo((prev) => ({ ...prev, doctorPhone: e.target.value }))}
+              disabled={!isEditing}
+              placeholder="(805) 123-4567"
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Behavior Notes */}
+          <div className="grid grid-cols-3 items-start gap-4">
+            <label className="text-sm font-medium text-gray-700">Behavior Notes / Support Needs</label>
+            <textarea
+              rows={2}
+              value={medicalInfo.behaviorNotes}
+              onChange={(e) => setMedicalInfo((prev) => ({ ...prev, behaviorNotes: e.target.value }))}
+              disabled={!isEditing}
+              placeholder="Can be stubborn when it comes to trying new things but takes some time to warm up"
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Dietary Restrictions */}
+          <div className="grid grid-cols-3 items-start gap-4">
+            <label className="text-sm font-medium text-gray-700">Dietary Restrictions</label>
+            <textarea
+              rows={2}
+              value={medicalInfo.dietaryRestrictions}
+              onChange={(e) => setMedicalInfo((prev) => ({ ...prev, dietaryRestrictions: e.target.value }))}
+              disabled={!isEditing}
+              placeholder="E.g. vegetarian"
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+
+          {/* Additional Notes */}
+          <div className="grid grid-cols-3 items-start gap-4">
+            <label className="text-sm font-medium text-gray-700">Additional Notes</label>
+            <textarea
+              rows={2}
+              value={medicalInfo.otherNotes}
+              onChange={(e) => setMedicalInfo((prev) => ({ ...prev, otherNotes: e.target.value }))}
+              disabled={!isEditing}
+              placeholder="Additional notes here..."
+              className="col-span-2 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
+        </div>
       </section>
 
       {/* Save and Cancel Buttons */}
