@@ -4,5 +4,14 @@ import WaiverSignatureForm from "@/components/WaiverSignatureComponent/WaiverSig
 function testfunc() {}
 
 export default function Page() {
-  return <WaiverSignatureForm participantType="child" waiverId="1" onSigned={testfunc}></WaiverSignatureForm>;
+  return (
+    <WaiverSignatureForm
+      eventID="1"
+      waiverID="1"
+      participants={[
+        { firstName: "James", lastName: "Hudson", userID: "e" },
+        { firstName: "Ava", lastName: "Hudson", userID: "2" },
+      ]}
+    ></WaiverSignatureForm>
+  );
 }
