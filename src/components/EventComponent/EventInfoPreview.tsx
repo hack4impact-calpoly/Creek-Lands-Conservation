@@ -468,6 +468,7 @@ export function EventInfoPreview({
       {!isFull && (
         <EventRegisterPreview
           isOpen={isRegisterDialogOpen}
+          capacityLeft={capacity ? capacity - (currentRegistrations ?? 0) : 0}
           onOpenChange={setIsRegisterDialogOpen}
           eventInfo={{
             title: title,

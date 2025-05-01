@@ -10,6 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface RegisterDialogProps {
   isOpen: boolean;
+  capacityLeft: number;
   onOpenChange: (open: boolean) => void;
   eventInfo: {
     title: string;
@@ -29,11 +30,20 @@ interface RegisterDialogProps {
   onConfirm: (attendees: string[]) => void;
 }
 
-export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo, onConfirm }: RegisterDialogProps) {
+export function EventRegisterPreview({
+  isOpen,
+  capacityLeft,
+  onOpenChange,
+  eventInfo,
+  userInfo,
+  onConfirm,
+}: RegisterDialogProps) {
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
   const [waiverEmail, setWaiverEmail] = useState("");
   const [waiverSigned, setWaiverSigned] = useState(false);
+  const remainingCapacity = capacityLeft;
   const { toast } = useToast();
+  console.log(remainingCapacity);
 
   const allRegistered = userInfo.alreadyRegistered && userInfo.family.every((member) => member.alreadyRegistered);
 
@@ -98,14 +108,22 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
                       checked ? [...prev, userInfo.id] : prev.filter((id) => id !== userInfo.id),
                     );
                   }}
-                  disabled={userInfo.alreadyRegistered}
+                  disabled={
+                    userInfo.alreadyRegistered ||
+                    (!selectedAttendees.includes(userInfo.id) && selectedAttendees.length >= remainingCapacity)
+                  }
                 />
                 <label
                   htmlFor={userInfo.id}
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
                   {userInfo.name}
-                  {userInfo.alreadyRegistered && " (Already Registered)"}
+                  {(userInfo.alreadyRegistered ||
+                    (!selectedAttendees.includes(userInfo.id) && selectedAttendees.length >= remainingCapacity)) && (
+                    <span className="ml-2 text-xs italic text-gray-500">
+                      {userInfo.alreadyRegistered ? "(Already registered)" : " (Capacity full)"}
+                    </span>
+                  )}
                 </label>
               </div>
               {userInfo.family.map((member) => (
@@ -118,14 +136,24 @@ export function EventRegisterPreview({ isOpen, onOpenChange, eventInfo, userInfo
                         checked ? [...prev, member.id] : prev.filter((id) => id !== member.id),
                       );
                     }}
-                    disabled={member.alreadyRegistered}
+                    disabled={
+                      member.alreadyRegistered ||
+                      (!selectedAttendees.includes(member.id) && selectedAttendees.length >= remainingCapacity)
+                    }
                   />
                   <label
                     htmlFor={member.id}
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
                     {member.name}
-                    {member.alreadyRegistered && " (Already Registered)"}
+                    <span className="ml-2 text-xs italic text-gray-500">
+                      {(member.alreadyRegistered ||
+                        (!selectedAttendees.includes(member.id) && selectedAttendees.length >= remainingCapacity)) && (
+                        <span className="ml-2 text-xs italic text-gray-500">
+                          {member.alreadyRegistered ? "(Already registered)" : " (Capacity full)"}
+                        </span>
+                      )}
+                    </span>
                   </label>
                 </div>
               ))}

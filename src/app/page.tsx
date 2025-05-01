@@ -60,35 +60,37 @@ export default function Home() {
   const handleRegister = async (eventId: string, attendees: string[]) => {
     if (!userData) return;
 
-    try {
-      // Step 1: Optimistically update userData
-      const updatedUserData = { ...userData };
-      if (attendees.includes(userData._id)) {
-        updatedUserData.registeredEvents = [...(updatedUserData.registeredEvents || []), eventId];
-      }
-      updatedUserData.children = updatedUserData.children.map((child) => {
-        if (attendees.includes(child._id)) {
-          return {
-            ...child,
-            registeredEvents: [...(child.registeredEvents || []), eventId],
-          };
-        }
-        return child;
-      });
-      setUserData(updatedUserData);
-
-      // Step 2: Update event sections
-      const registeredEventIds = [
-        ...(updatedUserData.registeredEvents || []),
-        ...(updatedUserData.children || []).flatMap((child) => child.registeredEvents || []),
-      ];
-      const allEvents = [...eventSections.available, ...eventSections.registered, ...eventSections.past];
-      const categorized = categorizeEvents(allEvents, registeredEventIds);
-      setEventSections(categorized);
-    } catch (error: any) {
-      console.error("Registration failed:", error);
-      setError("Failed to register for the event");
+    // Update userData with registered events
+    const updatedUserData = { ...userData };
+    if (attendees.includes(userData._id)) {
+      updatedUserData.registeredEvents = [...(updatedUserData.registeredEvents || []), eventId];
     }
+    updatedUserData.children = updatedUserData.children.map((child) => {
+      if (attendees.includes(child._id)) {
+        return {
+          ...child,
+          registeredEvents: [...(child.registeredEvents || []), eventId],
+        };
+      }
+      return child;
+    });
+    setUserData(updatedUserData);
+
+    // Update eventSections with new registration count and categorization
+    const allEvents = [...eventSections.available, ...eventSections.registered, ...eventSections.past];
+    const updatedEvents = allEvents.map((event) => {
+      if (event.id === eventId) {
+        return { ...event, currentRegistrations: event.currentRegistrations + attendees.length };
+      }
+      return event;
+    });
+
+    const registeredEventIds = [
+      ...(updatedUserData.registeredEvents || []),
+      ...(updatedUserData.children || []).flatMap((child) => child.registeredEvents || []),
+    ];
+    const categorized = categorizeEvents(updatedEvents, registeredEventIds);
+    setEventSections(categorized);
   };
 
   // Add a new handler for cancellation
@@ -221,12 +223,10 @@ const categorizeEvents = (events: LimitedEventInfo[], registeredEventIds: string
     const endDateTime = new Date(event.endDate);
     const isRegistered = registeredEventIds.includes(event.id);
 
-    if (isRegistered) {
-      if (endDateTime < now) {
-        sections.past.push(event);
-      } else {
-        sections.registered.push(event);
-      }
+    if (endDateTime < now) {
+      sections.past.push(event);
+    } else if (isRegistered) {
+      sections.registered.push(event);
     } else {
       sections.available.push(event);
     }
