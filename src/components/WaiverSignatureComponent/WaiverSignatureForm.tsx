@@ -1,78 +1,126 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useForm } from "react-hook-form";
-import { InputField } from "@/components/Forms/InputField";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import SignatureCanvas from "./SignatureCanvas";
-import { title } from "process";
+
+type Participant = {
+  firstName: string;
+  lastName: string;
+  userID: string;
+  isChild: boolean;
+};
+
+type Waiver = {
+  _id: string;
+  fileKey: string;
+};
 
 type WaiverSignatureFormProps = {
-  eventID: string;
-  waiverID: string;
-  title?: string;
-  participants: {
-    firstName: string;
-    lastName: string;
-    userID: string;
-  }[];
-  // onSigned: (data: { waiverId: string; participantId: string; signature: string }) => void;
+  eventId: string;
+  participants: Participant[];
+  onAllSigned: () => void;
 };
 
-type WaiverSignatureFormData = {
-  agreedToTerms: boolean;
-};
-
-export default function WaiverSignatureForm(props: WaiverSignatureFormProps) {
-  const { eventID, waiverID, title, participants } = props;
-  const [waiverName] = useState(title || "Waiver and Liability Agreement");
+export default function WaiverSignatureForm({ eventId, participants, onAllSigned }: WaiverSignatureFormProps) {
+  const [waivers, setWaivers] = useState<Waiver[]>([]);
+  const [currentIndex, setCurrentIndex] = useState(0);
   const [waiverUrl, setWaiverUrl] = useState("");
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<WaiverSignatureFormData>();
+  const [signed, setSigned] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [showError, setShowError] = useState(false);
 
+  // Fetch waivers for the event
   useEffect(() => {
-    const fetchWaiver = async () => {
-      const res = await fetch(
-        `/api/s3/presigned-waiver?fileName=${encodeURIComponent(
-          "1745601581740-8373191ac57207f0611156757ec9316e-Revised 3_2025_ CLC ED PROGRAM WAIVER AND RELEASE (Engl & Esp).pdf",
-        )}&mimetype=application/pdf&type=template&eventId=6813445539132eb8cd0958ab`,
-      );
-      const data = await res.json();
-      console.log(data);
-      setWaiverUrl(data.fileUrl);
+    const fetchWaivers = async () => {
+      try {
+        const res = await fetch(`/api/events/${eventId}/waivers`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to fetch waivers.");
+        setWaivers(data.waivers);
+      } catch (err) {
+        console.error("Error fetching waivers:", err);
+      }
     };
-    fetchWaiver();
-  }, [waiverID]);
+    fetchWaivers();
+  }, [eventId]);
 
-  const onSubmit = (values: WaiverSignatureFormData) => {
-    // TODO  actually use this
+  // Fetch S3 presigned URL for current waiver
+  useEffect(() => {
+    const fetchWaiverUrl = async () => {
+      if (waivers.length === 0 || !waivers[currentIndex]) return;
+      setLoading(true);
+      try {
+        const fileKey = waivers[currentIndex].fileKey;
+        const res = await fetch(`/api/s3/presigned-download?fileKey=${encodeURIComponent(fileKey)}`);
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Failed to get presigned URL.");
+        setWaiverUrl(data.url);
+      } catch (err) {
+        console.error("Error fetching waiver URL:", err);
+        setWaiverUrl("");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchWaiverUrl();
+  }, [waivers, currentIndex]);
+
+  // Reset state when switching waivers
+  useEffect(() => {
+    setSigned(false);
+    setAgreedToTerms(false);
+    setShowError(false);
+  }, [currentIndex]);
+
+  const onSubmit = () => {
+    if (!agreedToTerms) {
+      setShowError(true);
+      return;
+    }
+
+    if (currentIndex < waivers.length - 1) {
+      setCurrentIndex((prev) => prev + 1);
+    } else {
+      // Going to assume this is some type of redirect to the payment portal.
+      onAllSigned();
+    }
   };
+
+  const currentWaiver = waivers[currentIndex];
+
+  if (!currentWaiver || loading) {
+    return <p className="mt-12 text-center text-gray-600">Loading waiver...</p>;
+  }
 
   return (
     <div className="mx-auto mb-10 flex max-w-[960px] flex-col items-center px-6">
-      <h1 className="mb-6 mr-auto mt-4 text-2xl font-semibold">{waiverName}</h1>
+      <h1 className="mb-6 mr-auto mt-4 text-2xl font-semibold">Waiver and Liability Agreement</h1>
 
-      <iframe src={waiverUrl} className="min-h-[600px] w-full rounded border" title="Waiver Preview" />
+      <iframe src={waiverUrl} className="min-h-[600px] w-full rounded border" title="Waiver Preview" loading="lazy" />
 
-      <form onSubmit={handleSubmit(onSubmit)} className="my-8 w-full space-y-6">
+      <div className="my-8 w-full space-y-6">
         <div>
           <div className="flex items-start gap-2">
             <Checkbox
-              id="agree"
-              {...register("agreedToTerms", {
-                validate: (value) => value === true || "You must agree to the terms before continuing.",
-              })}
+              id="agreedToTerms"
+              checked={agreedToTerms}
+              onCheckedChange={(checked) => {
+                setAgreedToTerms(!!checked);
+                setShowError(false);
+              }}
             />
-            <label htmlFor="agree" className="text-sm font-bold leading-5">
+            <label htmlFor="agreedToTerms" className="text-sm font-bold leading-5">
               By checking this box, I agree to the terms of service stated above.
             </label>
           </div>
-          {errors.agreedToTerms && <p className="text-xs text-red-500 sm:text-sm">{errors.agreedToTerms.message}</p>}
+          {showError && (
+            <p className="text-xs text-red-500 sm:text-sm">You must agree to the terms before continuing.</p>
+          )}
         </div>
+
         <div className="mb-2">
           <p className="text-sm font-bold leading-5">You are signing for the following participants:</p>
           <div className="mt-2 flex flex-wrap gap-12 text-sm">
@@ -83,15 +131,28 @@ export default function WaiverSignatureForm(props: WaiverSignatureFormProps) {
             ))}
           </div>
         </div>
+
         <div className="flex justify-center">
-          <SignatureCanvas></SignatureCanvas>
+          <SignatureCanvas
+            eventId={eventId}
+            waiverId={currentWaiver._id}
+            fileKey={currentWaiver.fileKey}
+            participants={participants}
+            onSigned={() => setSigned(true)}
+          />
         </div>
+
         <div className="flex justify-center">
-          <Button type="submit" className="bg-[#488644] text-white hover:bg-[#3a6d37]">
-            Proceeed to Payment <ChevronRight />
+          <Button
+            type="button"
+            onClick={onSubmit}
+            className="bg-[#488644] text-white hover:bg-[#3a6d37]"
+            disabled={!signed || !waiverUrl}
+          >
+            {currentIndex === waivers.length - 1 ? "Proceed to Payment" : "Next Waiver"} <ChevronRight />
           </Button>
         </div>
-      </form>
+      </div>
     </div>
   );
 }

@@ -6,12 +6,12 @@ function testfunc() {}
 export default function Page() {
   return (
     <WaiverSignatureForm
-      eventID="1"
-      waiverID="68084f0128c720235cbe5438"
+      eventId="6813445539132eb8cd0958ab"
       participants={[
-        { firstName: "James", lastName: "Hudson", userID: "e" },
-        { firstName: "Ava", lastName: "Hudson", userID: "2" },
+        { firstName: "James", lastName: "Hudson", userID: "e", isChild: true },
+        { firstName: "Ava", lastName: "Hudson", userID: "2", isChild: true },
       ]}
+      onAllSigned={() => console.log("redirecting...")}
     ></WaiverSignatureForm>
   );
 }
