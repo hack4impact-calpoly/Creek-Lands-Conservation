@@ -3,11 +3,12 @@ import { auth } from "@clerk/nextjs/server";
 import connectDB from "@/database/db";
 import User from "@/database/userSchema";
 import Event from "@/database/eventSchema";
+import Waiver from "@/database/waiverSchema";
 import mongoose from "mongoose";
 import { PDFDocument } from "pdf-lib";
-import { PdfReader } from "pdfreader"; // Importing pdfreader
-import { s3 } from "@/lib/s3"; // Ensure you've set up an s3 instance for uploads
-import { GetObjectCommand } from "@aws-sdk/client-s3"; // Import GetObjectCommand to retrieve files from S3
+import { PdfReader } from "pdfreader";
+import { s3 } from "@/lib/s3";
+import { GetObjectCommand } from "@aws-sdk/client-s3";
 
 export async function POST(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
@@ -27,16 +28,25 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const { signatureBase64, fileKey } = await req.json(); // Accept fileKey as part of the request body
-  if (!signatureBase64 || !fileKey) {
-    return NextResponse.json({ error: "No signature or fileKey provided." }, { status: 400 });
+  // Get waiverID from the request body
+  const { signatureBase64, waiverID } = await req.json(); // Accept waiverID and signatureBase64 as part of the request body
+  if (!signatureBase64 || !waiverID) {
+    return NextResponse.json({ error: "No signature or waiverID provided." }, { status: 400 });
   }
 
   try {
+    // Fetch the waiver document using the waiverID to get the fileKey
+    const waiver = await Waiver.findById(waiverID);
+    if (!waiver) {
+      return NextResponse.json({ error: "Waiver not found" }, { status: 404 });
+    }
+
+    const { fileKey } = waiver; // Get the fileKey from the waiver document
+
     // Fetch the unsigned waiver from S3 using the fileKey
     const getObjectParams = {
-      Bucket: process.env.AWS_BUCKET_NAME, // Ensure this is set in your environment
-      Key: fileKey, // The fileKey provided in the request
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: fileKey, // The fileKey from the waiver document
     };
 
     const s3Object = await s3.send(new GetObjectCommand(getObjectParams));
@@ -47,7 +57,7 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
     // Use pdfreader to extract text and find the word 'SIGNATURE' first, then fall back to 'sign'
     const positions = await extractTextAndFindSign(pdfBytes);
 
-    // Choose the first position to place the signature (can be refined based on the business logic)
+    // Choose the first position to place the signature
     const signPosition = positions[0];
 
     const pdfDoc = await PDFDocument.load(pdfBytes);
