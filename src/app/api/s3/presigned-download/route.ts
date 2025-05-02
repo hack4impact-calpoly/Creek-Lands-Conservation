@@ -59,9 +59,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   } else if (fileKey.startsWith("waivers/templates/")) {
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    // No restriction needed — all logged-in users can view
   } else {
     return NextResponse.json({ error: "Invalid fileKey" }, { status: 403 });
   }
