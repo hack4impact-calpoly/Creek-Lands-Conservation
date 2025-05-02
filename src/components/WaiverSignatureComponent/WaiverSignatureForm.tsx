@@ -1,14 +1,17 @@
-import { useState } from "react";
+"use client";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { InputField } from "@/components/Forms/InputField";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import SignatureCanvas from "./SignatureCanvas";
+import { title } from "process";
 
 type WaiverSignatureFormProps = {
   eventID: string;
   waiverID: string;
+  title?: string;
   participants: {
     firstName: string;
     lastName: string;
@@ -22,15 +25,28 @@ type WaiverSignatureFormData = {
 };
 
 export default function WaiverSignatureForm(props: WaiverSignatureFormProps) {
-  const { eventID, waiverID, participants } = props;
-  // TODO: is this going to be dynamic?
-  const [waiverName] = useState("Outdoor Hiking Waiver and Liability Agreement");
-
+  const { eventID, waiverID, title, participants } = props;
+  const [waiverName] = useState(title || "Waiver and Liability Agreement");
+  const [waiverUrl, setWaiverUrl] = useState("");
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm<WaiverSignatureFormData>();
+
+  useEffect(() => {
+    const fetchWaiver = async () => {
+      const res = await fetch(
+        `/api/s3/presigned-waiver?fileName=${encodeURIComponent(
+          "1745601581740-8373191ac57207f0611156757ec9316e-Revised 3_2025_ CLC ED PROGRAM WAIVER AND RELEASE (Engl & Esp).pdf",
+        )}&mimetype=application/pdf&type=template&eventId=6813445539132eb8cd0958ab`,
+      );
+      const data = await res.json();
+      console.log(data);
+      setWaiverUrl(data.fileUrl);
+    };
+    fetchWaiver();
+  }, [waiverID]);
 
   const onSubmit = (values: WaiverSignatureFormData) => {
     // TODO  actually use this
@@ -40,7 +56,7 @@ export default function WaiverSignatureForm(props: WaiverSignatureFormProps) {
     <div className="mx-auto mb-10 flex max-w-[960px] flex-col items-center px-6">
       <h1 className="mb-6 mr-auto mt-4 text-2xl font-semibold">{waiverName}</h1>
 
-      <iframe src="/waiver.pdf" className="min-h-[600px] w-full rounded border" title="Waiver Preview" />
+      <iframe src={waiverUrl} className="min-h-[600px] w-full rounded border" title="Waiver Preview" />
 
       <form onSubmit={handleSubmit(onSubmit)} className="my-8 w-full space-y-6">
         <div>
@@ -72,7 +88,7 @@ export default function WaiverSignatureForm(props: WaiverSignatureFormProps) {
         </div>
         <div className="flex justify-center">
           <Button type="submit" className="bg-[#488644] text-white hover:bg-[#3a6d37]">
-            Complete Event Registration <ChevronRight />
+            Proceeed to Payment <ChevronRight />
           </Button>
         </div>
       </form>

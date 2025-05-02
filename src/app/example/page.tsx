@@ -7,7 +7,7 @@ export default function Page() {
   return (
     <WaiverSignatureForm
       eventID="1"
-      waiverID="1"
+      waiverID="68084f0128c720235cbe5438"
       participants={[
         { firstName: "James", lastName: "Hudson", userID: "e" },
         { firstName: "Ava", lastName: "Hudson", userID: "2" },
