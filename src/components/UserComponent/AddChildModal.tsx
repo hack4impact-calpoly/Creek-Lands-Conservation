@@ -1,90 +1,111 @@
 "use client";
 import React, { useState } from "react";
-import type { NewChild } from "./UserInfo";
+import { Dialog } from "@headlessui/react";
+import { Gender } from "./UserInfo";
 
-type AddChildModalProps = {
+interface AddChildModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (child: NewChild) => void;
-};
+  onSubmit: (childData: { firstName: string; lastName: string; birthday: string; gender: Gender }) => void;
+}
 
 const genderOptions = ["Male", "Female", "Non-binary", "Prefer not to say"];
 
 export default function AddChildModal({ isOpen, onClose, onSubmit }: AddChildModalProps) {
-  const [form, setForm] = useState<NewChild>({
-    firstName: "",
-    lastName: "",
-    gender: "",
-    birthday: "",
-  });
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [birthday, setBirthday] = useState("");
+  const [gender, setGender] = useState<Gender>("");
+  const handleAdd = () => {
+    if (!firstName || !lastName || !birthday || !gender) {
+      alert("All fields are required");
+      return;
+    }
 
-  const handleChange = (field: keyof NewChild, value: string) => {
-    setForm((prev) => ({ ...prev, [field]: value }));
+    onSubmit({ firstName, lastName, birthday, gender });
+
+    // Reset form
+    setFirstName("");
+    setLastName("");
+    setBirthday("");
+    setGender("");
+    onClose();
   };
-
-  const handleSubmit = () => {
-    onSubmit(form);
-    onClose(); // Close after adding
-    setForm({ firstName: "", lastName: "", gender: "", birthday: "" }); // Reset
-  };
-
-  if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
-      <div className="w-full max-w-md rounded-md bg-white p-6 shadow-lg">
-        <h2 className="mb-4 text-xl font-semibold">Add New Family Member</h2>
+    <Dialog open={isOpen} onClose={onClose} className="relative z-50">
+      <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
 
-        {/* First Name */}
-        <input
-          type="text"
-          value={form.firstName}
-          onChange={(e) => handleChange("firstName", e.target.value)}
-          placeholder="First Name"
-          className="mb-3 w-full rounded border border-gray-300 p-2"
-        />
+      <div className="fixed inset-0 flex items-center justify-center p-4">
+        <Dialog.Panel className="w-full max-w-md rounded-md bg-white p-6 shadow-md">
+          <Dialog.Title className="mb-4 text-lg font-semibold">Add New Child</Dialog.Title>
 
-        {/* Last Name */}
-        <input
-          type="text"
-          value={form.lastName}
-          onChange={(e) => handleChange("lastName", e.target.value)}
-          placeholder="Last Name"
-          className="mb-3 w-full rounded border border-gray-300 p-2"
-        />
+          {/* First Name */}
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700">First Name</label>
+            <input
+              type="text"
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="E.g. Sarah"
+              className="mt-1 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
 
-        {/* Gender */}
-        <select
-          value={form.gender}
-          onChange={(e) => handleChange("gender", e.target.value)}
-          className="mb-3 w-full rounded border border-gray-300 p-2"
-        >
-          <option value="">-- Select Gender --</option>
-          {genderOptions.map((g) => (
-            <option key={g} value={g}>
-              {g}
-            </option>
-          ))}
-        </select>
+          {/* Last Name */}
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700">Last Name</label>
+            <input
+              type="text"
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="E.g. Thompson"
+              className="mt-1 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
 
-        {/* Birthday */}
-        <input
-          type="date"
-          value={form.birthday}
-          onChange={(e) => handleChange("birthday", e.target.value)}
-          className="mb-4 w-full rounded border border-gray-300 p-2"
-        />
+          {/* Birthday */}
+          <div className="mb-3">
+            <label className="block text-sm font-medium text-gray-700">Birthday</label>
+            <input
+              type="date"
+              value={birthday}
+              onChange={(e) => setBirthday(e.target.value)}
+              className="mt-1 w-full rounded-md border border-gray-300 p-2"
+            />
+          </div>
 
-        {/* Buttons */}
-        <div className="flex justify-end gap-3">
-          <button onClick={onClose} className="rounded bg-gray-300 px-4 py-2 hover:bg-gray-400">
-            Cancel
-          </button>
-          <button onClick={handleSubmit} className="rounded bg-green-600 px-4 py-2 text-white hover:bg-green-700">
-            Add
-          </button>
-        </div>
+          {/* Gender */}
+          <div className="mb-5">
+            <label className="block text-sm font-medium text-gray-700">Gender</label>
+            <select
+              value={gender}
+              onChange={(e) => setGender(e.target.value as Gender)}
+              className="mt-1 w-full rounded-md border border-gray-300 p-2"
+            >
+              <option value="">-- Select --</option>
+              {genderOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={onClose}
+              className="rounded-md border border-gray-300 px-4 py-2 text-gray-700 hover:bg-gray-100"
+            >
+              Cancel
+            </button>
+            <button onClick={handleAdd} className="rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700">
+              Add Child
+            </button>
+          </div>
+        </Dialog.Panel>
       </div>
-    </div>
+    </Dialog>
   );
 }

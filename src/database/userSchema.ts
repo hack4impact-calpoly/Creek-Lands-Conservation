@@ -1,14 +1,24 @@
 import mongoose, { Schema, Document } from "mongoose";
-import { IWaiver } from "./waiverSchema";
 
-/**
- * Child Interface (Subdocument)
- */
+export interface EmergencyContact {
+  name: string;
+  phone: string;
+  work: string;
+  relationship: string;
+  canPickup: boolean;
+}
+
+export interface MedicalInfo {
+  allergies?: string;
+  medications?: string;
+  specialNeeds?: string;
+  physicianName?: string;
+  physicianPhone?: string;
+  insuranceProvider?: string;
+  insurancePolicyNumber?: string;
+}
+
 export interface IChild {
-  /**
-   * IMPORTANT: _id is automatically added by Mongoose subdocs
-   * This is used to reference the subdocument in the event schema.
-   */
   _id?: mongoose.Types.ObjectId;
   firstName: string;
   lastName: string;
@@ -16,18 +26,12 @@ export interface IChild {
   gender: "Male" | "Female" | "Non-binary" | "Prefer Not to Say" | "";
   imageUrl?: string;
   imageKey?: string;
-  /**
-   * References to signed waiver IDs.
-   * If you want to store the entire waiver doc, you can make this `IWaiver[]`.
-   */
   waiversSigned: mongoose.Types.ObjectId[];
-  /** Array of events this child is registered for */
   registeredEvents: mongoose.Types.ObjectId[];
+  emergencyContacts: EmergencyContact[];
+  medicalInfo: MedicalInfo;
 }
 
-/**
- * User Interface
- */
 export interface IUser extends Document {
   clerkID: string;
   userRole: "user" | "admin" | "donator";
@@ -46,38 +50,58 @@ export interface IUser extends Document {
     work?: string;
   };
   imageUrl?: string;
-  /** Internal S3 Object Identifier */
   imageKey?: string;
-  /** Embedded subdocuments for children */
   children: IChild[];
-  /** Top-level events this user is registered for (e.g., adult events) */
   registeredEvents: mongoose.Types.ObjectId[];
-  /** Waivers the user (adult) has signed */
   waiversSigned: mongoose.Types.ObjectId[];
+  emergencyContacts: EmergencyContact[];
+  medicalInfo: MedicalInfo;
 }
 
-/**
- * Child subdocument schema for embedding inside User.
- * NOTE: We do not set { _id: false } so each child has its own subdocument _id.
- */
+// Reusable sub-schemas
+const emergencyContactSchema = new Schema<EmergencyContact>(
+  {
+    name: String,
+    phone: String,
+    work: String,
+    relationship: String,
+    canPickup: Boolean,
+  },
+  { _id: false },
+);
+
+const medicalInfoSchema = new Schema<MedicalInfo>(
+  {
+    allergies: String,
+    medications: String,
+    specialNeeds: String,
+    physicianName: String,
+    physicianPhone: String,
+    insuranceProvider: String,
+    insurancePolicyNumber: String,
+  },
+  { _id: false },
+);
+
 const childSchema = new Schema<IChild>(
   {
-    firstName: { type: String, trim: true, required: true },
-    lastName: { type: String, trim: true, required: true },
+    firstName: { type: String, required: true, trim: true },
+    lastName: { type: String, required: true, trim: true },
     birthday: { type: Date, default: null },
-    gender: { type: String, enum: ["Male", "Female", "Non-binary", "Prefer Not to Say"] },
+    gender: {
+      type: String,
+      enum: ["Male", "Female", "Non-binary", "Prefer Not to Say"],
+    },
     imageUrl: { type: String, default: "" },
-    // NEW FIELD to hold the S3 key, so we can delete the object if replaced:
     imageKey: { type: String, default: "" },
     registeredEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: "Event" }],
     waiversSigned: [{ type: mongoose.Schema.Types.ObjectId, ref: "Waiver" }],
+    emergencyContacts: { type: [emergencyContactSchema], default: [] },
+    medicalInfo: { type: medicalInfoSchema, default: {} },
   },
   { _id: true },
 );
 
-/**
- * Main User schema
- */
 const userSchema = new Schema<IUser>(
   {
     clerkID: { type: String, required: true, unique: true },
@@ -89,84 +113,55 @@ const userSchema = new Schema<IUser>(
     firstName: { type: String, required: true, trim: true },
     lastName: { type: String, required: true, trim: true },
     email: { type: String, required: true, unique: true, trim: true },
-    gender: { type: String, enum: ["Male", "Female", "Non-binary", "Prefer Not to Say", ""], default: "" },
+    gender: {
+      type: String,
+      enum: ["Male", "Female", "Non-binary", "Prefer Not to Say", ""],
+      default: "",
+    },
     birthday: { type: Date, default: null },
     phoneNumbers: {
       cell: { type: String, trim: true, default: "" },
       work: { type: String, trim: true, default: "" },
     },
     address: {
-      type: {
-        home: {
-          type: String,
-          minlength: [5, "Address must be at least 5 characters long"],
-          trim: true,
-          default: "",
-        },
-        city: {
-          type: String,
-          match: [/^[a-zA-Z\s]+$/, "City must contain only letters and spaces"],
-          trim: true,
-          default: "",
-        },
-        zipCode: {
-          type: String,
-          validate: {
-            validator: function (value: string) {
-              if (!value) return true; // Allow empty value
-              return /^\d{5}(-\d{4})?$/.test(value); // US Zip code validation
-            },
-            message: "Invalid zip code format",
-          },
-          default: "",
+      home: { type: String, trim: true, default: "" },
+      city: { type: String, trim: true, default: "" },
+      zipCode: {
+        type: String,
+        validate: {
+          validator: (val: string) => /^\d{5}(-\d{4})?$/.test(val),
           message: "Invalid zip code format",
         },
+        default: "",
       },
     },
     imageUrl: { type: String, default: "" },
-    // NEW FIELD to hold the S3 key, so we can delete the object if replaced:
     imageKey: { type: String, default: "" },
-
-    // Embedding children here
     children: { type: [childSchema], default: [] },
-
-    // For adult events or single-user events
     registeredEvents: [{ type: mongoose.Schema.Types.ObjectId, ref: "Event" }],
-
-    // Waivers that the ADULT user has signed
     waiversSigned: [{ type: mongoose.Schema.Types.ObjectId, ref: "Waiver" }],
+    emergencyContacts: { type: [emergencyContactSchema], default: [] },
+    medicalInfo: { type: medicalInfoSchema, default: {} },
   },
-  {
-    timestamps: true,
-  },
+  { timestamps: true },
 );
 
-/**
- * Pre-save hook to trim fields
- */
 userSchema.pre("save", function (next) {
   this.firstName = this.firstName.trim();
   this.lastName = this.lastName.trim();
   this.email = this.email.trim();
 
-  if (this.phoneNumbers?.cell) {
-    this.phoneNumbers.cell = this.phoneNumbers.cell.trim();
-  }
-  if (this.phoneNumbers?.work) {
-    this.phoneNumbers.work = this.phoneNumbers.work.trim();
-  }
+  // Ensure phoneNumbers exists
+  if (!this.phoneNumbers) this.phoneNumbers = {};
+  this.phoneNumbers.cell = this.phoneNumbers.cell?.trim() || "";
+  this.phoneNumbers.work = this.phoneNumbers.work?.trim() || "";
 
-  if (this.address?.home) {
-    this.address.home = this.address.home.trim();
-  }
-  if (this.address?.city) {
-    this.address.city = this.address.city.trim();
-  }
-  if (this.address?.zipCode) {
-    this.address.zipCode = this.address.zipCode.trim();
-  }
+  // Ensure address exists
+  if (!this.address) this.address = {};
+  this.address.home = this.address.home?.trim() || "";
+  this.address.city = this.address.city?.trim() || "";
+  this.address.zipCode = this.address.zipCode?.trim() || "";
 
-  // Trim fields in children
   this.children.forEach((child) => {
     child.firstName = child.firstName.trim();
     child.lastName = child.lastName.trim();
@@ -177,10 +172,4 @@ userSchema.pre("save", function (next) {
   next();
 });
 
-/**
- * Export the User schema.
- * NOTE: The model name here is "User"; references in other schemas
- * should be `ref: "User"` to match.
- * User collections are created in the database with the name "users".
- */
 export default mongoose.models.User || mongoose.model<IUser>("User", userSchema);

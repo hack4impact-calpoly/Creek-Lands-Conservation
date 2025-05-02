@@ -1,3 +1,5 @@
+export type Gender = "" | "Male" | "Female" | "Non-binary" | "Prefer not to say";
+
 export interface Child {
   localId: number;
   _id?: string;
@@ -5,6 +7,8 @@ export interface Child {
   lastName: string;
   birthday: string; // YYYY-MM-DD format
   gender: "Male" | "Female" | "Non-binary" | "Prefer not to say" | "";
+  medicalInfo: MedicalInfo;
+  emergencyContacts: EmergencyContact[]; // <-- Add this
 }
 
 export type NewChild = {
