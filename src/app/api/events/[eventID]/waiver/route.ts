@@ -4,14 +4,10 @@ import connectDB from "@/database/db";
 import User from "@/database/userSchema";
 import Event from "@/database/eventSchema";
 import mongoose from "mongoose";
-import fs from "fs";
-import path from "path";
-import { PDFDocument, rgb } from "pdf-lib";
+import { PDFDocument } from "pdf-lib";
 import { PdfReader } from "pdfreader"; // Importing pdfreader
-
-export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
-  return NextResponse.json({ message: `GET request received for event ${params.eventID}` });
-}
+import { s3 } from "@/lib/s3"; // Ensure you've set up an s3 instance for uploads
+import { GetObjectCommand } from "@aws-sdk/client-s3"; // Import GetObjectCommand to retrieve files from S3
 
 export async function POST(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
@@ -31,18 +27,25 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const { signatureBase64 } = await req.json();
-  if (!signatureBase64) {
-    return NextResponse.json({ error: "No signature provided." }, { status: 400 });
+  const { signatureBase64, fileKey } = await req.json(); // Accept fileKey as part of the request body
+  if (!signatureBase64 || !fileKey) {
+    return NextResponse.json({ error: "No signature or fileKey provided." }, { status: 400 });
   }
 
   try {
-    const waiverName = "waiver";
-    const pdfPath = path.join(process.cwd(), "public", `${waiverName}.pdf`);
-    const pdfBytes = fs.readFileSync(pdfPath);
+    // Fetch the unsigned waiver from S3 using the fileKey
+    const getObjectParams = {
+      Bucket: process.env.AWS_BUCKET_NAME, // Ensure this is set in your environment
+      Key: fileKey, // The fileKey provided in the request
+    };
+
+    const s3Object = await s3.send(new GetObjectCommand(getObjectParams));
+
+    // Read the file from S3 and convert it into a PDF byte array
+    const pdfBytes = await streamToBuffer(s3Object.Body); // Convert S3 stream to buffer
 
     // Use pdfreader to extract text and find the word 'SIGNATURE' first, then fall back to 'sign'
-    const positions = await extractTextAndFindSign(pdfPath);
+    const positions = await extractTextAndFindSign(pdfBytes);
 
     // Choose the first position to place the signature (can be refined based on the business logic)
     const signPosition = positions[0];
@@ -68,17 +71,27 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
 
     const modifiedPdf = await pdfDoc.save();
 
-    const signedFilename = `${waiverName}-signed-${eventID}-${user._id}.pdf`;
-    const outputPath = path.join(process.cwd(), "public", "signed-waivers", signedFilename);
-    const outputDir = path.join(process.cwd(), "public", "signed-waivers");
+    // Generate a unique file key for the signed version in S3
+    const signedFilename = `waiver-signed-${eventID}-${user._id}.pdf`;
+    const s3Key = `waivers/completed/${eventID}/${user._id}/${signedFilename}`;
 
-    if (!fs.existsSync(outputDir)) {
-      fs.mkdirSync(outputDir, { recursive: true });
-    }
+    // Upload the signed waiver to S3
+    const uploadParams = {
+      Bucket: process.env.AWS_BUCKET_NAME,
+      Key: s3Key,
+      Body: modifiedPdf,
+      ContentType: "application/pdf",
+    };
 
-    fs.writeFileSync(outputPath, modifiedPdf);
+    await s3.send(new PutObjectCommand(uploadParams));
 
-    return NextResponse.json({ message: "Waiver signed!", signedPdfUrl: `/signed-waivers/${signedFilename}` });
+    // Generate a publicly accessible URL to the uploaded file
+    const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
+
+    return NextResponse.json({
+      message: "Waiver signed and uploaded!",
+      signedPdfUrl: fileUrl, // Return the S3 URL where the file can be accessed
+    });
   } catch (error) {
     console.error("Error processing waiver:", error);
     return NextResponse.json({ error: "Failed to sign waiver." }, { status: 500 });
@@ -86,13 +99,13 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
 }
 
 // Function to extract text and find positions for exact 'SIGNATURE' or fallback to 'sign'
-async function extractTextAndFindSign(pdfPath: string) {
+async function extractTextAndFindSign(pdfBytes: Buffer) {
   return new Promise((resolve, reject) => {
     const exactMatches: any[] = [];
     const fallbackMatches: any[] = [];
     let currentPage = 0;
 
-    new PdfReader().parseFileItems(pdfPath, (err, item) => {
+    new PdfReader().parseBuffer(pdfBytes, (err, item) => {
       if (err) return reject(err);
 
       if (item?.page) {
@@ -117,5 +130,15 @@ async function extractTextAndFindSign(pdfPath: string) {
         resolve(finalMatches);
       }
     });
+  });
+}
+
+// Helper function to convert S3 stream to buffer
+async function streamToBuffer(stream: any): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    const chunks: any[] = [];
+    stream.on("data", (chunk) => chunks.push(chunk));
+    stream.on("end", () => resolve(Buffer.concat(chunks)));
+    stream.on("error", reject);
   });
 }

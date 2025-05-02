@@ -7,9 +7,12 @@ import { useRouter } from "next/navigation";
 
 interface SignatureCanvasProps {
   eventID: string;
+  waiverID: string;
+  fileKey: string;
+  participants?: any;
 }
 
-function SignatureCanvas({ eventID }: SignatureCanvasProps) {
+function SignatureCanvas({ eventID, waiverID, fileKey, participants }: SignatureCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const signaturePadRef = useRef<SignaturePad | null>(null);
   const [isEmpty, setIsEmpty] = useState(true);
@@ -61,6 +64,9 @@ function SignatureCanvas({ eventID }: SignatureCanvasProps) {
           },
           body: JSON.stringify({
             signatureBase64: dataURL,
+            waiverID: waiverID,
+            fileKey: fileKey,
+            participants: participants,
           }),
         });
 
