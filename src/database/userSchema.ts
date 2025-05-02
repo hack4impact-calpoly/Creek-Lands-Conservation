@@ -9,13 +9,14 @@ export interface EmergencyContact {
 }
 
 export interface MedicalInfo {
-  allergies?: string;
-  medications?: string;
-  specialNeeds?: string;
-  physicianName?: string;
-  physicianPhone?: string;
-  insuranceProvider?: string;
-  insurancePolicyNumber?: string;
+  photoRelease: boolean;
+  allergies: string;
+  insurance: string;
+  doctorName: string;
+  doctorPhone: string;
+  behaviorNotes: string;
+  dietaryRestrictions: string;
+  otherNotes: string;
 }
 
 export interface IChild {
@@ -72,13 +73,14 @@ const emergencyContactSchema = new Schema<EmergencyContact>(
 
 const medicalInfoSchema = new Schema<MedicalInfo>(
   {
-    allergies: String,
-    medications: String,
-    specialNeeds: String,
-    physicianName: String,
-    physicianPhone: String,
-    insuranceProvider: String,
-    insurancePolicyNumber: String,
+    photoRelease: { type: Boolean, default: false },
+    allergies: { type: String, default: "" },
+    insurance: { type: String, default: "" },
+    doctorName: { type: String, default: "" },
+    doctorPhone: { type: String, default: "" },
+    behaviorNotes: { type: String, default: "" },
+    dietaryRestrictions: { type: String, default: "" },
+    otherNotes: { type: String, default: "" },
   },
   { _id: false },
 );

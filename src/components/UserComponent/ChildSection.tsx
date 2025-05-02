@@ -84,7 +84,10 @@ export default function ChildSection({ child, isEditing, onEdit, onDelete }: Chi
       {isEditing && (
         <div className="flex justify-end">
           <button
-            onClick={() => onDelete(child.localId)}
+            onClick={() => {
+              onDelete(child.localId);
+              window.location.reload();
+            }}
             className="mt-2 rounded-md bg-red-600 px-3 py-2 text-white hover:bg-red-700"
           >
             Remove Child

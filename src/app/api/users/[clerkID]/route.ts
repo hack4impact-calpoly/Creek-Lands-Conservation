@@ -64,6 +64,7 @@ export async function PUT(req: NextRequest, { params }: { params: { clerkID: str
     if (errors.length > 0) {
       return NextResponse.json({ error: errors }, { status: 400 });
     }
+    console.log(medicalInfo);
 
     const updatedUser = await User.findOneAndUpdate(
       { clerkID: params.clerkID },

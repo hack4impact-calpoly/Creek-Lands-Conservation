@@ -38,7 +38,11 @@ export default function PersonalInfo() {
   const [phoneNumbers, setPhoneNumbers] = useState({ cell: "", work: "" });
   const [address, setAddress] = useState({ home: "", city: "", zipCode: "" });
 
-  const [primaryEmergencyContacts, setPrimaryEmergencyContacts] = useState<EmergencyContact[]>([]);
+  const [primaryEmergencyContacts, setPrimaryEmergencyContacts] = useState<EmergencyContact[]>([
+    { name: "", phone: "", work: "", relationship: "", canPickup: false },
+    { name: "", phone: "", work: "", relationship: "", canPickup: false },
+  ]);
+
   const [primaryMedicalInfo, setPrimaryMedicalInfo] = useState<MedicalInfo>(defaultMedicalInfo);
 
   const [children, setChildren] = useState<Child[]>([]);
@@ -68,14 +72,32 @@ export default function PersonalInfo() {
         setBirthday(data.birthday?.split("T")[0] || "");
         setPhoneNumbers(data.phoneNumbers || { cell: "", work: "" });
         setAddress(data.address || { home: "", city: "", zipCode: "" });
-        setPrimaryEmergencyContacts(data.emergencyContacts || []);
+        setPrimaryEmergencyContacts(
+          (data.emergencyContacts || []).slice(0, 2).concat(
+            Array(2 - (data.emergencyContacts?.length || 0)).fill({
+              name: "",
+              phone: "",
+              work: "",
+              relationship: "",
+              canPickup: false,
+            }),
+          ),
+        );
         setPrimaryMedicalInfo(data.medicalInfo || defaultMedicalInfo);
 
         const parsedChildren = (data.children || []).map((c: any, i: number) => ({
           ...c,
           localId: i + 1,
           birthday: c.birthday?.split("T")[0] || "",
-          emergencyContacts: c.emergencyContacts || [],
+          emergencyContacts: (c.emergencyContacts || []).slice(0, 2).concat(
+            Array(2 - (c.emergencyContacts?.length || 0)).fill({
+              name: "",
+              phone: "",
+              work: "",
+              relationship: "",
+              canPickup: false,
+            }),
+          ),
           medicalInfo: c.medicalInfo || defaultMedicalInfo,
         }));
 
@@ -205,7 +227,7 @@ export default function PersonalInfo() {
 
         <button
           onClick={() => setShowModal(true)}
-          className="mt-6 rounded-md bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
+          className="mt-6 rounded-md bg-navy-tertiary px-4 py-2 text-white hover:opacity-90"
         >
           Add New Family Member
         </button>
@@ -236,9 +258,10 @@ export default function PersonalInfo() {
             onUpdate={(index, updatedContact) => {
               const updated = [...primaryEmergencyContacts];
               updated[index] = updatedContact;
-              setPrimaryEmergencyContacts(updated);
+              setPrimaryEmergencyContacts(updated.slice(0, 2));
             }}
           />
+
           <MedicalInfoSection
             isEditing={editingMemberId === activeMemberId}
             data={primaryMedicalInfo}
@@ -265,13 +288,16 @@ export default function PersonalInfo() {
                     child.localId === selectedChild.localId
                       ? {
                           ...child,
-                          emergencyContacts: child.emergencyContacts.map((c, i) => (i === index ? updatedContact : c)),
+                          emergencyContacts: child.emergencyContacts
+                            .map((c, i) => (i === index ? updatedContact : c))
+                            .slice(0, 2),
                         }
                       : child,
                   ),
                 );
               }}
             />
+
             <MedicalInfoSection
               isEditing={editingMemberId === activeMemberId}
               data={selectedChild.medicalInfo || defaultMedicalInfo}
