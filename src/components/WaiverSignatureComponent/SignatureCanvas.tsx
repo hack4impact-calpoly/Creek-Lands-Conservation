@@ -8,7 +8,11 @@ import { useRouter } from "next/navigation";
 interface SignatureCanvasProps {
   eventID: string;
   waiverID: string;
-  participants?: any;
+  participants: {
+    firstName: string;
+    lastName: string;
+    userID: string;
+  };
 }
 
 function SignatureCanvas({ eventID, waiverID, participants }: SignatureCanvasProps) {

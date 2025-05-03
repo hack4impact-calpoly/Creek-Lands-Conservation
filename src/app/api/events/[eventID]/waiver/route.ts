@@ -8,7 +8,7 @@ import mongoose from "mongoose";
 import { PDFDocument } from "pdf-lib";
 import { PdfReader } from "pdfreader";
 import { s3 } from "@/lib/s3";
-import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 
 export async function POST(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
@@ -29,9 +29,9 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
   }
 
   // Get waiverID from the request body
-  const { signatureBase64, waiverID } = await req.json(); // Accept waiverID and signatureBase64 as part of the request body
-  if (!signatureBase64 || !waiverID) {
-    return NextResponse.json({ error: "No signature or waiverID provided." }, { status: 400 });
+  const { signatureBase64, waiverID, participants } = await req.json(); // Accept waiverID and signatureBase64 as part of the request body
+  if (!signatureBase64 || !waiverID || !participants) {
+    return NextResponse.json({ error: "No signature, waiverID, or participants provided." }, { status: 400 });
   }
 
   try {
@@ -95,8 +95,71 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
 
     await s3.send(new PutObjectCommand(uploadParams));
 
+    // 1) Get presigned URL → 2) PUT to S3 → 3) return final URL + key + name
+    const uploadPDF = async (file: File, eventId: string): Promise<PDFInfo> => {
+      const presigned = await fetch(
+        `/api/s3/presigned-waiver?fileName=${encodeURIComponent(signedFilename)}&mimetype=application/pdf&type=completed&eventId=${eventId}`,
+      );
+      if (!presigned.ok) throw new Error("Presign failed");
+      const { uploadUrl, fileUrl, key } = await presigned.json();
+      await fetch(uploadUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": "application/pdf" },
+      });
+      return { fileUrl, fileKey: key, fileName: file.name };
+    };
+
     // Generate a publicly accessible URL to the uploaded file
     const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.${process.env.AWS_REGION}.amazonaws.com/${s3Key}`;
+
+    // Loop through all participants and create individual waiver records
+    const waiverDocs = [];
+
+    for (const participant of participants) {
+      const isSelf = participant.userID === user.clerkID;
+
+      let childSubdocId = undefined;
+
+      if (!isSelf) {
+        // make sure child is valid/user's child
+        const child = user.children.find((child) => child._id.toString() === participant.userID);
+
+        if (!child) {
+          console.warn(`No matching child found for participant: ${participant.firstName} ${participant.lastName}`);
+          continue; // skip if child not found
+        }
+
+        childSubdocId = child._id;
+      }
+
+      // create a new waiver document
+      const participantWaiver = await Waiver.create({
+        fileKey: s3Key,
+        fileName: signedFilename,
+        uploadedBy: user._id,
+        belongsToUser: user._id,
+        childSubdocId: childSubdocId,
+        isForChild: !isSelf,
+        type: "completed",
+        templateRef: waiver._id,
+        eventId: new mongoose.Types.ObjectId(eventID),
+      });
+
+      // update the user scheme
+      if (isSelf) {
+        user.waiversSigned.push(participantWaiver._id);
+      } else if (childSubdocId) {
+        const child = user.children.id(childSubdocId);
+        if (child) {
+          child.waiversSigned.push(participantWaiver._id);
+        }
+      }
+
+      waiverDocs.push(participantWaiver);
+    }
+
+    await user.save();
 
     return NextResponse.json({
       message: "Waiver signed and uploaded!",
