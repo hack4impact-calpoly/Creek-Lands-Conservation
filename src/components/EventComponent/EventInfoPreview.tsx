@@ -2,8 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Calendar, Clock, MapPin, Mail, Text, Image as ImageIcon, Users, CalendarClock } from "lucide-react";
-import { FaHourglassStart, FaHourglassEnd } from "react-icons/fa";
+import { Clock1, Clock5, MapPin, Mail, Text, Image as ImageIcon, Users, CalendarClock } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import {
@@ -123,13 +122,13 @@ export function EventInfoPreview({
   };
 
   const handleRedirect = () => {
-    router.push(`${id}/register`);
+    router.push(`${id}`);
   };
 
   const handleOpenRegisterDialog = () => {
-    // fetchUserFamily();
-    // setIsRegisterDialogOpen(true);
-    handleRedirect();
+    fetchUserFamily();
+    setIsRegisterDialogOpen(true);
+    // handleRedirect();
   };
 
   const handleDeleteEvent = async () => {
@@ -239,11 +238,19 @@ export function EventInfoPreview({
                   {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
                   {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"}
                 </h1> */}
-                <FaHourglassStart className="h-5 w-5" />
+                <Clock1 className="h-5 w-5" />
                 <h1>
-                  {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
                   {startDateTime
-                    ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    ? new Date(startDateTime)
+                        .toLocaleString("en-US", {
+                          month: "2-digit",
+                          day: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                        .replace(",", " -")
                     : "TBD"}
                 </h1>
               </div>
@@ -258,11 +265,19 @@ export function EventInfoPreview({
                     ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                     : "TBD"}
                 </h1> */}
-                <FaHourglassEnd className="h-5 w-5" />
+                <Clock5 className="h-5 w-5" />
                 <h1>
-                  {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"} -{" "}
                   {endDateTime
-                    ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    ? new Date(endDateTime)
+                        .toLocaleString("en-US", {
+                          month: "2-digit",
+                          day: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                        .replace(",", " -")
                     : "TBD"}
                 </h1>
               </div>
@@ -279,12 +294,15 @@ export function EventInfoPreview({
                 <h1>
                   Deadline:{" "}
                   {registrationDeadline
-                    ? registrationDeadline.toLocaleDateString() +
-                      " " +
-                      "-" +
-                      " " +
-                      registrationDeadline.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                    : "TBD"}
+                    ?.toLocaleString("en-US", {
+                      month: "2-digit",
+                      day: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    })
+                    .replace(",", " -") || "TBD"}
                 </h1>
               </div>
               <div className="grid grid-cols-[auto_1fr] items-center gap-4">

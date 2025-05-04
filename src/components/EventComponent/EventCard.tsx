@@ -2,8 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { EventInfoPreview } from "./EventInfoPreview";
-import { Calendar, Clock, Users, CalendarClock, LucideProps } from "lucide-react";
-import { FaHourglassStart, FaHourglassEnd } from "react-icons/fa";
+import { Clock1, Clock5, Users, CalendarClock, LucideProps } from "lucide-react";
 import Image from "next/image";
 
 export interface EventCardProps {
@@ -74,45 +73,49 @@ export default function EventCard(props: EventCardProps) {
         <h2 className="line-clamp-2 overflow-hidden text-2xl font-medium">{eventTitle}</h2>
 
         <div className="space-y-2 text-base lg:text-lg">
-          {/* <InfoRow icon={Calendar}>
-            <h1>
-              {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
-              {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"}
-            </h1>
-          </InfoRow> */}
-          <div className="flex items-center gap-2">
-            <FaHourglassStart className="h-5 w-5" />
-            <h1>
-              {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
-              {startDateTime
-                ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                : "TBD"}
-            </h1>
-          </div>
+          <InfoRow icon={Clock1}>
+            {startDateTime
+              ? new Date(startDateTime)
+                  .toLocaleString("en-US", {
+                    month: "2-digit",
+                    day: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  })
+                  .replace(",", " -")
+              : "TBD"}
+          </InfoRow>
 
-          <div className="flex items-center gap-2">
-            <FaHourglassEnd className="h-5 w-5" />
-            <h1>
-              {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"} -{" "}
-              {endDateTime
-                ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                : "TBD"}
-            </h1>
-          </div>
+          <InfoRow icon={Clock5}>
+            {endDateTime
+              ? new Date(endDateTime)
+                  .toLocaleString("en-US", {
+                    month: "2-digit",
+                    day: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  })
+                  .replace(",", " -")
+              : "TBD"}
+          </InfoRow>
 
-          {/* <InfoRow icon={Clock}>
-            <h1>
-              {startDateTime
-                ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                : "TBD"}{" "}
-              -{" "}
-              {endDateTime
-                ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                : "TBD"}
-            </h1>
-          </InfoRow> */}
-
-          <InfoRow icon={CalendarClock}>Deadline: {registrationDeadline?.toLocaleString() || "TBD"}</InfoRow>
+          <InfoRow icon={CalendarClock}>
+            Deadline:{" "}
+            {registrationDeadline
+              ?.toLocaleString("en-US", {
+                month: "2-digit",
+                day: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })
+              .replace(",", " -") || "TBD"}
+          </InfoRow>
 
           <InfoRow icon={Users}>
             {currentRegistrations} / {capacity} spots filled
