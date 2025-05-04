@@ -122,12 +122,18 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
       eventId: new mongoose.Types.ObjectId(eventID),
     });
 
+    console.log(newWaiver);
+
+    if (!newWaiver || !newWaiver._id) {
+      return NextResponse.json({ error: "Failed to save waiver in database." }, { status: 500 });
+    }
+
     user.waiversSigned.push(newWaiver._id);
     await user.save();
 
     return NextResponse.json({
       message: "Waiver signed and uploaded!",
-      signedPdfUrl: downloadUrl,
+      signedPdfUrl: fileUrl,
     });
   } catch (error: any) {
     console.error("Error processing waiver:", error);
@@ -167,16 +173,6 @@ async function extractTextAndFindSign(pdfBytes: Buffer) {
         resolve(finalMatches);
       }
     });
-  });
-}
-
-// Helper function to convert S3 stream to buffer
-async function streamToBuffer(stream: any): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    const chunks: any[] = [];
-    stream.on("data", (chunk) => chunks.push(chunk));
-    stream.on("end", () => resolve(Buffer.concat(chunks)));
-    stream.on("error", reject);
   });
 }
 
