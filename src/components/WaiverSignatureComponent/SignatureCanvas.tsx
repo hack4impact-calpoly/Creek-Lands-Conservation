@@ -5,17 +5,15 @@ import { Button } from "@/components/ui/button";
 import SignaturePad from "signature_pad";
 import { useRouter } from "next/navigation";
 
-interface SignatureCanvasProps {
-  eventID: string;
-  waiverID: string;
-  participants: {
-    firstName: string;
-    lastName: string;
-    userID: string;
-  };
-}
+type SignatureCanvasProps = {
+  eventId: string;
+  waiverId: string;
+  fileKey: string;
+  participants: Participant[];
+  onSigned: () => void;
+};
 
-function SignatureCanvas({ eventID, waiverID, participants }: SignatureCanvasProps) {
+function SignatureCanvas({ eventId, waiverId, fileKey, participants, onSigned }: SignatureCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const signaturePadRef = useRef<SignaturePad | null>(null);
   const [isEmpty, setIsEmpty] = useState(true);
@@ -55,19 +53,20 @@ function SignatureCanvas({ eventID, waiverID, participants }: SignatureCanvasPro
   const saveSignature = async () => {
     if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
       setIsSaving(true);
-      console.log("Submitting to:", `/api/events/${eventID}/waiver`);
+      console.log("Submitting to:", `/api/events/${eventId}/waivers`);
       try {
         const dataURL = signaturePadRef.current.toDataURL();
         console.log(`Signature: ${dataURL}`);
 
-        const res = await fetch(`/api/events/${eventID}/waiver`, {
+        const res = await fetch(`/api/events/${eventId}/waivers`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
             signatureBase64: dataURL,
-            waiverID: waiverID,
+            waiverID: waiverId,
+            templateKey: fileKey,
             participants: participants,
           }),
         });
@@ -78,6 +77,7 @@ function SignatureCanvas({ eventID, waiverID, participants }: SignatureCanvasPro
           setSuccessMsg("Waiver signed successfully!");
           console.log("Signed PDF URL:", result.signedPdfUrl);
           clearSignature();
+          onSigned(); // to tell parent component successfully signed
         } else {
           console.error(result.error);
           setSuccessMsg(`Error: ${result.error}`);
@@ -109,7 +109,7 @@ function SignatureCanvas({ eventID, waiverID, participants }: SignatureCanvasPro
           onClick={saveSignature}
           disabled={isEmpty || isSaving}
         >
-          {isSaving ? "Submitting..." : "Submit"}
+          {isSaving ? "Signing..." : "Sign Waiver"}
         </Button>
       </div>
       {successMsg && <p className="mt-2 text-sm text-green-600 dark:text-green-400">{successMsg}</p>}
