@@ -24,6 +24,21 @@ import { EventRegisterPreview } from "./EventRegisterPreview";
 import DOMPurify from "dompurify";
 import { CancelRegistrationDialog } from "./CancelRegisterationDialog";
 
+interface Child {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  registeredEvents: string[];
+}
+
+interface UserData {
+  _id: string;
+  firstName?: string;
+  lastName?: string;
+  registeredEvents: string[];
+  children?: Child[];
+}
+
 interface EventInfoProps {
   id: string;
   title: string;
@@ -113,9 +128,9 @@ export function EventInfoPreview({
       const response = await fetch(`/api/users/${user.id}`);
       if (!response.ok) throw new Error("Failed to fetch user data");
 
-      const userData = await response.json();
+      const userData: UserData = await response.json();
       const family =
-        userData.children?.map((child: any) => ({
+        userData.children?.map((child: Child) => ({
           id: child._id,
           name: `${child.firstName || ""} ${child.lastName || ""}`.trim(),
           alreadyRegistered: child.registeredEvents.includes(id),
