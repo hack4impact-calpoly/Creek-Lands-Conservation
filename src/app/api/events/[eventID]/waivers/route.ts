@@ -5,7 +5,7 @@ import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import User from "@/database/userSchema";
-import { PDFDocument } from "pdf-lib";
+import { PDFDocument, StandardFonts } from "pdf-lib";
 import { PdfReader } from "pdfreader";
 import { s3 } from "@/lib/s3";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
 
       // Add the user’s name above the participant's name
       const userName = `${user.firstName} ${user.lastName}`; // Assuming user has firstName and lastName
-      const font = await pdfDoc.embedStandardFont("Helvetica");
+      const font = await pdfDoc.embedStandardFont(StandardFonts.Helvetica);
       const fontSize = 12; // Set an appropriate font size
       const textWidth = font.widthOfTextAtSize(userName, fontSize);
 
