@@ -2,9 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Calendar, Clock, MapPin, Mail, Text, ImageIcon, Users, CalendarClock } from "lucide-react";
+import { Calendar, Clock, MapPin, Mail, Text, Image as ImageIcon, Users, CalendarClock } from "lucide-react";
 import Image from "next/image";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,22 +22,6 @@ import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
 import { EventRegisterPreview } from "./EventRegisterPreview";
 import DOMPurify from "dompurify";
-import { CancelRegistrationDialog } from "./CancelRegisterationDialog";
-
-interface Child {
-  _id: string;
-  firstName?: string;
-  lastName?: string;
-  registeredEvents: string[];
-}
-
-interface UserData {
-  _id: string;
-  firstName?: string;
-  lastName?: string;
-  registeredEvents: string[];
-  children?: Child[];
-}
 
 interface EventInfoProps {
   id: string;
@@ -53,7 +37,6 @@ interface EventInfoProps {
   currentRegistrations?: number;
   onDelete?: (eventId: string) => void;
   onRegister?: (eventId: string, attendees: string[]) => void;
-  onCancelRegistration?: (eventId: string, attendees: string[]) => void;
 }
 
 export function EventInfoPreview({
@@ -70,20 +53,11 @@ export function EventInfoPreview({
   currentRegistrations,
   onDelete,
   onRegister,
-  onCancelRegistration,
 }: EventInfoProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
-  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
-  const [registeredParticipants, setRegisteredParticipants] = useState<
-    Array<{
-      id: string;
-      name: string;
-      type: "user" | "child";
-    }>
-  >([]);
   const [userInfo, setUserInfo] = useState<{
     id: string;
     name: string;
@@ -115,56 +89,7 @@ export function EventInfoPreview({
           "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg",
         ];
 
-  useEffect(() => {
-    if (user) {
-      fetchUserFamily();
-    }
-  }, [user, id]);
-
   const fetchUserFamily = async () => {
-    if (!user?.id) return false;
-
-    try {
-      const response = await fetch(`/api/users/${user.id}`);
-      if (!response.ok) throw new Error("Failed to fetch user data");
-
-      const userData: UserData = await response.json();
-      const family =
-        userData.children?.map((child: Child) => ({
-          id: child._id,
-          name: `${child.firstName || ""} ${child.lastName || ""}`.trim(),
-          alreadyRegistered: child.registeredEvents.includes(id),
-        })) || [];
-
-      const userIsRegistered = userData.registeredEvents.includes(id);
-      const anyChildrenRegistered = family.some((child) => child.alreadyRegistered);
-      const isAnyoneRegistered = userIsRegistered || anyChildrenRegistered;
-
-      setUserInfo({
-        id: userData._id,
-        name: `${userData?.firstName || ""} ${userData?.lastName || ""}`.trim(),
-        alreadyRegistered: userIsRegistered,
-        family,
-      });
-
-      // Set isRegistered state based on user or any children being registered
-      setIsRegistered(isAnyoneRegistered);
-
-      console.log("Fetched user family:", family, "Is registered:", isAnyoneRegistered);
-
-      return isAnyoneRegistered;
-    } catch (error) {
-      console.error("Error fetching user family:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load family information",
-        variant: "destructive",
-      });
-      return false;
-    }
-  };
-
-  const fetchRegisteredParticipants = async () => {
     if (!user?.id) return;
 
     try {
@@ -172,79 +97,33 @@ export function EventInfoPreview({
       if (!response.ok) throw new Error("Failed to fetch user data");
 
       const userData = await response.json();
-      const participants = [];
+      const family =
+        userData.children?.map((child: any) => ({
+          id: child._id,
+          name: `${child.firstName || ""} ${child.lastName || ""}`.trim(),
+          alreadyRegistered: child.registeredEvents.includes(id),
+        })) || [];
 
-      // Add user if registered
-      if (userData.registeredEvents.includes(id)) {
-        participants.push({
-          id: userData._id,
-          name: `${userData?.firstName || ""} ${userData?.lastName || ""}`.trim(),
-          type: "user" as const,
-        });
-      }
-
-      // Add registered children
-      if (userData.children?.length > 0) {
-        userData.children.forEach((child: any) => {
-          if (child.registeredEvents.includes(id)) {
-            participants.push({
-              id: child._id,
-              name: `${child.firstName || ""} ${child.lastName || ""}`.trim(),
-              type: "child" as const,
-            });
-          }
-        });
-      }
-
-      setRegisteredParticipants(participants);
-      return participants.length > 0;
+      setUserInfo({
+        id: userData._id,
+        name: `${userData?.firstName || ""} ${userData?.lastName || ""}`.trim(),
+        alreadyRegistered: userData.registeredEvents.includes(id),
+        family,
+      });
+      console.log("Fetched user family:", family);
     } catch (error) {
-      console.error("Error fetching registered participants:", error);
+      console.error("Error fetching user family:", error);
       toast({
         title: "Error",
-        description: "Failed to load registration information",
+        description: "Failed to load family information",
         variant: "destructive",
       });
-      return false;
     }
   };
 
   const handleOpenRegisterDialog = () => {
     fetchUserFamily();
     setIsRegisterDialogOpen(true);
-  };
-
-  const handleOpenCancelDialog = async () => {
-    const hasParticipants = await fetchRegisteredParticipants();
-    if (hasParticipants) {
-      setIsCancelDialogOpen(true);
-    } else {
-      toast({
-        title: "No registrations found",
-        description: "You or your family members are not registered for this event.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleCancellationSuccess = async (cancelledParticipants: string[]) => {
-    // Refresh user data to update registration status
-    await fetchUserFamily();
-
-    // Force update of registered participants state
-    setRegisteredParticipants([]);
-    setIsRegistered(false);
-
-    // Notify parent component about the cancellation
-    if (onCancelRegistration) {
-      onCancelRegistration(id, cancelledParticipants);
-    }
-
-    // Show success message
-    toast({
-      title: "Registration cancelled",
-      description: "Your registration has been successfully cancelled.",
-    });
   };
 
   const handleDeleteEvent = async () => {
@@ -407,7 +286,7 @@ export function EventInfoPreview({
                 {eventImages.map((src, index) => (
                   <div key={index} className="flex-shrink-0">
                     <Image
-                      src={src || "/placeholder.svg"}
+                      src={src}
                       alt={`Event Image ${index + 1}`}
                       width={256}
                       height={180}
@@ -433,16 +312,6 @@ export function EventInfoPreview({
                   <Button className="bg-[#488644] text-white hover:bg-[#3a6d37]">Sign In to Register</Button>
                 </SignInButton>
               ))}
-
-            {showRegisterButton && user && isRegistered && (
-              <Button
-                variant="outline"
-                className="border-red-400 text-red-600 hover:bg-red-50 hover:text-red-700"
-                onClick={handleOpenCancelDialog}
-              >
-                Cancel Registration
-              </Button>
-            )}
 
             {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
@@ -502,13 +371,6 @@ export function EventInfoPreview({
           onConfirm={handleRegisterEvent}
         />
       )}
-      <CancelRegistrationDialog
-        isOpen={isCancelDialogOpen}
-        onOpenChange={setIsCancelDialogOpen}
-        eventId={id}
-        participants={registeredParticipants}
-        onSuccess={(cancelledParticipants) => handleCancellationSuccess(cancelledParticipants)}
-      />
     </>
   );
 }
