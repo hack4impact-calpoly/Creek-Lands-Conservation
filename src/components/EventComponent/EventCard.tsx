@@ -3,6 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { EventInfoPreview } from "./EventInfoPreview";
 import { Calendar, Clock, Users, CalendarClock, LucideProps } from "lucide-react";
+import { FaHourglassStart, FaHourglassEnd } from "react-icons/fa";
 import Image from "next/image";
 
 export interface EventCardProps {
@@ -66,21 +67,40 @@ export default function EventCard(props: EventCardProps) {
     "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg";
 
   return (
-    <Card className="relative w-full min-w-[312px] max-w-sm overflow-hidden rounded-lg shadow-lg">
-      <BackgroundImageLayer imageUrl={backgroundImage} altText={eventTitle} />
+    <Card className="relative w-full min-w-[312px] max-w-sm overflow-hidden rounded-lg bg-[#E5F4FA] shadow-lg">
+      {/* <BackgroundImageLayer imageUrl={backgroundImage} altText={eventTitle} /> */}
 
-      <CardContent className="relative flex flex-col gap-4 p-6 text-white">
-        <h2 className="line-clamp-2 h-16 overflow-hidden text-2xl font-medium">{eventTitle}</h2>
+      <CardContent className="relative flex flex-col gap-4 p-6">
+        <h2 className="line-clamp-2 overflow-hidden text-2xl font-medium">{eventTitle}</h2>
 
         <div className="space-y-2 text-base lg:text-lg">
-          <InfoRow icon={Calendar}>
+          {/* <InfoRow icon={Calendar}>
             <h1>
               {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
               {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"}
             </h1>
-          </InfoRow>
+          </InfoRow> */}
+          <div className="flex items-center gap-2">
+            <FaHourglassStart className="h-5 w-5" />
+            <h1>
+              {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
+              {startDateTime
+                ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                : "TBD"}
+            </h1>
+          </div>
 
-          <InfoRow icon={Clock}>
+          <div className="flex items-center gap-2">
+            <FaHourglassEnd className="h-5 w-5" />
+            <h1>
+              {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"} -{" "}
+              {endDateTime
+                ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                : "TBD"}
+            </h1>
+          </div>
+
+          {/* <InfoRow icon={Clock}>
             <h1>
               {startDateTime
                 ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -90,7 +110,7 @@ export default function EventCard(props: EventCardProps) {
                 ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                 : "TBD"}
             </h1>
-          </InfoRow>
+          </InfoRow> */}
 
           <InfoRow icon={CalendarClock}>Deadline: {registrationDeadline?.toLocaleString() || "TBD"}</InfoRow>
 

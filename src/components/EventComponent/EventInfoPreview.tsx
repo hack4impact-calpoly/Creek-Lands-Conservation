@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Calendar, Clock, MapPin, Mail, Text, Image as ImageIcon, Users, CalendarClock } from "lucide-react";
+import { FaHourglassStart, FaHourglassEnd } from "react-icons/fa";
 import Image from "next/image";
 import { useState } from "react";
 import {
@@ -121,9 +122,14 @@ export function EventInfoPreview({
     }
   };
 
+  const handleRedirect = () => {
+    router.push(`${id}/register`);
+  };
+
   const handleOpenRegisterDialog = () => {
-    fetchUserFamily();
-    setIsRegisterDialogOpen(true);
+    // fetchUserFamily();
+    // setIsRegisterDialogOpen(true);
+    handleRedirect();
   };
 
   const handleDeleteEvent = async () => {
@@ -217,7 +223,7 @@ export function EventInfoPreview({
     <>
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="outline" className="border-gray-400 bg-[#488644] text-white">
+          <Button variant="outline" className="border-gray-400 bg-[#45575E] text-white">
             View Event Details
           </Button>
         </DialogTrigger>
@@ -228,19 +234,33 @@ export function EventInfoPreview({
           <div className="max-h-[60vh] overflow-y-auto px-4 md:px-6">
             <div className="grid grid-cols-1 gap-6 py-4 sm:grid-cols-2">
               <div className="grid grid-cols-[auto_1fr] items-center gap-4">
-                <Calendar className="h-5 w-5" />
+                {/* <Calendar className="h-5 w-5" />
                 <h1>
                   {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
                   {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"}
+                </h1> */}
+                <FaHourglassStart className="h-5 w-5" />
+                <h1>
+                  {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
+                  {startDateTime
+                    ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    : "TBD"}
                 </h1>
               </div>
               <div className="grid grid-cols-[auto_1fr] items-center gap-4">
-                <Clock className="h-5 w-5" />
+                {/* <Clock className="h-5 w-5" />
                 <h1>
                   {startDateTime
                     ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                     : "TBD"}{" "}
                   -{" "}
+                  {endDateTime
+                    ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    : "TBD"}
+                </h1> */}
+                <FaHourglassEnd className="h-5 w-5" />
+                <h1>
+                  {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"} -{" "}
                   {endDateTime
                     ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                     : "TBD"}
@@ -276,11 +296,6 @@ export function EventInfoPreview({
             </div>
 
             <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
-              <Text className="h-5 w-5" />
-              <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizedDescription }} />
-            </div>
-
-            <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
               <ImageIcon className="h-5 w-5" />
               <div className="scrollbar-hidden flex gap-4 overflow-x-auto py-4">
                 {eventImages.map((src, index) => (
@@ -295,6 +310,11 @@ export function EventInfoPreview({
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
+              <Text className="h-5 w-5" />
+              <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizedDescription }} />
             </div>
           </div>
           <DialogFooter className="flex justify-between">
