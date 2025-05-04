@@ -31,7 +31,7 @@ export async function createUser(userData: {
       imageUrl: userData.imageUrl || "",
       userRole: "user", // Default role
       gender: "",
-      birthday: "",
+      birthday: null,
       registeredEvents: [],
       waiversSigned: [],
       children: [],
@@ -62,7 +62,13 @@ export async function getUserById({ id, clerkUserId }: { id?: string; clerkUserI
     const query = id ? { _id: id } : { clerkID: clerkUserId };
 
     // Populating user registered events and waiver signed with actual info
-    const user = await User.findOne(query).populate("registeredEvents").populate("waiversSigned");
+    const user = await User.findOne(query)
+      .populate("registeredEvents")
+      .populate("waiversSigned")
+      .populate({
+        path: "children",
+        populate: [{ path: "registeredEvents" }, { path: "waiversSigned" }],
+      });
 
     if (!user) {
       return { error: "User not found" };

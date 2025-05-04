@@ -1,7 +1,13 @@
-import * as React from "react";
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { EventInfo } from "@/types/events";
+import {
+  FormattedEvent,
+  RawEvent,
+  RawEventWaiverTemplate,
+  RawRegisteredChild,
+  RawRegisteredUser,
+  RawWaiverSigned,
+} from "@/types/events";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -19,17 +25,40 @@ export const validateEventDates = (startDate: Date, endDate: Date, registrationD
   return null;
 };
 
-export const formatEvents = (data: any[]): EventInfo[] =>
-  data.map((event) => ({
-    id: event._id.toString(),
-    title: event.title || "Untitled Event",
-    startDateTime: event.startDate ? new Date(event.startDate) : null,
-    endDateTime: event.endDate ? new Date(event.endDate) : null,
-    location: event.location || "Location not available",
-    description: event.description || "No description provided",
-    images: Array.isArray(event.images) ? event.images : [],
-    registrationDeadline: event.registrationDeadline ? new Date(event.registrationDeadline) : null,
-    capacity: event.capacity || 0,
-    registeredUsers: event.registeredUsers?.map((u: any) => u.toString()) || [],
-    registeredChildren: event.registeredChildren?.map((c: any) => c.toString()) || [],
-  }));
+/** Turn Mongoose doc into a nice JSON-friendly object */
+export function formatEvents(doc: RawEvent): FormattedEvent {
+  return {
+    id: doc._id.toString(),
+    title: doc.title,
+    description: doc.description,
+    startDate: doc.startDate.toISOString(),
+    endDate: doc.endDate.toISOString(),
+    location: doc.location,
+    capacity: doc.capacity,
+    registrationDeadline: doc.registrationDeadline?.toISOString() ?? "",
+    images: doc.images,
+    fee: doc.fee,
+    stripePaymentId: doc.stripePaymentId ?? "",
+    paymentNote: doc.paymentNote ?? "",
+    isDraft: doc.isDraft,
+    eventWaiverTemplates: doc.eventWaiverTemplates.map((w: RawEventWaiverTemplate) => ({
+      waiverId: w.waiverId.toString(),
+      required: w.required,
+    })),
+    registeredUsers: doc.registeredUsers.map((u: RawRegisteredUser) => ({
+      user: u.user.toString(),
+      waiversSigned: u.waiversSigned.map((s: RawWaiverSigned) => ({
+        waiverId: s.waiverId.toString(),
+        signed: s.signed,
+      })),
+    })),
+    registeredChildren: doc.registeredChildren.map((c: RawRegisteredChild) => ({
+      parent: c.parent.toString(),
+      childId: c.childId.toString(),
+      waiversSigned: c.waiversSigned.map((s: RawWaiverSigned) => ({
+        waiverId: s.waiverId.toString(),
+        signed: s.signed,
+      })),
+    })),
+  };
+}

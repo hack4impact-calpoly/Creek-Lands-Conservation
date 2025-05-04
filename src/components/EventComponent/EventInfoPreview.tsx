@@ -26,8 +26,8 @@ import DOMPurify from "dompurify";
 interface EventInfoProps {
   id: string;
   title: string;
-  startDateTime: Date | null;
-  endDateTime: Date | null;
+  startDateTime: string | null;
+  endDateTime: string | null;
   location: string;
   description: string;
   images: string[];
@@ -48,7 +48,7 @@ export function EventInfoPreview({
   description,
   images,
   registrationDeadline,
-  email = "info@creeklands.org",
+  email = "marysia@creeklands.org",
   capacity,
   currentRegistrations,
   onDelete,
@@ -230,15 +230,20 @@ export function EventInfoPreview({
               <div className="grid grid-cols-[auto_1fr] items-center gap-4">
                 <Calendar className="h-5 w-5" />
                 <h1>
-                  {startDateTime ? startDateTime.toLocaleDateString() : "TBD"} -{" "}
-                  {endDateTime ? endDateTime.toLocaleDateString() : "TBD"}
+                  {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
+                  {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"}
                 </h1>
               </div>
               <div className="grid grid-cols-[auto_1fr] items-center gap-4">
                 <Clock className="h-5 w-5" />
                 <h1>
-                  {startDateTime ? startDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD"}{" "}
-                  - {endDateTime ? endDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD"}
+                  {startDateTime
+                    ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    : "TBD"}{" "}
+                  -{" "}
+                  {endDateTime
+                    ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    : "TBD"}
                 </h1>
               </div>
               <div className="grid grid-cols-[auto_1fr] items-center gap-4">
@@ -347,17 +352,20 @@ export function EventInfoPreview({
       {!isFull && (
         <EventRegisterPreview
           isOpen={isRegisterDialogOpen}
+          capacityLeft={capacity ? capacity - (currentRegistrations ?? 0) : 0}
           onOpenChange={setIsRegisterDialogOpen}
           eventInfo={{
             title: title,
-            startDate: startDateTime ? startDateTime.toLocaleDateString() : "TBD",
-            endDate: endDateTime ? endDateTime.toLocaleDateString() : "TBD",
+            startDate: startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD",
+            endDate: endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD",
             startTime: startDateTime
-              ? startDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+              ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
               : "TBD",
-            endTime: endDateTime ? endDateTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "TBD",
+            endTime: endDateTime
+              ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+              : "TBD",
             location: location,
-            contactEmail: email || "info@creeklands.org",
+            contactEmail: email || "marysia@creeklands.org",
           }}
           userInfo={userInfo}
           onConfirm={handleRegisterEvent}

@@ -14,10 +14,8 @@ import Link from "next/link";
 import { validateEventDates } from "@/lib/utils";
 import LoadingSkeleton from "@/components/Forms/LoadingSkeleton";
 import { EventFormData } from "@/types/events";
-import { TextAreaField } from "@/components/Forms/TextAreaField";
 import { MinimalTiptapEditor } from "@/components/minimal-tiptap";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { Content } from "@tiptap/react";
 import BackButton from "@/components/ui/back-button";
 
 const EditEventPage = () => {

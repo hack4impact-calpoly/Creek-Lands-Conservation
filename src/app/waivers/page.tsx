@@ -3,10 +3,19 @@
 import { useEffect, useState } from "react";
 import WaiverSignatureComponent from "@/components/WaiverSignatureComponent/WaiverSignatureComponent";
 import { useUser } from "@clerk/nextjs";
-import { getEvents } from "@/app/actions/events/actions";
-import { formatEvents } from "@/lib/utils";
 import WaiverSignatureSkeleton from "@/components/WaiverSignatureComponent/WaiverSignatureSkeleton";
+import { getSignedWaiversForRegisteredEvents } from "@/app/actions/waivers/action";
 
+// Interface for the data returned by the server action
+interface SignedWaiver {
+  waiverId: string;
+  event: { title: string; startDate: string; endDate: string };
+  uploadedAt: string;
+  isForChild: boolean;
+  childName?: string;
+}
+
+// Interface expected by WaiverSignatureComponent
 interface RegisteredEvent {
   id: string;
   eventName: string;
@@ -23,41 +32,42 @@ export default function WaiversPage() {
   const { isLoaded, user } = useUser();
 
   useEffect(() => {
-    const fetchRegisteredEvents = async () => {
+    const fetchSignedWaiversData = async () => {
       try {
         if (!isLoaded || !user) return;
 
-        const events = await getEvents();
-        const formattedEvents = formatEvents(events);
-
+        // Fetch user data to get MongoDB _id
         const userResponse = await fetch(`/api/users/${user.id}`);
         if (!userResponse.ok) throw new Error("Failed to fetch user data");
-
         const userData = await userResponse.json();
         if (!userData?._id) throw new Error("User not Found in MongoDB");
+        console.log("User data:", userData);
+        console.log("User ID:", userData._id);
 
-        const userRegisteredEvents = formattedEvents
-          .filter((event) => event.registeredUsers.includes(userData._id.toString()))
-          .filter((event) => event.startDateTime !== null)
-          .map((event) => ({
-            id: event.id,
-            eventName: event.title,
-            startDateTime: event.startDateTime ? new Date(event.startDateTime) : new Date(),
-            endDateTime: event.endDateTime ? new Date(event.endDateTime) : new Date(),
-            signatureDate: event.startDateTime ? new Date(event.startDateTime) : new Date(),
-            waiverId: event.id,
-          }));
+        // Fetch signed waivers using the new server action
+        const signedWaivers: SignedWaiver[] = await getSignedWaiversForRegisteredEvents(userData._id);
+        console.log("Fetched signed waivers:", signedWaivers);
 
-        setRegisteredEvents(userRegisteredEvents);
+        // Map waivers to RegisteredEvent interface
+        const registeredEvents: RegisteredEvent[] = signedWaivers.map((waiver) => ({
+          id: waiver.waiverId,
+          eventName: waiver.isForChild ? `${waiver.event.title}` : waiver.event.title,
+          startDateTime: new Date(waiver.event.startDate),
+          endDateTime: new Date(waiver.event.endDate),
+          signatureDate: new Date(waiver.uploadedAt),
+          waiverId: waiver.waiverId,
+        }));
+
+        setRegisteredEvents(registeredEvents);
       } catch (error: any) {
-        console.error("Failed to fetch registered events:", error);
+        console.error("Failed to fetch signed waivers:", error);
         setError(error.message || "Failed to load waivers");
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchRegisteredEvents();
+    fetchSignedWaiversData();
   }, [isLoaded, user]);
 
   const handleViewWaiver = async (waiverId: string) => {
@@ -97,7 +107,7 @@ export default function WaiversPage() {
               eventName={event.eventName}
               startDateTime={event.startDateTime}
               endDateTime={event.endDateTime}
-              signed={true} // All waivers are signed
+              signed={true} // All waivers on this page are signed
               signatureDate={event.signatureDate}
               onViewWaiver={() => handleViewWaiver(event.waiverId)}
             />

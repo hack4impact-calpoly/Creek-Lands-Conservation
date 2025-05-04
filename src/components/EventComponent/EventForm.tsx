@@ -1,14 +1,17 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useRef, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { useToast } from "@/hooks/use-toast";
-import { Content } from "@tiptap/react";
 import { MinimalTiptapEditor } from "@/components/minimal-tiptap";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { LoadingSpinner } from "../ui/loading-spinner";
+import EnhancedImageSelector, { type EnhancedImageSelectorHandle } from "@/components/EventComponent/FileUploader";
+import EnhancedPDFSelector, {
+  type EnhancedPDFSelectorHandle,
+  type PDFInfo,
+} from "@/components/EventComponent/PDFUploader";
 
-type EventFormData = {
+export type EventFormData = {
   title: string;
   description: string;
   startDate: string;
@@ -20,292 +23,355 @@ type EventFormData = {
   registrationDeadline: string;
   fee: number;
   paymentNote: string;
+  images: string[];
 };
 
 export default function CreateEventForm() {
+  const fileUploadRef = useRef<EnhancedImageSelectorHandle>(null);
+  const pdfUploadRef = useRef<EnhancedPDFSelectorHandle>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resetUploader, setResetUploader] = useState(false);
   const { toast } = useToast();
+
   const {
     register,
     handleSubmit,
-    setValue,
     reset,
     control,
+    setValue,
     formState: { errors },
-  } = useForm<EventFormData>();
+  } = useForm<EventFormData>({
+    defaultValues: {
+      title: "",
+      description: "",
+      startDate: "",
+      startTime: "",
+      endDate: "",
+      endTime: "",
+      location: "",
+      maxParticipants: 0,
+      registrationDeadline: "",
+      fee: 0,
+      paymentNote: "",
+      images: [],
+    },
+  });
 
   const onSubmit = async (data: EventFormData, isDraft: boolean) => {
-    // Combine date and time into ISO 8601 format for MongoDB
-    const startDateTime = new Date(`${data.startDate}T${data.startTime}:00`).toISOString();
-    const endDateTime = new Date(`${data.endDate}T${data.endTime}:00`).toISOString();
-    const registrationDeadline = new Date(data.registrationDeadline).toISOString();
-
-    // Validate start and end times
-    if (new Date(endDateTime) <= new Date(startDateTime)) {
-      toast({
-        title: "Unable to Create Event!",
-        variant: "destructive",
-        description: "End Time and Date Must Be After Start Time and Date!",
-        duration: 5000,
-      });
-      return;
-    }
-
-    // Prepare data for MongoDB
-    const eventData = {
-      title: data.title,
-      description: data.description,
-      startDate: startDateTime,
-      endDate: endDateTime,
-      location: data.location,
-      capacity: Number(data.maxParticipants),
-      registrationDeadline: registrationDeadline,
-      fee: Number(data.fee),
-    };
-
     setIsSubmitting(true);
-    console.log(data, isDraft ? "Saved as Draft" : "Published");
+    try {
+      // Validate times
+      const startISO = new Date(`${data.startDate}T${data.startTime}:00`).toISOString();
+      const endISO = new Date(`${data.endDate}T${data.endTime}:00`).toISOString();
+      const deadlineISO = new Date(data.registrationDeadline).toISOString();
 
-    // send post request if not draft
-    if (!isDraft) {
-      try {
-        const response = await fetch("/api/events", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(eventData),
-        });
-
-        if (response.ok) {
-          reset();
-          toast({
-            title: "Event Created Successfully!",
-            description: "Your Event Has Been Published!",
-            variant: "success",
-            duration: 5000,
-          });
-        } else {
-          toast({
-            title: "Event Creation Failed!",
-            variant: "destructive",
-            description: "An Error Occurred While Creating the Event.",
-            duration: 5000,
-          });
-        }
-      } catch (error) {
-        console.error("Error submitting form:", error);
+      if (new Date(endISO) <= new Date(startISO)) {
         toast({
-          title: "Event Creation Failed!",
+          title: "Unable to Create Event!",
           variant: "destructive",
-          description: "An Error Occurred While Creating the Event.",
-          duration: 5000,
+          description: "End time must be after start time.",
         });
+        setIsSubmitting(false);
+        return;
       }
+      if (new Date(deadlineISO) >= new Date(startISO)) {
+        toast({
+          title: "Unable to Create Event!",
+          variant: "destructive",
+          description: "Registration deadline must be before start.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // Build payload
+      const eventData = {
+        title: data.title,
+        description: data.description,
+        startDate: startISO,
+        endDate: endISO,
+        location: data.location,
+        capacity: Number(data.maxParticipants),
+        registrationDeadline: deadlineISO,
+        fee: Number(data.fee),
+        paymentNote: data.paymentNote,
+        isDraft,
+      };
+
+      // Send to backend
+      const response = await fetch("/api/events", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(eventData),
+      });
+      if (!response.ok) throw new Error("Event Creation Failed");
+      const createdEvent = await response.json();
+      console.log("Event created:", createdEvent);
+      const eventId = createdEvent.id;
+      console.log("Event ID in Form:", eventId);
+      const imageUrls = fileUploadRef.current
+        ? await fileUploadRef.current.uploadFiles(eventId) // Pass eventId
+        : [];
+      const pdfInfos = pdfUploadRef.current
+        ? await pdfUploadRef.current.uploadFiles(eventId) // Pass eventId
+        : [];
+      console.log("Uploaded image URLs:", imageUrls);
+      console.log("Uploaded PDF Infos:", pdfInfos);
+
+      // Step 3: Update the event with uploaded files
+      const updateResponse = await fetch(`/api/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ images: imageUrls, waiverTemplates: pdfInfos }),
+      });
+
+      if (!updateResponse.ok) {
+        const errorData = await updateResponse.json();
+        console.error("PATCH failed:", errorData);
+        throw new Error("Failed to update event with files");
+      }
+
+      // On success
+      reset();
+      fileUploadRef.current?.clear();
+      pdfUploadRef.current?.clear();
+      setResetUploader(true);
+      toast({
+        title: isDraft ? "Draft Saved Successfully!" : "Event Created Successfully!",
+        description: isDraft ? "Your event has been saved as a draft." : "Your event has been published!",
+        variant: "success",
+      });
+    } catch (error) {
+      console.error(error);
+      toast({
+        title: isDraft ? "Draft Save Failed!" : "Event Creation Failed!",
+        variant: "destructive",
+        description: "An error occurred while processing your request.",
+      });
+    } finally {
+      setIsSubmitting(false);
+      setResetUploader(false);
     }
-    setIsSubmitting(false);
   };
 
   return (
-    <form onSubmit={handleSubmit((data) => onSubmit(data, false))} className="mx-auto max-w-4xl space-y-6 p-6">
-      <h1 className="text-3xl font-medium">Basic Information</h1>
-      <div className="flex space-x-4">
-        <div className="flex-1">
-          <label htmlFor="title" className="block font-medium">
-            Event Name
-          </label>
-          <input
-            id="title"
-            type="text"
-            placeholder="Enter the event name"
-            {...register("title", { required: "Event title is required" })}
-            className="w-full rounded border p-2"
-          />
-          {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
+    <div>
+      <div className="mx-auto mb-6 flex w-full max-w-6xl flex-wrap gap-4 p-2">
+        <div className="min-w-[250px] flex-1">
+          <EnhancedImageSelector ref={fileUploadRef} resetFiles={resetUploader} />
         </div>
-
-        <div className="flex-1">
-          <label htmlFor="location" className="block font-medium">
-            Location
-          </label>
-          <input
-            id="location"
-            type="text"
-            placeholder="Enter the event location"
-            {...register("location")}
-            className="w-full rounded border p-2"
+        <div className="min-w-[250px] flex-1">
+          <EnhancedPDFSelector
+            type="template"
+            ref={pdfUploadRef}
+            onPDFsSelected={() => {}}
+            resetFiles={resetUploader}
           />
         </div>
       </div>
+      <form onSubmit={handleSubmit((data) => onSubmit(data, false))} className="mx-auto max-w-6xl space-y-6 p-2">
+        <h1 className="text-3xl font-medium">Basic Information</h1>
+        <div className="flex space-x-4">
+          <div className="flex-1">
+            <label htmlFor="title" className="block font-medium">
+              Event Name
+            </label>
+            <input
+              id="title"
+              type="text"
+              placeholder="Enter the event name"
+              {...register("title", { required: "Event title is required" })}
+              className="w-full rounded border p-2"
+            />
+            {errors.title && <p className="text-sm text-red-500">{errors.title.message}</p>}
+          </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <div>
-          <label htmlFor="startDate" className="block font-medium">
-            Start Date
-          </label>
-          <input
-            type="date"
-            id="startDate"
-            {...register("startDate", { required: "Start date is required" })}
-            className="w-full rounded border p-2"
-          />
-          {errors.startDate && <p className="text-sm text-red-500">{errors.startDate.message}</p>}
-        </div>
-        <div>
-          <label htmlFor="startTime" className="block font-medium">
-            Start Time
-          </label>
-          <input
-            type="time"
-            id="startTime"
-            {...register("startTime", { required: "Start time is required" })}
-            className="w-full rounded border p-2"
-          />
-          {errors.startTime && <p className="text-sm text-red-500">{errors.startTime.message}</p>}
-        </div>
-
-        <div>
-          <label htmlFor="endDate" className="block font-medium">
-            End Date
-          </label>
-          <input
-            type="date"
-            id="endDate"
-            {...register("endDate", { required: "End date is required" })}
-            className="w-full rounded border p-2"
-          />
-          {errors.endDate && <p className="text-sm text-red-500">{errors.endDate.message}</p>}
-        </div>
-        <div>
-          <label htmlFor="endTime" className="block font-medium">
-            End Time
-          </label>
-          <input
-            type="time"
-            id="endTime"
-            {...register("endTime", { required: "End time is required" })}
-            className="w-full rounded border p-2"
-          />
-          {errors.endTime && <p className="text-sm text-red-500">{errors.endTime.message}</p>}
-        </div>
-      </div>
-
-      <h1 className="text-3xl font-medium">Further Details</h1>
-      <div>
-        <label htmlFor="description" className="block font-medium">
-          Event Description
-        </label>
-        <Controller
-          name="description"
-          control={control}
-          render={({ field }) => (
-            <TooltipProvider>
-              <MinimalTiptapEditor
-                className="w-full"
-                editorContentClassName="p-5"
-                output="html"
-                value={field.value}
-                onChange={field.onChange}
-              />
-            </TooltipProvider>
-          )}
-        />
-      </div>
-
-      <h1 className="text-3xl font-medium">Waivers and Registration</h1>
-      <div>
-        <label htmlFor="registrationDeadline" className="block font-medium">
-          Registration Deadline
-        </label>
-        <input
-          type="datetime-local"
-          id="registrationDeadline"
-          {...register("registrationDeadline", { required: "Registration deadline is required" })}
-          className="w-full rounded border p-2"
-        />
-        {errors.registrationDeadline && <p className="text-sm text-red-500">{errors.registrationDeadline.message}</p>}
-      </div>
-
-      <div>
-        <label htmlFor="maxParticipants" className="block font-medium">
-          Maximum Participants
-        </label>
-        <input
-          type="number"
-          id="maxParticipants"
-          placeholder="Enter max participants"
-          {...register("maxParticipants", {
-            required: "Maximum participants is required",
-            min: { value: 1, message: "Must be at least 1" },
-          })}
-          className="w-full rounded border p-2"
-        />
-        {errors.maxParticipants && <p className="text-sm text-red-500">{errors.maxParticipants.message}</p>}
-      </div>
-
-      <h1 className="text-3xl font-medium">Payment</h1>
-      <div>
-        <label htmlFor="fee" className="block font-medium">
-          Event Fee
-        </label>
-        <input
-          type="number"
-          id="fee"
-          placeholder="Enter the event fee"
-          {...register("fee", {
-            required: "Event fee is required",
-            min: { value: 0, message: "Fee cannot be negative" },
-          })}
-          className="w-full rounded border p-2"
-        />
-        {errors.fee && <p className="text-sm text-red-500">{errors.fee.message}</p>}
-      </div>
-
-      <div>
-        <label htmlFor="paymentNote" className="block font-medium">
-          Notes About Payment?
-        </label>
-        <Controller
-          name="paymentNote"
-          control={control}
-          render={({ field }) => (
-            <TooltipProvider>
-              <MinimalTiptapEditor
-                className="w-full"
-                editorContentClassName="p-5"
-                output="html"
-                value={field.value}
-                onChange={field.onChange}
-              />
-            </TooltipProvider>
-          )}
-        />
-      </div>
-
-      <div className="flex justify-end space-x-4">
-        <button
-          type="button"
-          onClick={handleSubmit((data) => onSubmit(data, true))}
-          disabled={isSubmitting}
-          className="rounded border bg-[#45575E] px-4 py-2 text-white hover:bg-gray-500"
-        >
-          Save as Draft
-        </button>
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className="rounded border bg-[#558552] px-4 py-2 text-white hover:bg-[#6FAF68]"
-        >
-          Publish Event
-        </button>
-      </div>
-
-      {/* loading indicator while submitting form */}
-      {isSubmitting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent">
-          <div className="flex items-center space-x-4 rounded-lg bg-white p-6 shadow-lg">
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-t-4 border-solid border-blue-500"></div>
+          <div className="flex-1">
+            <label htmlFor="location" className="block font-medium">
+              Location
+            </label>
+            <input
+              id="location"
+              type="text"
+              placeholder="Enter the event location"
+              {...register("location", { required: "Location is required" })}
+              className="w-full rounded border p-2"
+            />
+            {errors.location && <p className="text-sm text-red-500">{errors.location.message}</p>}
           </div>
         </div>
-      )}
-    </form>
+
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div>
+            <label htmlFor="startDate" className="block font-medium">
+              Start Date
+            </label>
+            <input
+              type="date"
+              id="startDate"
+              {...register("startDate", { required: "Start date is required" })}
+              className="w-full rounded border p-2"
+            />
+            {errors.startDate && <p className="text-sm text-red-500">{errors.startDate.message}</p>}
+          </div>
+          <div>
+            <label htmlFor="startTime" className="block font-medium">
+              Start Time
+            </label>
+            <input
+              type="time"
+              id="startTime"
+              {...register("startTime", { required: "Start time is required" })}
+              className="w-full rounded border p-2"
+            />
+            {errors.startTime && <p className="text-sm text-red-500">{errors.startTime.message}</p>}
+          </div>
+
+          <div>
+            <label htmlFor="endDate" className="block font-medium">
+              End Date
+            </label>
+            <input
+              type="date"
+              id="endDate"
+              {...register("endDate", { required: "End date is required" })}
+              className="w-full rounded border p-2"
+            />
+            {errors.endDate && <p className="text-sm text-red-500">{errors.endDate.message}</p>}
+          </div>
+          <div>
+            <label htmlFor="endTime" className="block font-medium">
+              End Time
+            </label>
+            <input
+              type="time"
+              id="endTime"
+              {...register("endTime", { required: "End time is required" })}
+              className="w-full rounded border p-2"
+            />
+            {errors.endTime && <p className="text-sm text-red-500">{errors.endTime.message}</p>}
+          </div>
+        </div>
+
+        <h1 className="text-3xl font-medium">Further Details</h1>
+        <div>
+          <label htmlFor="description" className="block font-medium">
+            Event Description
+          </label>
+          <Controller
+            name="description"
+            control={control}
+            render={({ field }) => (
+              <TooltipProvider>
+                <MinimalTiptapEditor
+                  className="w-full"
+                  editorContentClassName="p-5"
+                  output="html"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              </TooltipProvider>
+            )}
+          />
+        </div>
+
+        <h1 className="text-3xl font-medium">Waivers and Registration</h1>
+        <div>
+          <label htmlFor="registrationDeadline" className="block font-medium">
+            Registration Deadline
+          </label>
+          <input
+            type="datetime-local"
+            id="registrationDeadline"
+            {...register("registrationDeadline", { required: "Registration deadline is required" })}
+            className="w-full rounded border p-2"
+          />
+          {errors.registrationDeadline && <p className="text-sm text-red-500">{errors.registrationDeadline.message}</p>}
+        </div>
+
+        <div>
+          <label htmlFor="maxParticipants" className="block font-medium">
+            Maximum Participants
+          </label>
+          <input
+            type="number"
+            id="maxParticipants"
+            placeholder="Enter max participants"
+            {...register("maxParticipants", {
+              required: "Maximum participants is required",
+              min: { value: 1, message: "Must be at least 1" },
+            })}
+            className="w-full rounded border p-2"
+          />
+          {errors.maxParticipants && <p className="text-sm text-red-500">{errors.maxParticipants.message}</p>}
+        </div>
+
+        <h1 className="text-3xl font-medium">Payment</h1>
+        <div>
+          <label htmlFor="fee" className="block font-medium">
+            Event Fee
+          </label>
+          <input
+            type="number"
+            id="fee"
+            placeholder="Enter the event fee"
+            {...register("fee", {
+              required: "Event fee is required",
+              min: { value: 0, message: "Fee cannot be negative" },
+            })}
+            className="w-full rounded border p-2"
+          />
+          {errors.fee && <p className="text-sm text-red-500">{errors.fee.message}</p>}
+        </div>
+
+        <div>
+          <label htmlFor="paymentNote" className="block font-medium">
+            Notes About Payment?
+          </label>
+          <Controller
+            name="paymentNote"
+            control={control}
+            render={({ field }) => (
+              <TooltipProvider>
+                <MinimalTiptapEditor
+                  className="w-full"
+                  editorContentClassName="p-5"
+                  output="html"
+                  value={field.value}
+                  onChange={field.onChange}
+                />
+              </TooltipProvider>
+            )}
+          />
+        </div>
+
+        <div className="flex justify-end space-x-4">
+          <button
+            type="button"
+            onClick={handleSubmit((data) => onSubmit(data, true))}
+            disabled={isSubmitting}
+            className="rounded border bg-[#45575E] px-4 py-2 text-white hover:bg-gray-500"
+          >
+            Save as Draft
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="rounded border bg-[#558552] px-4 py-2 text-white hover:bg-[#6FAF68]"
+          >
+            Publish Event
+          </button>
+        </div>
+
+        {/* loading indicator while submitting form */}
+        {isSubmitting && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent">
+            <div className="flex items-center space-x-4 rounded-lg bg-white p-6 shadow-lg">
+              <div className="h-12 w-12 animate-spin rounded-full border-4 border-t-4 border-solid border-blue-500"></div>
+            </div>
+          </div>
+        )}
+      </form>
+    </div>
   );
 }

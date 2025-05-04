@@ -1,96 +1,125 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import EventCard from "@/components/EventComponent/EventCard";
 import { useUser } from "@clerk/nextjs";
 import { getEvents } from "@/app/actions/events/actions";
-import { EventInfo } from "@/types/events";
+import { EventInfo, LimitedEventInfo } from "@/types/events";
 import EventSection from "@/components/EventComponent/EventSection";
 import SkeletonEventSection from "@/components/EventComponent/EventSectionSkeleton";
 import { formatEvents } from "@/lib/utils";
 
-interface IChild {
+interface IChildData {
   _id: string;
+  firstName: string;
+  lastName: string;
+  birthday?: string; // ISO string from Date
+  gender: "Male" | "Female" | "Non-binary" | "Prefer Not to Say" | "";
+  imageUrl?: string;
+  imageKey?: string;
+  registeredEvents: string[]; // ObjectIds as strings
+  waiversSigned: string[]; // ObjectIds as strings
 }
 
 interface IUserData {
   _id: string;
-  children: IChild[];
+  clerkID: string;
+  userRole: "user" | "admin" | "donator";
+  firstName: string;
+  lastName: string;
+  email: string;
+  gender: "Male" | "Female" | "Non-binary" | "Prefer Not to Say" | "";
+  birthday?: string | null; // ISO string or null
+  address?: {
+    home?: string;
+    city?: string;
+    zipCode?: string;
+  };
+  phoneNumbers?: {
+    cell?: string;
+    work?: string;
+  };
+  imageUrl?: string;
+  imageKey?: string;
+  children: IChildData[];
+  registeredEvents: string[]; // ObjectIds as strings
+  waiversSigned: string[]; // ObjectIds as strings
 }
 
 export default function Home() {
   // TODO consider more possibilities (children registered, deadline missed, etc) and how to sort those cases
   const [eventSections, setEventSections] = useState<{
-    available: EventInfo[];
-    registered: EventInfo[];
-    past: EventInfo[];
+    available: LimitedEventInfo[];
+    registered: LimitedEventInfo[];
+    past: LimitedEventInfo[];
   }>({ available: [], registered: [], past: [] });
   const [userData, setUserData] = useState<IUserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { isLoaded, user } = useUser();
 
-  const handleRegister = (eventId: string, attendees: string[]) => {
-    setEventSections((prev) => {
-      // Update all sections, not just available, to ensure the event is found
-      const allEvents = [...prev.available, ...prev.registered, ...prev.past];
-      const updatedEvents = allEvents.map((event) => {
-        if (event.id === eventId) {
-          const userId = userData?._id || "";
-          const userChildren = userData?.children.map((c: any) => c._id) || [];
-          const userIsRegistered = attendees.includes(userId);
-          const childIsRegistered = attendees.some((id) => userChildren.includes(id));
-          const updatedEvent = {
-            ...event,
-            registeredUsers: userIsRegistered ? [...event.registeredUsers, userId] : event.registeredUsers,
-            registeredChildren: childIsRegistered
-              ? [...event.registeredChildren, ...attendees.filter((id) => userChildren.includes(id))]
-              : event.registeredChildren,
-          };
-          console.log("Updated event:", updatedEvent.id, "registeredUsers:", updatedEvent.registeredUsers);
-          return updatedEvent;
-        }
-        return event;
-      });
-      const newSections = categorizeEvents(
-        updatedEvents,
-        userData?._id || "",
-        userData?.children.map((c) => c._id) || [],
-      );
-      console.log(
-        "New sections - Registered:",
-        newSections.registered.map((e) => e.id),
-      );
-      return newSections;
+  // inside Home()
+  const handleRegister = async (eventId: string, attendees: string[]) => {
+    if (!userData) return;
+
+    // Update userData with registered events
+    const updatedUserData = { ...userData };
+    if (attendees.includes(userData._id)) {
+      updatedUserData.registeredEvents = [...(updatedUserData.registeredEvents || []), eventId];
+    }
+    updatedUserData.children = updatedUserData.children.map((child) => {
+      if (attendees.includes(child._id)) {
+        return {
+          ...child,
+          registeredEvents: [...(child.registeredEvents || []), eventId],
+        };
+      }
+      return child;
     });
+    setUserData(updatedUserData);
+
+    // Update eventSections with new registration count and categorization
+    const allEvents = [...eventSections.available, ...eventSections.registered, ...eventSections.past];
+    const updatedEvents = allEvents.map((event) => {
+      if (event.id === eventId) {
+        return { ...event, currentRegistrations: event.currentRegistrations + attendees.length };
+      }
+      return event;
+    });
+
+    const registeredEventIds = [
+      ...(updatedUserData.registeredEvents || []),
+      ...(updatedUserData.children || []).flatMap((child) => child.registeredEvents || []),
+    ];
+    const categorized = categorizeEvents(updatedEvents, registeredEventIds);
+    setEventSections(categorized);
   };
 
   useEffect(() => {
     const fetchAndProcessEvents = async () => {
-      try {
-        if (!isLoaded) return; // Ensure user state is loaded before proceeding
+      if (!isLoaded) return;
+      setIsLoading(true);
 
-        const events = await getEvents();
-        const formattedEvents = formatEvents(events);
+      try {
+        const events = (await getEvents()) as LimitedEventInfo[];
 
         if (user) {
           const userResponse = await fetch(`/api/users/${user.id}`);
           if (!userResponse.ok) throw new Error("Failed to fetch user data");
 
-          const fetchedUserData = await userResponse.json();
-          if (!fetchedUserData?._id) throw new Error("User not Found in MongoDB");
+          const fetchedUserData: IUserData = await userResponse.json();
+          if (!fetchedUserData?._id) throw new Error("User not found in MongoDB");
 
           setUserData(fetchedUserData);
 
-          const categorized = categorizeEvents(
-            formattedEvents,
-            fetchedUserData._id.toString(),
-            fetchedUserData.children.map((child: any) => child._id),
-          );
+          const registeredEventIds = [
+            ...(fetchedUserData.registeredEvents || []),
+            ...(fetchedUserData.children || []).flatMap((child) => child.registeredEvents || []),
+          ];
+
+          const categorized = categorizeEvents(events, registeredEventIds);
           setEventSections(categorized);
         } else {
-          // If no user, just show all events
-          setEventSections({ available: formattedEvents, registered: [], past: [] });
+          setEventSections({ available: events, registered: [], past: [] });
         }
 
         setIsLoading(false);
@@ -124,19 +153,24 @@ export default function Home() {
 }
 
 // Helper function
-const categorizeEvents = (events: EventInfo[], userId: string, userChildren: string[]) => {
+// Helper at bottom of page.tsx
+// Categorize events using LimitedEventInfo and user's registered event IDs
+const categorizeEvents = (events: LimitedEventInfo[], registeredEventIds: string[]) => {
   const now = new Date();
-  const sections = { available: [], registered: [], past: [] } as {
-    available: EventInfo[];
-    registered: EventInfo[];
-    past: EventInfo[];
+  const sections = {
+    available: [] as LimitedEventInfo[],
+    registered: [] as LimitedEventInfo[],
+    past: [] as LimitedEventInfo[],
   };
+
   events.forEach((event) => {
-    // events for which a child is registered will also appear on the Registered tab
-    const userIsRegistered = event.registeredUsers.includes(userId);
-    const childIsRegistered = event.registeredChildren.some((childId) => userChildren.includes(childId));
-    if (userIsRegistered || childIsRegistered) {
-      event.endDateTime && event.endDateTime < now ? sections.past.push(event) : sections.registered.push(event);
+    const endDateTime = new Date(event.endDate);
+    const isRegistered = registeredEventIds.includes(event.id);
+
+    if (endDateTime < now) {
+      sections.past.push(event);
+    } else if (isRegistered) {
+      sections.registered.push(event);
     } else {
       sections.available.push(event);
     }

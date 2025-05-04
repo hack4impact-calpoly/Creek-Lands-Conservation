@@ -1,34 +1,53 @@
+// src/app/api/events/route.ts
 import connectDB from "@/database/db";
 import Event from "@/database/eventSchema";
 import { NextResponse } from "next/server";
 import { authenticateAdmin } from "@/lib/auth";
+import { auth } from "@clerk/nextjs/server";
+import User from "@/database/userSchema";
+import { formatEvents } from "@/lib/utils";
+import { EventPayload } from "@/types/events";
 
 export async function POST(request: Request) {
-  try {
-    const authError = await authenticateAdmin();
-    if (authError !== true) return authError;
-
-    const body = await request.json();
-
-    // Validate required fields
-    const requiredFields = ["title", "startDate", "endDate"];
-    for (const field of requiredFields) {
-      if (!body[field]) {
-        return NextResponse.json({ error: `Missing required field: ${field}` }, { status: 400 });
-      }
-    }
-
-    await connectDB();
-
-    const newEvent = await Event.create({
-      ...body,
-      registeredUsers: [],
-      registeredChildren: [],
-    });
-
-    return NextResponse.json(newEvent, { status: 201 });
-  } catch (error) {
-    console.error("Failed to create event:", error);
-    return NextResponse.json({ error: "Failed to create event" }, { status: 500 });
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+  await connectDB();
+  const mongoUser = await User.findOne({ clerkID: userId });
+  if (!mongoUser) {
+    return NextResponse.json({ error: "User record not found" }, { status: 404 });
+  }
+  const authError = await authenticateAdmin();
+  if (authError !== true) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const body: EventPayload = await request.json();
+  console.log("Received Request Body:", body);
+
+  for (const f of ["title", "startDate", "endDate"] as const) {
+    if (!body[f]) {
+      return NextResponse.json({ error: `Missing required field: ${f}` }, { status: 400 });
+    }
+  }
+
+  const toCreate = {
+    title: body.title,
+    description: body.description,
+    startDate: new Date(body.startDate),
+    endDate: new Date(body.endDate),
+    location: body.location,
+    capacity: body.capacity ?? 0,
+    registrationDeadline: new Date(body.registrationDeadline),
+    images: body.images ?? [],
+    fee: body.fee ?? 0,
+    stripePaymentId: body.stripePaymentId ?? null,
+    paymentNote: body.paymentNote ?? "",
+    isDraft: body.isDraft ?? false,
+    registeredUsers: [],
+    registeredChildren: [],
+    eventWaiverTemplates: [],
+  };
+
+  const newEvent = await Event.create(toCreate);
+  return NextResponse.json(formatEvents(newEvent), { status: 201 });
 }
