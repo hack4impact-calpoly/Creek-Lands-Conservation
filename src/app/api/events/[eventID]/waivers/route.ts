@@ -11,6 +11,13 @@ import { s3 } from "@/lib/s3";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { rgb } from "pdf-lib";
 
+interface PdfReaderItem {
+  page?: number;
+  text?: string;
+  x?: number;
+  y?: number;
+}
+
 export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
   const { eventID } = params;
@@ -187,20 +194,22 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
 }
 
 // Function to extract text and find positions for exact 'SIGNATURE' or fallback to 'sign'
-async function extractTextAndFindSign(pdfBytes: Buffer) {
+async function extractTextAndFindSign(
+  pdfBytes: Buffer,
+): Promise<{ x: number; y: number; page: number; text: string }[]> {
   return new Promise((resolve, reject) => {
-    const exactMatches: any[] = [];
-    const fallbackMatches: any[] = [];
+    const exactMatches: { x: number; y: number; page: number; text: string }[] = [];
+    const fallbackMatches: { x: number; y: number; page: number; text: string }[] = [];
     let currentPage = 0;
 
-    new PdfReader().parseBuffer(pdfBytes, (err, item) => {
+    new PdfReader().parseBuffer(pdfBytes, (err: string | Error | null, item: PdfReaderItem | null) => {
       if (err) return reject(err);
 
       if (item?.page) {
         currentPage = item.page;
       }
 
-      if (item && item.text) {
+      if (item && item.text && typeof item.x === "number" && typeof item.y === "number") {
         const text = item.text.trim();
         const normalized = text.replace(/\s+/g, "").toLowerCase(); // Remove spaces for matching
 
@@ -225,7 +234,7 @@ async function extractTextAndFindSign(pdfBytes: Buffer) {
 async function streamToBuffer(stream: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: any[] = [];
-    stream.on("data", (chunk) => chunks.push(chunk));
+    stream.on("data", (chunk: any) => chunks.push(chunk));
     stream.on("end", () => resolve(Buffer.concat(chunks)));
     stream.on("error", reject);
   });
