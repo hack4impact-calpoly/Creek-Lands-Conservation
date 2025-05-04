@@ -9,6 +9,7 @@ import { PDFDocument } from "pdf-lib";
 import { PdfReader } from "pdfreader";
 import { s3 } from "@/lib/s3";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
+import { rgb } from "pdf-lib";
 
 export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
@@ -44,10 +45,13 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
-  const { signatureBase64, waiverID, templateKey } = await req.json();
+  const { signatureBase64, waiverID, templateKey, participants } = await req.json();
 
-  if (!signatureBase64 || !waiverID || !templateKey) {
-    return NextResponse.json({ error: "Missing signatureBase64, waiverID, or templateKey." }, { status: 400 });
+  if (!signatureBase64 || !waiverID || !templateKey || !Array.isArray(participants)) {
+    return NextResponse.json(
+      { error: "Missing signatureBase64, waiverID, templateKey, or participants list." },
+      { status: 400 },
+    );
   }
 
   try {
@@ -66,78 +70,115 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
     }
 
     const signPosition = positions[0];
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-    const page = pdfDoc.getPages()[signPosition.page - 1];
-    const pdfWidth = page.getWidth();
-    const pdfHeight = page.getHeight();
+    const signedWaiverIDs: mongoose.Types.ObjectId[] = [];
+    const signedPdfUrls: string[] = [];
 
-    const pngImage = await pdfDoc.embedPng(signatureBase64);
-    const { width, height } = pngImage.scale(0.35);
+    for (const participant of participants) {
+      const pdfDoc = await PDFDocument.load(pdfBytes);
+      const page = pdfDoc.getPages()[signPosition.page - 1];
+      const pdfWidth = page.getWidth();
+      const pdfHeight = page.getHeight();
 
-    const scaledX = (signPosition.x / 100) * 2 * pdfWidth;
-    const scaledY = pdfHeight - (signPosition.y / 100) * 2 * pdfHeight;
+      const pngImage = await pdfDoc.embedPng(signatureBase64);
+      const { width, height } = pngImage.scale(0.35);
 
-    page.drawImage(pngImage, {
-      x: scaledX,
-      y: scaledY,
-      width,
-      height,
-    });
+      const scaledX = (signPosition.x / 100) * 2 * pdfWidth;
+      const scaledY = pdfHeight - (signPosition.y / 100) * 2 * pdfHeight;
 
-    const modifiedPdf = await pdfDoc.save();
+      page.drawImage(pngImage, {
+        x: scaledX,
+        y: scaledY,
+        width,
+        height,
+      });
 
-    // upload to S3
-    // Convert the signed PDF to a Buffer
-    const buffer = Buffer.from(modifiedPdf);
+      // Add the user’s name above the participant's name
+      const userName = `${user.firstName} ${user.lastName}`; // Assuming user has firstName and lastName
+      const font = await pdfDoc.embedStandardFont("Helvetica");
+      const fontSize = 12; // Set an appropriate font size
+      const textWidth = font.widthOfTextAtSize(userName, fontSize);
 
-    // Define the S3 file key and file name
-    const fileName = `${user._id}-${waiverID}.pdf`; // File name using the user ID and waiver ID
-    const fileKey = `waivers/completed/${eventID}/${user._id}/${fileName}`; // File path in S3
+      // Position the user’s name above the signature
+      const textX = scaledX + (width - textWidth) / 2; // Center the text
+      const textY = scaledY - height - 11; // Position 5 units above the signature image
 
-    // Upload to S3
-    const uploadParams = {
-      Bucket: process.env.AWS_BUCKET_NAME,
-      Key: fileKey,
-      Body: buffer,
-      ContentType: "application/pdf", // Ensure the content type is set correctly
-    };
+      page.drawText(userName, {
+        x: textX,
+        y: textY,
+        font,
+        size: fontSize,
+        color: rgb(0, 0, 0), // Text color (black)
+      });
 
-    // Perform the S3 upload
-    await s3.send(new PutObjectCommand(uploadParams));
+      // Add participant's name below the user’s name
+      const participantName = `${participant.firstName} ${participant.lastName}`;
+      const participantTextWidth = font.widthOfTextAtSize(participantName, fontSize);
 
-    // Construct the file URL after upload
-    const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.amazonaws.com/${fileKey}`;
+      // Position the participant's name below the user's name
+      const participantTextX = scaledX + (width - participantTextWidth) / 2; // Center the text below
+      const participantTextY = textY - fontSize - 31; // Position the participant's name below the user’s name
 
-    console.log(fileUrl);
+      page.drawText(participantName, {
+        x: participantTextX,
+        y: participantTextY,
+        font,
+        size: fontSize,
+        color: rgb(0, 0, 0), // Text color (black)
+      });
 
-    // Save waiver to DB
-    const newWaiver = await Waiver.create({
-      fileKey,
-      fileName,
-      uploadedBy: user._id,
-      belongsToUser: user._id,
-      isForChild: false,
-      type: "completed",
-      templateRef: waiverID,
-      eventId: new mongoose.Types.ObjectId(eventID),
-    });
+      const modifiedPdf = await pdfDoc.save();
+      const buffer = Buffer.from(modifiedPdf);
 
-    console.log(newWaiver);
+      const fileName = `${participant.userID}-${waiverID}.pdf`;
+      const fileKey = `waivers/completed/${eventID}/${user._id}/${fileName}`;
 
-    if (!newWaiver || !newWaiver._id) {
-      return NextResponse.json({ error: "Failed to save waiver in database." }, { status: 500 });
+      console.log(fileKey);
+
+      await s3.send(
+        new PutObjectCommand({
+          Bucket: process.env.AWS_BUCKET_NAME,
+          Key: fileKey,
+          Body: buffer,
+          ContentType: "application/pdf",
+        }),
+      );
+
+      const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.amazonaws.com/${fileKey}`;
+      signedPdfUrls.push(fileUrl);
+
+      const newWaiver = await Waiver.create({
+        fileKey,
+        fileName,
+        uploadedBy: user._id,
+        belongsToUser: user._id,
+        isForChild: participant.isChild,
+        childSubdocId: participant.isChild ? participant.userID : undefined,
+        type: "completed",
+        templateRef: waiverID,
+        eventId: new mongoose.Types.ObjectId(eventID),
+      });
+
+      if (participant.isChild) {
+        const child = user.children.id(participant.userID); // participant.userID is the _id of the child subdoc
+        if (child) {
+          child.waiversSigned.push(newWaiver._id);
+          await user.save(); // Save parent document
+        } else {
+          console.warn(`Child with ID ${participant.userID} not found in user ${user._id}`);
+        }
+      } else {
+        user.waiversSigned.push(newWaiver._id);
+        await user.save();
+      }
     }
 
-    user.waiversSigned.push(newWaiver._id);
-    await user.save();
-
     return NextResponse.json({
-      message: "Waiver signed and uploaded!",
-      signedPdfUrl: fileUrl,
+      message: "Waivers signed and uploaded for all participants.",
+      signedPdfUrls,
     });
   } catch (error: any) {
-    console.error("Error processing waiver:", error);
-    return NextResponse.json({ error: error.message || "Failed to sign waiver." }, { status: 500 });
+    console.error("Error processing waivers:", error);
+    return NextResponse.json({ error: error.message || "Failed to sign waivers." }, { status: 500 });
   }
 }
 

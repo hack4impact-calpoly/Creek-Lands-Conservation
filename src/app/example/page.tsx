@@ -8,8 +8,8 @@ export default function Page() {
     <WaiverSignatureForm
       eventId="6813445539132eb8cd0958ab"
       participants={[
-        { firstName: "James", lastName: "Hudson", userID: "e", isChild: true },
-        { firstName: "Ava", lastName: "Hudson", userID: "2", isChild: true },
+        { firstName: "James", lastName: "Hudson", userID: "6816d463c43dbce290295172", isChild: true },
+        { firstName: "Ava", lastName: "Hudson", userID: "6816d463c43dbce290295173", isChild: true },
       ]}
       onAllSigned={() => console.log("redirecting...")}
     ></WaiverSignatureForm>
