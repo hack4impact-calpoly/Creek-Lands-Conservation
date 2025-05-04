@@ -65,6 +65,10 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
     const pdfBytes = await streamToBuffer(s3Object.Body);
     const positions = await extractTextAndFindSign(pdfBytes);
 
+    if (!Array.isArray(positions)) {
+      return NextResponse.json({ error: "Invalid response format from extractTextAndFindSign." }, { status: 500 });
+    }
+
     if (positions.length === 0) {
       return NextResponse.json({ error: "No signature position found in the document." }, { status: 400 });
     }
