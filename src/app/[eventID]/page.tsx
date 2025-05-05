@@ -30,7 +30,7 @@ const RegisterPage = () => {
   const [registrationStage, setRegistrationState] = useState<"selectParticipants" | "signWaivers">(
     "selectParticipants",
   );
-  const [paymentStage, setPaymentStage] = useState<boolean>(false);
+  const [paymentStage, setPaymentStage] = useState<boolean>(true); // SET TO FALSE
   const [userInfo, setUserInfo] = useState<{
     id: string;
     firstName: string;

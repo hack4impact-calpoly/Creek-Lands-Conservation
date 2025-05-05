@@ -2,10 +2,10 @@ import Stripe from "stripe";
 import { headers } from "next/headers";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 
 export async function POST(req: Request) {
   console.log("Received Stripe webhook");
-  const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
   const body = await req.text();
   const signature = headers().get("Stripe-Signature") as string;
   console.log("Signature:", signature);
@@ -50,9 +50,3 @@ export async function POST(req: Request) {
     }
   }
 }
-
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
