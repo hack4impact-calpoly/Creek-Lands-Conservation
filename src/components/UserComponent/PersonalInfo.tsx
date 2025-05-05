@@ -8,6 +8,7 @@ import ChildSection from "@/components/UserComponent/ChildSection";
 import EmergencyContactsSection from "@/components/UserComponent/EmergencyContacts";
 import MedicalInfoSection from "@/components/UserComponent/MedicalInfo";
 import AddChildModal from "./AddChildModal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { Child, EmergencyContact, Gender, MedicalInfo } from "@/components/UserComponent/UserInfo";
 
 const defaultMedicalInfo: MedicalInfo = {
@@ -184,18 +185,21 @@ export default function PersonalInfo() {
       <h2 className="mb-6 text-3xl font-semibold text-gray-800">Account Information</h2>
 
       <div className="mb-6">
-        <label className="mb-1 block text-sm font-medium text-gray-700">Select Profile</label>
-        <select
-          value={activeMemberId}
-          onChange={(e) => setActiveMemberId(e.target.value)}
-          className="w-full rounded-md border border-gray-300 p-2"
-        >
-          {familyMembers.map((member) => (
-            <option key={member.id} value={member.id}>
-              {member.name} {member.type === "Primary" ? "(Primary)" : ""}
-            </option>
-          ))}
-        </select>
+        <label htmlFor="profile-select" className="mb-1 block text-sm font-medium text-gray-700">
+          Select Profile
+        </label>
+        <Select value={activeMemberId} onValueChange={setActiveMemberId}>
+          <SelectTrigger id="profile-select" className="w-full">
+            <SelectValue placeholder="Select a profile" />
+          </SelectTrigger>
+          <SelectContent>
+            {familyMembers.map((member) => (
+              <SelectItem key={member.id} value={member.id}>
+                {member.name} {member.type === "Primary" ? "(Primary)" : ""}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="mb-4 mt-4 flex items-center justify-between">
