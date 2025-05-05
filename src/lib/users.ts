@@ -32,6 +32,15 @@ export async function createUser(userData: {
       userRole: "user", // Default role
       gender: "",
       birthday: null,
+      address: {
+        home: "",
+        city: "",
+        zipCode: "",
+      },
+      phoneNumbers: {
+        cell: "",
+        work: "",
+      },
       registeredEvents: [],
       waiversSigned: [],
       children: [],
