@@ -28,8 +28,10 @@ const CheckoutButton = ({ title, startDate, fee, attendees, eventId }: CheckoutB
     fee: fee, // Fee in cents
     quantity: attendees.length,
     eventId: eventId,
-    attendees: attendees,
+    attendees: attendees.map((attendee) => attendee.userID), // only pass userID
   };
+
+  console.log(attendees.map((attendee) => attendee.userID));
 
   const handleCheckout = async () => {
     const res = await fetch("/api/stripe", {

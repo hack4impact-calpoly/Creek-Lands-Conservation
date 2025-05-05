@@ -28,7 +28,7 @@ export async function POST(req: Request) {
       cancel_url: `${origin}/${eventId}`,
       metadata: {
         eventId: eventId,
-        attendees: JSON.stringify(attendees),
+        attendees: JSON.stringify({ attendees }),
       },
     });
 

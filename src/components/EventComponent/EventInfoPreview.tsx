@@ -172,6 +172,8 @@ export function EventInfoPreview({
 
     try {
       console.log("Registering attendees:", attendees, "User ID:", userInfo.id);
+      console.log("attendees", attendees);
+      console.log("attendees stringed", JSON.stringify({ attendees }));
       const response = await fetch(`/api/events/${id}/registrations`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
