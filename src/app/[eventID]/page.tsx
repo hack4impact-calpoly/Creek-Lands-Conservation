@@ -15,6 +15,7 @@ const RegisterPage = () => {
   const [userData, setUserData] = useState<IUserData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
   const [registrationStage, setRegistrationState] = useState<"selectParticipants" | "signWaivers" | "payment">(
     "selectParticipants",
   );
@@ -96,6 +97,8 @@ const RegisterPage = () => {
           registeredUsers={event.registeredUsers}
           registeredChildren={event.registeredChildren}
           userInfo={userInfo}
+          selectedAttendees={selectedAttendees}
+          setSelectedAttendees={setSelectedAttendees}
         />
       )}
     </div>

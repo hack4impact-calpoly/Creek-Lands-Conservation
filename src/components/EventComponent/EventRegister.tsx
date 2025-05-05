@@ -31,6 +31,8 @@ interface EventRegisterProps {
     alreadyRegistered: boolean;
     family: { id: string; name: string; alreadyRegistered: boolean }[];
   };
+  selectedAttendees: string[];
+  setSelectedAttendees: React.Dispatch<React.SetStateAction<string[]>>;
 }
 
 const EventRegister = ({
@@ -47,9 +49,9 @@ const EventRegister = ({
   registeredChildren,
   // user props
   userInfo,
-  // registeredEvents,
+  selectedAttendees,
+  setSelectedAttendees,
 }: EventRegisterProps) => {
-  const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
   const [waiverEmail, setWaiverEmail] = useState("");
   const [waiverSigned, setWaiverSigned] = useState(false);
   const sanitizedDescription = DOMPurify.sanitize(description);
