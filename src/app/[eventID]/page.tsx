@@ -176,7 +176,7 @@ const RegisterPage = () => {
             <Button
               type="button"
               onClick={handleSelectSubmit}
-              className="bg-[#488644] text-white hover:bg-[#3a6d37]"
+              className="mb-10 bg-[#488644] text-white hover:bg-[#3a6d37]"
               disabled={selectedAttendees.length === 0}
             >
               {selectedAttendees.length > 0 ? "Proceed to Waiver" : "Select Participants"}

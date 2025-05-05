@@ -156,8 +156,8 @@ const EventRegister = ({
             </div>
           </div>
 
-          <div className="w-full">
-            <h2 className="text 3xl mb-4">Who&apos;s attending?</h2>
+          <div className="mt-6 w-full">
+            <h1 className="mb-4 text-2xl">Who&apos;s attending?</h1>
             <div className="space-y-3">
               <div className="flex items-center space-x-3">
                 <Checkbox
