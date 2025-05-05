@@ -75,15 +75,35 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
     setShowError(false);
   }, [currentIndex]);
 
-  const onSubmit = () => {
+  const onSubmit = async () => {
     if (!agreedToTerms) {
       setShowError(true);
+      return;
+    }
+    if (!signed) {
+      // TODO: this needs some server side error handling
+      // registration endpoint should somehow check for signature.
       return;
     }
 
     if (currentIndex < waivers.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
+      // this is the last page when everything is signed
+      // TODO: I really would like a better place to put this
+      try {
+        await fetch(`/api/events/${eventId}/registrations`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            attendees: participants.map((p) => p.userID),
+          }),
+        });
+      } catch (err) {
+        console.error("Registration failed:", err);
+        // optionally show toast or fallback
+      }
+
       // Going to assume this is some type of redirect to the payment portal.
       onAllSigned();
     }
@@ -149,7 +169,7 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
             className="bg-[#488644] text-white hover:bg-[#3a6d37]"
             disabled={!signed || !waiverUrl}
           >
-            {currentIndex === waivers.length - 1 ? "Proceed to Payment" : "Next Waiver"} <ChevronRight />
+            {currentIndex === waivers.length - 1 ? "Complete Registration" : "Next Waiver"} <ChevronRight />
           </Button>
         </div>
       </div>

@@ -23,9 +23,10 @@ interface RegisterDialogProps {
   };
   userInfo: {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     alreadyRegistered: boolean;
-    family: { id: string; name: string; alreadyRegistered: boolean }[];
+    family: { id: string; firstName: string; lastName: string; alreadyRegistered: boolean }[];
   };
   onConfirm: (attendees: string[]) => void;
 }
@@ -117,7 +118,7 @@ export function EventRegisterPreview({
                   htmlFor={userInfo.id}
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  {userInfo.name}
+                  {userInfo.firstName} {userInfo.lastName}
                   {(userInfo.alreadyRegistered ||
                     (!selectedAttendees.includes(userInfo.id) && selectedAttendees.length >= remainingCapacity)) && (
                     <span className="ml-2 text-xs italic text-gray-500">
@@ -145,7 +146,7 @@ export function EventRegisterPreview({
                     htmlFor={member.id}
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    {member.name}
+                    {member.firstName} {member.lastName}
                     <span className="ml-2 text-xs italic text-gray-500">
                       {(member.alreadyRegistered ||
                         (!selectedAttendees.includes(member.id) && selectedAttendees.length >= remainingCapacity)) && (
