@@ -173,14 +173,26 @@ const RegisterPage = () => {
             setSelectedAttendees={setSelectedAttendees}
           />
           <div className="flex justify-center">
-            <Button
-              type="button"
-              onClick={handleSelectSubmit}
-              className="mb-10 bg-[#488644] text-white hover:bg-[#3a6d37]"
-              disabled={selectedAttendees.length === 0}
-            >
-              {selectedAttendees.length > 0 ? "Proceed to Waiver" : "Select Participants"}
-            </Button>
+            {event.eventWaiverTemplates.length != 0 && ( // waivers
+              <Button
+                type="button"
+                onClick={handleSelectSubmit}
+                className="mb-10 bg-[#488644] text-white hover:bg-[#3a6d37]"
+                disabled={selectedAttendees.length === 0}
+              >
+                {selectedAttendees.length > 0 ? "Proceed to Waiver" : "Select Participants"}
+              </Button>
+            )}
+            {event?.fee &&
+              event.eventWaiverTemplates.length == 0 && ( // waivers and event fee
+                <CheckoutButton
+                  title={event.title}
+                  startDate={event.startDate}
+                  fee={event.fee}
+                  attendees={selectedAttendees}
+                  eventId={event.id}
+                />
+              )}
           </div>
         </>
       )}

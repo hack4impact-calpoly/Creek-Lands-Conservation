@@ -49,10 +49,7 @@ const CheckoutButton = ({ title, startDate, fee, attendees, eventId }: CheckoutB
   };
 
   return (
-    <Button
-      onClick={handleCheckout}
-      className="mx-auto mb-10 w-full bg-[#488644] text-white hover:bg-[#3a6d37] sm:w-2/5"
-    >
+    <Button onClick={handleCheckout} className="mx-auto mb-10 w-[250px] bg-[#488644] text-white hover:bg-[#3a6d37]">
       Register and Pay for Event
     </Button>
   );
