@@ -126,9 +126,9 @@ export function EventInfoPreview({
   };
 
   const handleOpenRegisterDialog = () => {
-    fetchUserFamily();
-    setIsRegisterDialogOpen(true);
-    // handleRedirect();
+    // fetchUserFamily();
+    // setIsRegisterDialogOpen(true);
+    handleRedirect();
   };
 
   const handleDeleteEvent = async () => {

@@ -11,6 +11,7 @@ import { APIEvent, RegisteredChildInfo, RegisteredUserInfo } from "@/types/event
 import { IChildData, IUserData } from "@/types/user";
 import Image from "next/image";
 import DOMPurify from "dompurify";
+import { Attendee } from "@/app/[eventID]/page";
 
 interface EventRegisterProps {
   // event props
@@ -27,12 +28,13 @@ interface EventRegisterProps {
   // user props
   userInfo: {
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     alreadyRegistered: boolean;
-    family: { id: string; name: string; alreadyRegistered: boolean }[];
+    family: { id: string; firstName: string; lastName: string; alreadyRegistered: boolean }[];
   };
-  selectedAttendees: string[];
-  setSelectedAttendees: React.Dispatch<React.SetStateAction<string[]>>;
+  selectedAttendees: Attendee[];
+  setSelectedAttendees: React.Dispatch<React.SetStateAction<Attendee[]>>;
 }
 
 const EventRegister = ({
@@ -160,26 +162,40 @@ const EventRegister = ({
               <div className="flex items-center space-x-3">
                 <Checkbox
                   id={userInfo.id}
-                  checked={selectedAttendees.includes(userInfo.id) || userInfo.alreadyRegistered}
+                  checked={selectedAttendees.some((att) => att.userID === userInfo.id) || userInfo.alreadyRegistered}
                   onCheckedChange={(checked) => {
-                    setSelectedAttendees((prev) =>
-                      checked ? [...prev, userInfo.id] : prev.filter((id) => id !== userInfo.id),
-                    );
+                    setSelectedAttendees((prev) => {
+                      if (checked) {
+                        return [
+                          ...prev,
+                          {
+                            firstName: userInfo.firstName,
+                            lastName: userInfo.lastName,
+                            userID: userInfo.id,
+                            isChild: false,
+                          },
+                        ];
+                      } else {
+                        return prev.filter((a) => a.userID !== userInfo.id);
+                      }
+                    });
                   }}
                   disabled={
                     userInfo.alreadyRegistered ||
-                    (!selectedAttendees.includes(userInfo.id) && selectedAttendees.length >= remainingCapacity)
+                    (!selectedAttendees.some((a) => a.userID === userInfo.id) &&
+                      selectedAttendees.length >= remainingCapacity)
                   }
                 />
                 <label
                   htmlFor={userInfo.id}
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  {userInfo.name}
+                  {userInfo.firstName} {userInfo.lastName}
                   {(userInfo.alreadyRegistered ||
-                    (!selectedAttendees.includes(userInfo.id) && selectedAttendees.length >= remainingCapacity)) && (
+                    (!selectedAttendees.some((a) => a.userID === userInfo.id) &&
+                      selectedAttendees.length >= remainingCapacity)) && (
                     <span className="ml-2 text-xs italic text-gray-500">
-                      {userInfo.alreadyRegistered ? "(Already registered)" : " (Capacity full)"}
+                      {userInfo.alreadyRegistered ? "(Already registered)" : "(Capacity full)"}
                     </span>
                   )}
                 </label>
@@ -188,30 +204,40 @@ const EventRegister = ({
                 <div key={member.id} className="flex items-center space-x-3">
                   <Checkbox
                     id={member.id}
-                    checked={selectedAttendees.includes(member.id) || member.alreadyRegistered}
+                    checked={selectedAttendees.some((a) => a.userID === member.id) || member.alreadyRegistered}
                     onCheckedChange={(checked) => {
                       setSelectedAttendees((prev) =>
-                        checked ? [...prev, member.id] : prev.filter((id) => id !== member.id),
+                        checked
+                          ? [
+                              ...prev,
+                              {
+                                firstName: member.firstName,
+                                lastName: member.lastName,
+                                userID: member.id,
+                                isChild: true,
+                              },
+                            ]
+                          : prev.filter((a) => a.userID !== member.id),
                       );
                     }}
                     disabled={
                       member.alreadyRegistered ||
-                      (!selectedAttendees.includes(member.id) && selectedAttendees.length >= remainingCapacity)
+                      (!selectedAttendees.some((a) => a.userID === member.id) &&
+                        selectedAttendees.length >= remainingCapacity)
                     }
                   />
                   <label
                     htmlFor={member.id}
                     className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                   >
-                    {member.name}
-                    <span className="ml-2 text-xs italic text-gray-500">
-                      {(member.alreadyRegistered ||
-                        (!selectedAttendees.includes(member.id) && selectedAttendees.length >= remainingCapacity)) && (
-                        <span className="ml-2 text-xs italic text-gray-500">
-                          {member.alreadyRegistered ? "(Already registered)" : " (Capacity full)"}
-                        </span>
-                      )}
-                    </span>
+                    {member.firstName} {member.lastName}
+                    {(member.alreadyRegistered ||
+                      (!selectedAttendees.some((a) => a.userID === member.id) &&
+                        selectedAttendees.length >= remainingCapacity)) && (
+                      <span className="ml-2 text-xs italic text-gray-500">
+                        {member.alreadyRegistered ? "(Already registered)" : "(Capacity full)"}
+                      </span>
+                    )}
                   </label>
                 </div>
               ))}
