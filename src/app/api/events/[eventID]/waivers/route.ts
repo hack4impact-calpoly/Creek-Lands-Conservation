@@ -5,17 +5,19 @@ import mongoose from "mongoose";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import User from "@/database/userSchema";
-import { PDFDocument, StandardFonts } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { PdfReader } from "pdfreader";
 import { s3 } from "@/lib/s3";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
-import { rgb } from "pdf-lib";
+import fs from "fs";
+import path from "path";
 
 interface PdfReaderItem {
   page?: number;
   text?: string;
   x?: number;
   y?: number;
+  w?: number;
 }
 
 export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
@@ -70,6 +72,15 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
       }),
     );
     const pdfBytes = await streamToBuffer(s3Object.Body);
+
+    // Find the position of the first "date" (case-insensitive)
+    const datePosition = await findDatePosition(pdfBytes);
+    if (!datePosition) {
+      console.warn("No 'date' (case-insensitive) found in the document.");
+    } else {
+      console.log("Found 'date' at:", datePosition);
+    }
+
     const positions = await extractTextAndFindSign(pdfBytes);
 
     if (!Array.isArray(positions)) {
@@ -84,12 +95,44 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
     const signedWaiverIDs: mongoose.Types.ObjectId[] = [];
     const signedPdfUrls: string[] = [];
 
+    // Get today's date
+    const today = new Date();
+    const formattedDate = `${today.getMonth() + 1}/${today.getDate()}/${today.getFullYear()}`;
+
     for (const participant of participants) {
       const pdfDoc = await PDFDocument.load(pdfBytes);
       const page = pdfDoc.getPages()[signPosition.page - 1];
       const pdfWidth = page.getWidth();
       const pdfHeight = page.getHeight();
 
+      // Inject today's date if position is found
+      // Inject today's date if position is found
+      if (datePosition) {
+        const datePage = pdfDoc.getPages()[datePosition.page - 1];
+
+        // Use coordinates directly as they are in points
+        //const dateTextX = datePosition.x;
+        //const dateTextY = datePosition.y - 1; // Slight offset above the line for visibility
+
+        const scaledDateX = (datePosition.x / 100) * 2.7 * pdfWidth;
+        const scaledDateY = pdfHeight - (datePosition.y / 100) * 2.05 * pdfHeight;
+
+        console.log(
+          `Injecting date '${formattedDate}' at page ${datePosition.page}, x=${scaledDateX}, y=${scaledDateY}`,
+        );
+
+        const font = await pdfDoc.embedStandardFont(StandardFonts.Helvetica);
+        const fontSize = 12;
+        datePage.drawText(formattedDate, {
+          x: scaledDateX,
+          y: scaledDateY,
+          font,
+          size: fontSize,
+          color: rgb(0, 0, 0),
+        });
+      }
+
+      // Add signature
       const pngImage = await pdfDoc.embedPng(signatureBase64);
       const { width, height } = pngImage.scale(0.35);
 
@@ -104,37 +147,35 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
       });
 
       // Add the user’s name above the participant's name
-      const userName = `${user.firstName} ${user.lastName}`; // Assuming user has firstName and lastName
+      const userName = `${user.firstName} ${user.lastName}`;
       const font = await pdfDoc.embedStandardFont(StandardFonts.Helvetica);
-      const fontSize = 12; // Set an appropriate font size
+      const fontSize = 12;
       const textWidth = font.widthOfTextAtSize(userName, fontSize);
 
-      // Position the user’s name above the signature
-      const textX = scaledX + (width - textWidth) / 2; // Center the text
-      const textY = scaledY - height - 11; // Position 5 units above the signature image
+      const textX = scaledX + (width - textWidth) / 2;
+      const textY = scaledY - height - 11;
 
       page.drawText(userName, {
         x: textX,
         y: textY,
         font,
         size: fontSize,
-        color: rgb(0, 0, 0), // Text color (black)
+        color: rgb(0, 0, 0),
       });
 
       // Add participant's name below the user’s name
       const participantName = `${participant.firstName} ${participant.lastName}`;
       const participantTextWidth = font.widthOfTextAtSize(participantName, fontSize);
 
-      // Position the participant's name below the user's name
-      const participantTextX = scaledX + (width - participantTextWidth) / 2; // Center the text below
-      const participantTextY = textY - fontSize - 31; // Position the participant's name below the user’s name
+      const participantTextX = scaledX + (width - participantTextWidth) / 2;
+      const participantTextY = textY - fontSize - 31;
 
       page.drawText(participantName, {
         x: participantTextX,
         y: participantTextY,
         font,
         size: fontSize,
-        color: rgb(0, 0, 0), // Text color (black)
+        color: rgb(0, 0, 0),
       });
 
       const modifiedPdf = await pdfDoc.save();
@@ -170,10 +211,10 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
       });
 
       if (participant.isChild) {
-        const child = user.children.id(participant.userID); // participant.userID is the _id of the child subdoc
+        const child = user.children.id(participant.userID);
         if (child) {
           child.waiversSigned.push(newWaiver._id);
-          await user.save(); // Save parent document
+          await user.save();
         } else {
           console.warn(`Child with ID ${participant.userID} not found in user ${user._id}`);
         }
@@ -193,7 +234,6 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
   }
 }
 
-// Function to extract text and find positions for exact 'SIGNATURE' or fallback to 'sign'
 async function extractTextAndFindSign(
   pdfBytes: Buffer,
 ): Promise<{ x: number; y: number; page: number; text: string }[]> {
@@ -211,7 +251,7 @@ async function extractTextAndFindSign(
 
       if (item && item.text && typeof item.x === "number" && typeof item.y === "number") {
         const text = item.text.trim();
-        const normalized = text.replace(/\s+/g, "").toLowerCase(); // Remove spaces for matching
+        const normalized = text.replace(/\s+/g, "").toLowerCase();
 
         if (/^signature$/.test(normalized)) {
           console.log(`[MATCH: EXACT] Page ${currentPage}: "${text}"`);
@@ -230,12 +270,161 @@ async function extractTextAndFindSign(
   });
 }
 
-// Helper function to convert a stream to a buffer (for S3 file content)
 async function streamToBuffer(stream: any): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const chunks: any[] = [];
     stream.on("data", (chunk: any) => chunks.push(chunk));
     stream.on("end", () => resolve(Buffer.concat(chunks)));
     stream.on("error", reject);
+  });
+}
+
+// Ensure logs directory exists
+const logsDir = path.join(process.cwd(), "logs");
+if (!fs.existsSync(logsDir)) {
+  fs.mkdirSync(logsDir, { recursive: true });
+}
+
+// Generate log file path with timestamp
+const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
+const logFilePath = path.join(logsDir, `pdf-text-log-${timestamp}.txt`);
+
+async function findDatePosition(
+  pdfBytes: Buffer,
+): Promise<{ x: number; y: number; page: number; width: number } | null> {
+  return new Promise((resolve, reject) => {
+    let currentPage = 0;
+    let found = false; // Track if the position was found
+
+    new PdfReader().parseBuffer(pdfBytes, (err: string | Error | null, item: any) => {
+      if (err) {
+        const errorMessage = `[DEBUG_ERROR] Error processing PDF: ${err}\n`;
+        console.error(errorMessage);
+        fs.appendFileSync(logFilePath, errorMessage, "utf8");
+        return reject(err);
+      }
+
+      if (item?.page) {
+        currentPage = item.page;
+        const logMessage = `[DEBUG] Processing Page ${currentPage}\n`;
+        console.log(logMessage);
+        fs.appendFileSync(logFilePath, logMessage, "utf8");
+      }
+
+      if (item && item.text && typeof item.x === "number" && typeof item.y === "number") {
+        const text = item.text.trim();
+        const logMessage = `[DEBUG_RAW] Text="${text}", x=${item.x}, y=${item.y}, width=${item.w || "undefined"}\n`;
+        console.log(logMessage);
+        fs.appendFileSync(logFilePath, logMessage, "utf8");
+
+        // Check for the specific underline for the date field
+        if (
+          text === "__________________" &&
+          Math.abs(item.x - 20) < 0.1 && // Match x=20
+          Math.abs(item.y - 26.854) < 0.1 && // Match y=26.854
+          Math.abs(item.w - 143.438) < 0.1 // Match width=143.438
+        ) {
+          found = true; // Set flag to true
+          const result = {
+            x: item.x,
+            y: item.y,
+            page: currentPage,
+            width: item.w,
+          };
+          const foundMessage = `[DEBUG] Found date underline at: ${JSON.stringify(result)}\n`;
+          console.log(foundMessage);
+          fs.appendFileSync(logFilePath, foundMessage, "utf8");
+          resolve(result);
+          return;
+        }
+      }
+
+      if (!item && !found) {
+        // Only log and resolve null if not found
+        const logMessage = "[DEBUG] No matching date underline found in the document.\n";
+        console.log(logMessage);
+        fs.appendFileSync(logFilePath, logMessage, "utf8");
+        resolve(null);
+      }
+    });
+  });
+}
+
+async function logAllPdfText(pdfBytes: Buffer): Promise<void> {
+  return new Promise((resolve, reject) => {
+    let currentPage = 0;
+    const lines: { y: number; items: { text: string; x: number; y: number; w: number }[] }[] = [];
+
+    new PdfReader().parseBuffer(pdfBytes, (err: string | Error | null, item: any) => {
+      if (err) {
+        const errorMessage = `[PDF_TEXT_ERROR] Error processing PDF: ${err}\n`;
+        console.error(errorMessage);
+        fs.appendFileSync(logFilePath, errorMessage, "utf8");
+        return reject(err);
+      }
+
+      if (item?.page) {
+        currentPage = item.page;
+        const logMessage = `[PDF_TEXT] Page ${currentPage}:\n`;
+        console.log(logMessage);
+        fs.appendFileSync(logFilePath, logMessage, "utf8");
+      }
+
+      if (item && item.text && typeof item.x === "number" && typeof item.y === "number") {
+        const text = item.text.trim();
+        const logMessage = `[PDF_TEXT_RAW] Text="${text}", x=${item.x}, y=${item.y}, width=${item.w || "undefined"}\n`;
+        console.log(logMessage);
+        fs.appendFileSync(logFilePath, logMessage, "utf8");
+
+        // Group text items by y-coordinate
+        let line = lines.find((l) => Math.abs(l.y - item.y) < 0.1);
+        if (!line) {
+          line = { y: item.y, items: [] };
+          lines.push(line);
+        }
+        line.items.push({ text, x: item.x, y: item.y, w: item.w || 50 });
+      }
+
+      if (!item) {
+        // Process each line to reconstruct words
+        for (const line of lines) {
+          line.items.sort((a, b) => a.x - b.x);
+
+          let currentWord = "";
+          let startX = 0;
+          let totalWidth = 0;
+          let lastX = 0;
+          let lastWidth = 0;
+
+          for (let i = 0; i <= line.items.length; i++) {
+            const currentItem = line.items[i];
+            const isLast = i === line.items.length;
+
+            if (isLast || (currentItem && lastX && currentItem.x - (lastX + lastWidth) > 2)) {
+              if (currentWord) {
+                const wordMessage = `[PDF_TEXT_WORD] Reconstructed Word="${currentWord}", x=${startX}, y=${line.y}, width=${totalWidth}\n`;
+                console.log(wordMessage);
+                fs.appendFileSync(logFilePath, wordMessage, "utf8");
+              }
+              currentWord = "";
+              totalWidth = 0;
+            }
+
+            if (!isLast) {
+              if (!currentWord) startX = currentItem.x;
+              currentWord += currentItem.text;
+              totalWidth += currentItem.w;
+              lastX = currentItem.x;
+              lastWidth = currentItem.w;
+            }
+          }
+        }
+
+        const logMessage = "[PDF_TEXT] Finished processing PDF.\n";
+        console.log(logMessage);
+        fs.appendFileSync(logFilePath, logMessage, "utf8");
+        resolve();
+      }
+    });
   });
 }
