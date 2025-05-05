@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import SignaturePad from "signature_pad";
 import { useRouter } from "next/navigation";
 
+type Participant = {
+  firstName: string;
+  lastName: string;
+  userID: string;
+  isChild: boolean;
+};
+
 type SignatureCanvasProps = {
   eventId: string;
   waiverId: string;
