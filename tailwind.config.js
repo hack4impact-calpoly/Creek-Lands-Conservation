@@ -54,6 +54,24 @@ module.exports = {
           4: "hsl(var(--chart-4))",
           5: "hsl(var(--chart-5))",
         },
+        brand: {
+          rust: "#D3983F",
+          paleYellow: "#E0B364",
+          fadedGreen: "#99B697",
+          emeraldGreen: "#558552",
+          skyBlue: "#ABCCDB",
+        },
+        neutral: {
+          white: "#FFFFFF",
+          lightGrey1: "#EEEEEE",
+          lightGrey2: "#D9D9D9",
+          black: "#1D2427",
+        },
+        navy: {
+          primary: "#13303C",
+          secondary: "#45575E",
+          tertiary: "#6D8995",
+        },
       },
       keyframes: {
         "accordion-down": {
