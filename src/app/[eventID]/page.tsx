@@ -10,6 +10,7 @@ import { getEvents } from "@/app/actions/events/actions";
 import { Button } from "@/components/ui/button";
 import WaiverSignatureForm from "@/components/WaiverSignatureComponent/WaiverSignatureForm";
 import CheckoutButton from "@/components/Payment/CheckoutButton";
+import { toast } from "@/hooks/use-toast";
 
 export interface Attendee {
   firstName: string;
@@ -29,7 +30,7 @@ const RegisterPage = () => {
   const [registrationStage, setRegistrationState] = useState<"selectParticipants" | "signWaivers">(
     "selectParticipants",
   );
-  const [paymentStage, setPaymentStage] = useState<boolean>(true); // CHANGE TO FALSE
+  const [paymentStage, setPaymentStage] = useState<boolean>(false);
   const [userInfo, setUserInfo] = useState<{
     id: string;
     firstName: string;
@@ -102,6 +103,56 @@ const RegisterPage = () => {
     console.log("Selected Attendees:", selectedAttendees);
   };
 
+  const handleRegisterEvent = async (attendees: string[]) => {
+    if (!user) {
+      toast({
+        title: "Error",
+        description: "You must be logged in to register.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log("Registering attendees:", attendees, "User ID:", userInfo.id);
+      const response = await fetch(`/api/events/${event?.id}/registrations`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attendees }),
+      });
+
+      const responseData = await response.json();
+      if (!response.ok) throw new Error(responseData.error || "Failed to register for event.");
+
+      setUserInfo((prev) => {
+        const userIsAttendee = attendees.includes(prev.id);
+        console.log("User is attendee:", userIsAttendee);
+        return {
+          ...prev,
+          alreadyRegistered: userIsAttendee ? true : prev.alreadyRegistered,
+          family: prev.family.map((member) => ({
+            ...member,
+            alreadyRegistered: attendees.includes(member.id) ? true : member.alreadyRegistered,
+          })),
+        };
+      });
+
+      console.log("Parent Signup");
+      // onRegister?.(userData?._id, attendees);
+      toast({
+        title: "Registration successful",
+        description: "You have been registered for the event.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to register for the event.",
+        variant: "destructive",
+      });
+    } finally {
+    }
+  };
+
   return (
     <div>
       {event && registrationStage === "selectParticipants" && (
@@ -133,28 +184,28 @@ const RegisterPage = () => {
           </div>
         </>
       )}
-      {event && registrationStage === "signWaivers" && (
+      {event && registrationStage === "signWaivers" && event.eventWaiverTemplates.length && (
         <>
           <WaiverSignatureForm
             eventId={event.id}
             participants={selectedAttendees}
             setRegistrationState={setPaymentStage}
           />
-          {event && paymentStage && (
-            <div className="flex justify-center">
-              {event?.fee && (
-                <CheckoutButton
-                  title={event.title}
-                  startDate={event.startDate}
-                  fee={event.fee}
-                  attendees={selectedAttendees.length}
-                  eventId={event.id}
-                />
-              )}{" "}
-              {!event?.fee && <Button>test</Button>}
-            </div>
-          )}
         </>
+      )}
+      {event && registrationStage != "selectParticipants" && (paymentStage || !event.eventWaiverTemplates.length) && (
+        <div className="flex justify-center">
+          {event?.fee && (
+            <CheckoutButton
+              title={event.title}
+              startDate={event.startDate}
+              fee={event.fee}
+              attendees={selectedAttendees}
+              eventId={event.id}
+            />
+          )}
+          {!event?.fee && <Button>test</Button>}
+        </div>
       )}
     </div>
   );

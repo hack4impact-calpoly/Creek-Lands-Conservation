@@ -6,7 +6,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 export async function POST(req: Request) {
   try {
     const origin = req.headers.get("origin");
-    const { title, description, fee, attendees, eventId } = await req.json();
+    const { title, description, fee, quantity, eventId, attendees } = await req.json();
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -20,12 +20,16 @@ export async function POST(req: Request) {
             },
             unit_amount: fee,
           },
-          quantity: attendees,
+          quantity: quantity,
         },
       ],
       mode: "payment",
-      success_url: `${origin}/${eventId}`,
+      success_url: `${origin}/${eventId}/success`,
       cancel_url: `${origin}/${eventId}`,
+      metadata: {
+        eventId: eventId,
+        attendees: JSON.stringify(attendees),
+      },
     });
 
     return NextResponse.json({ sessionUrl: session.url });

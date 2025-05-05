@@ -1,5 +1,6 @@
 "use client";
 
+import { Attendee } from "@/app/[eventID]/page";
 import { Button } from "@/components/ui/button";
 import { StringExpression } from "mongoose";
 import { start } from "repl";
@@ -8,7 +9,7 @@ interface CheckoutButtonProps {
   title: string;
   startDate: string;
   fee: number;
-  attendees: number;
+  attendees: Attendee[];
   eventId: string;
 }
 
@@ -25,8 +26,9 @@ const CheckoutButton = ({ title, startDate, fee, attendees, eventId }: CheckoutB
       hour12: true,
     }),
     fee: fee, // Fee in cents
-    attendees: attendees,
+    quantity: attendees.length,
     eventId: eventId,
+    attendees: attendees,
   };
 
   const handleCheckout = async () => {
