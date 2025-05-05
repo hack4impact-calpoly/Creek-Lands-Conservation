@@ -138,7 +138,7 @@ const RegisterPage = () => {
             participants={selectedAttendees}
             onAllSigned={() => console.log("redirecting...")}
           />
-          <div className="flex justify-center">
+          {/* <div className="flex justify-center">
             <Button
               type="button"
               onClick={handleSelectSubmit}
@@ -147,7 +147,7 @@ const RegisterPage = () => {
             >
               {selectedAttendees.length > 0 ? "Proceed to Waiver" : "Select Participants"}
             </Button>
-          </div>
+          </div> */}
         </>
       )}
     </div>
