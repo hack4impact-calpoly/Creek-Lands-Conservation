@@ -172,12 +172,19 @@ export function EventInfoPreview({
     }
 
     const participants = [
-      {
-        firstName: userInfo.firstName,
-        lastName: userInfo.lastName,
-        userID: userInfo.id,
-        isChild: false,
-      },
+      // Include parent only if selected
+      ...(attendees.includes(userInfo.id)
+        ? [
+            {
+              firstName: userInfo.firstName,
+              lastName: userInfo.lastName,
+              userID: userInfo.id,
+              isChild: false,
+            },
+          ]
+        : []),
+
+      // Always include selected children
       ...userInfo.family
         .filter((m) => attendees.includes(m.id))
         .map((m) => ({
