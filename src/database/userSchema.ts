@@ -131,7 +131,7 @@ const userSchema = new Schema<IUser>(
       zipCode: {
         type: String,
         validate: {
-          validator: (val: string) => /^\d{5}(-\d{4})?$/.test(val),
+          validator: (val: string) => !val || /^\d{5}(-\d{4})?$/.test(val),
           message: "Invalid zip code format",
         },
         default: "",
