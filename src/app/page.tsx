@@ -7,7 +7,6 @@ import { EventInfo, LimitedEventInfo } from "@/types/events";
 import EventSection from "@/components/EventComponent/EventSection";
 import SkeletonEventSection from "@/components/EventComponent/EventSectionSkeleton";
 import { formatEvents } from "@/lib/utils";
-import CheckoutButton from "@/components/Payment/CheckoutButton";
 
 interface IChildData {
   _id: string;
@@ -146,7 +145,6 @@ export default function Home() {
 
   return (
     <main className="mx-auto mb-8 flex flex-col">
-      <CheckoutButton />
       <EventSection title="Registered Events" events={eventSections.registered} onRegister={handleRegister} />
       <EventSection title="Available Events" events={eventSections.available} onRegister={handleRegister} />
       <EventSection title="Past Events" events={eventSections.past} onRegister={handleRegister} />

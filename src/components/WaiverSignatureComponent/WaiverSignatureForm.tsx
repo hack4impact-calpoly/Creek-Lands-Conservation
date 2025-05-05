@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Dispatch, SetStateAction } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
@@ -20,10 +20,10 @@ type Waiver = {
 type WaiverSignatureFormProps = {
   eventId: string;
   participants: Participant[];
-  onAllSigned: () => void;
+  setRegistrationState: Dispatch<SetStateAction<boolean>>;
 };
 
-export default function WaiverSignatureForm({ eventId, participants, onAllSigned }: WaiverSignatureFormProps) {
+export default function WaiverSignatureForm({ eventId, participants, setRegistrationState }: WaiverSignatureFormProps) {
   const [waivers, setWaivers] = useState<Waiver[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [waiverUrl, setWaiverUrl] = useState("");
@@ -83,9 +83,6 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
 
     if (currentIndex < waivers.length - 1) {
       setCurrentIndex((prev) => prev + 1);
-    } else {
-      // Going to assume this is some type of redirect to the payment portal.
-      onAllSigned();
     }
   };
 
@@ -138,19 +135,26 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
             waiverId={currentWaiver._id}
             fileKey={currentWaiver.fileKey}
             participants={participants}
-            onSigned={() => setSigned(true)}
+            onSigned={() => {
+              setSigned(true);
+              if (currentIndex === waivers.length - 1) {
+                setRegistrationState(() => true);
+              }
+            }}
           />
         </div>
 
         <div className="flex justify-center">
-          <Button
-            type="button"
-            onClick={onSubmit}
-            className="bg-[#488644] text-white hover:bg-[#3a6d37]"
-            disabled={!signed || !waiverUrl}
-          >
-            {currentIndex === waivers.length - 1 ? "Proceed to Payment" : "Next Waiver"} <ChevronRight />
-          </Button>
+          {currentIndex < waivers.length - 1 && (
+            <Button
+              type="button"
+              onClick={onSubmit}
+              className="bg-[#488644] text-white hover:bg-[#3a6d37]"
+              disabled={!signed || !waiverUrl}
+            >
+              Next Waiver <ChevronRight />
+            </Button>
+          )}
         </div>
       </div>
     </div>

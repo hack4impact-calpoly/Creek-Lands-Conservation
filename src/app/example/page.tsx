@@ -11,7 +11,7 @@ export default function Page() {
         { firstName: "James", lastName: "Hudson", userID: "6816d463c43dbce290295172", isChild: true },
         { firstName: "Ava", lastName: "Hudson", userID: "6816d463c43dbce290295173", isChild: true },
       ]}
-      onAllSigned={() => console.log("redirecting...")}
+      setRegistrationState={() => console.log("redirecting...")}
     ></WaiverSignatureForm>
   );
 }

@@ -1,17 +1,32 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { StringExpression } from "mongoose";
+import { start } from "repl";
 
-const CheckoutButton = () => {
-  // Replace with your actual event data
-  // adjust fee based on number of attendees
+interface CheckoutButtonProps {
+  title: string;
+  startDate: string;
+  fee: number;
+  attendees: number;
+  eventId: string;
+}
+
+const CheckoutButton = ({ title, startDate, fee, attendees, eventId }: CheckoutButtonProps) => {
+  fee = Math.round(fee * 100); // Convert to cents
   const eventData = {
-    title: "Event Title",
-    description: "Event Description", // change to the start date
-    fee: 1000, // Fee in cents
-    attendees: 2, // Number of attendees
-    // add a return url for back button
-    // add a redirect url for successful payment
+    title: title,
+    description: new Date(startDate).toLocaleString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    }),
+    fee: fee, // Fee in cents
+    attendees: attendees,
+    eventId: eventId,
   };
 
   const handleCheckout = async () => {

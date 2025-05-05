@@ -9,6 +9,7 @@ import { useUser } from "@clerk/nextjs";
 import { getEvents } from "@/app/actions/events/actions";
 import { Button } from "@/components/ui/button";
 import WaiverSignatureForm from "@/components/WaiverSignatureComponent/WaiverSignatureForm";
+import CheckoutButton from "@/components/Payment/CheckoutButton";
 
 export interface Attendee {
   firstName: string;
@@ -25,9 +26,10 @@ const RegisterPage = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedAttendees, setSelectedAttendees] = useState<Attendee[]>([]);
-  const [registrationStage, setRegistrationState] = useState<"selectParticipants" | "signWaivers" | "payment">(
+  const [registrationStage, setRegistrationState] = useState<"selectParticipants" | "signWaivers">(
     "selectParticipants",
   );
+  const [paymentStage, setPaymentStage] = useState<boolean>(true); // CHANGE TO FALSE
   const [userInfo, setUserInfo] = useState<{
     id: string;
     firstName: string;
@@ -136,18 +138,22 @@ const RegisterPage = () => {
           <WaiverSignatureForm
             eventId={event.id}
             participants={selectedAttendees}
-            onAllSigned={() => console.log("redirecting...")}
+            setRegistrationState={setPaymentStage}
           />
-          {/* <div className="flex justify-center">
-            <Button
-              type="button"
-              onClick={handleSelectSubmit}
-              className="bg-[#488644] text-white hover:bg-[#3a6d37]"
-              disabled={selectedAttendees.length === 0}
-            >
-              {selectedAttendees.length > 0 ? "Proceed to Waiver" : "Select Participants"}
-            </Button>
-          </div> */}
+          {event && paymentStage && (
+            <div className="flex justify-center">
+              {event?.fee && (
+                <CheckoutButton
+                  title={event.title}
+                  startDate={event.startDate}
+                  fee={event.fee}
+                  attendees={selectedAttendees.length}
+                  eventId={event.id}
+                />
+              )}{" "}
+              {!event?.fee && <Button>test</Button>}
+            </div>
+          )}
         </>
       )}
     </div>
