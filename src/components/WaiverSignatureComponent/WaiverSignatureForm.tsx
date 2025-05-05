@@ -31,6 +31,7 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
   const [loading, setLoading] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [waiversFetched, setWaiversFetched] = useState(false);
 
   // Fetch waivers for the event
   useEffect(() => {
@@ -42,6 +43,8 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
         setWaivers(data.waivers);
       } catch (err) {
         console.error("Error fetching waivers:", err);
+      } finally {
+        setWaiversFetched(true);
       }
     };
     fetchWaivers();
@@ -67,6 +70,27 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
     };
     fetchWaiverUrl();
   }, [waivers, currentIndex]);
+
+  useEffect(() => {
+    // if there happens to be no waivers for this event.
+    if (waiversFetched && waivers.length === 0) {
+      (async () => {
+        try {
+          await fetch(`/api/events/${eventId}/registrations`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              attendees: participants.map((p) => p.userID),
+            }),
+          });
+        } catch (err) {
+          console.error("Registration failed (no waivers):", err);
+        } finally {
+          onAllSigned();
+        }
+      })();
+    }
+  }, [waiversFetched, waivers, eventId, participants, onAllSigned]);
 
   // Reset state when switching waivers
   useEffect(() => {
@@ -111,8 +135,11 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
 
   const currentWaiver = waivers[currentIndex];
 
-  if (!currentWaiver || loading) {
+  if (loading || !waiversFetched) {
     return <p className="mt-12 text-center text-gray-600">Loading waiver...</p>;
+  }
+  if (waivers.length === 0) {
+    return <p className="mt-12 text-center text-gray-600">No waivers required. Completing registration...</p>;
   }
 
   return (
