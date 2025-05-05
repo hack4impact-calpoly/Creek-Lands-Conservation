@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { APIEvent, RegisteredChildInfo, RegisteredUserInfo } from "@/types/events";
-import { IUserData } from "@/types/user";
+import { IChildData, IUserData } from "@/types/user";
 import Image from "next/image";
 import DOMPurify from "dompurify";
 
@@ -24,13 +24,13 @@ interface EventRegisterProps {
   images: string[];
   registeredUsers: RegisteredUserInfo[];
   registeredChildren: RegisteredChildInfo[];
-  // // user props
-  // _id?: string;
-  // clerkID?: string;
-  // firstName?: string;
-  // lastName?: string;
-  // children?: IUserData[]; // Array of child data
-  // registeredEvents?: APIEvent[]; // Array of registered events
+  // user props
+  userInfo: {
+    id: string;
+    name: string;
+    alreadyRegistered: boolean;
+    family: { id: string; name: string; alreadyRegistered: boolean }[];
+  };
 }
 
 const EventRegister = ({
@@ -45,12 +45,8 @@ const EventRegister = ({
   images,
   registeredUsers,
   registeredChildren,
-  // // user props
-  // _id,
-  // clerkID,
-  // firstName,
-  // lastName,
-  // children,
+  // user props
+  userInfo,
   // registeredEvents,
 }: EventRegisterProps) => {
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
@@ -58,6 +54,7 @@ const EventRegister = ({
   const [waiverSigned, setWaiverSigned] = useState(false);
   const sanitizedDescription = DOMPurify.sanitize(description);
   const currentRegistrations = registeredUsers.length + registeredChildren.length;
+  const remainingCapacity = capacity - currentRegistrations;
 
   return (
     <>
@@ -152,6 +149,70 @@ const EventRegister = ({
             <div className="col-span-full">
               <Text className="h-5 w-5" />
               <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizedDescription }} />
+            </div>
+          </div>
+
+          <div className="w-full">
+            <h2 className="text 3xl mb-4">Who&apos;s attending?</h2>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-3">
+                <Checkbox
+                  id={userInfo.id}
+                  checked={selectedAttendees.includes(userInfo.id) || userInfo.alreadyRegistered}
+                  onCheckedChange={(checked) => {
+                    setSelectedAttendees((prev) =>
+                      checked ? [...prev, userInfo.id] : prev.filter((id) => id !== userInfo.id),
+                    );
+                  }}
+                  disabled={
+                    userInfo.alreadyRegistered ||
+                    (!selectedAttendees.includes(userInfo.id) && selectedAttendees.length >= remainingCapacity)
+                  }
+                />
+                <label
+                  htmlFor={userInfo.id}
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  {userInfo.name}
+                  {(userInfo.alreadyRegistered ||
+                    (!selectedAttendees.includes(userInfo.id) && selectedAttendees.length >= remainingCapacity)) && (
+                    <span className="ml-2 text-xs italic text-gray-500">
+                      {userInfo.alreadyRegistered ? "(Already registered)" : " (Capacity full)"}
+                    </span>
+                  )}
+                </label>
+              </div>
+              {userInfo.family.map((member) => (
+                <div key={member.id} className="flex items-center space-x-3">
+                  <Checkbox
+                    id={member.id}
+                    checked={selectedAttendees.includes(member.id) || member.alreadyRegistered}
+                    onCheckedChange={(checked) => {
+                      setSelectedAttendees((prev) =>
+                        checked ? [...prev, member.id] : prev.filter((id) => id !== member.id),
+                      );
+                    }}
+                    disabled={
+                      member.alreadyRegistered ||
+                      (!selectedAttendees.includes(member.id) && selectedAttendees.length >= remainingCapacity)
+                    }
+                  />
+                  <label
+                    htmlFor={member.id}
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    {member.name}
+                    <span className="ml-2 text-xs italic text-gray-500">
+                      {(member.alreadyRegistered ||
+                        (!selectedAttendees.includes(member.id) && selectedAttendees.length >= remainingCapacity)) && (
+                        <span className="ml-2 text-xs italic text-gray-500">
+                          {member.alreadyRegistered ? "(Already registered)" : " (Capacity full)"}
+                        </span>
+                      )}
+                    </span>
+                  </label>
+                </div>
+              ))}
             </div>
           </div>
         </div>

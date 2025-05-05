@@ -2,10 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
-import { APIEvent } from "@/types/events";
+import { APIEvent, LimitedEventInfo } from "@/types/events";
 import EventRegister from "@/components/EventComponent/EventRegister";
 import { IUserData } from "@/types/user";
 import { useUser } from "@clerk/nextjs";
+import { getEvents } from "@/app/actions/events/actions";
 
 const RegisterPage = () => {
   const { eventID } = useParams();
@@ -17,33 +18,36 @@ const RegisterPage = () => {
   const [registrationStage, setRegistrationState] = useState<"selectParticipants" | "signWaivers" | "payment">(
     "selectParticipants",
   );
-  const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
+  const [userInfo, setUserInfo] = useState<{
+    id: string;
+    name: string;
+    alreadyRegistered: boolean;
+    family: { id: string; name: string; alreadyRegistered: boolean }[];
+  }>({
+    id: "",
+    name: "",
+    alreadyRegistered: false,
+    family: [],
+  });
 
   useEffect(() => {
-    const fetchEvent = async () => {
+    const fetchEventandUser = async () => {
+      if (!isLoaded) return;
       try {
-        const response = await fetch(`/api/events/${eventID}`, {
+        const eventRes = await fetch(`/api/events/${eventID}`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
           },
         });
 
-        if (!response.ok) {
+        if (!eventRes.ok) {
           throw new Error("Failed to fetch event data");
         }
 
-        const eventData = await response.json();
+        const eventData = await eventRes.json();
         setEvent(eventData);
-        console.log(eventData);
-      } catch (error) {
-        console.error("Error fetching event data:", error);
-      }
-    };
 
-    const fetchUserData = async () => {
-      if (!isLoaded) return;
-      try {
         if (user) {
           const userResponse = await fetch(`/api/users/${user.id}`);
           if (!userResponse.ok) throw new Error("Failed to fetch user data");
@@ -52,14 +56,29 @@ const RegisterPage = () => {
           if (!fetchedUserData?._id) throw new Error("User not found in MongoDB");
 
           setUserData(fetchedUserData);
+
+          const family =
+            fetchedUserData.children?.map((child: any) => ({
+              id: child._id,
+              name: `${child.firstName || ""} ${child.lastName || ""}`.trim(),
+              alreadyRegistered: child.registeredEvents.includes(eventData.id),
+            })) || [];
+
+          setUserInfo({
+            id: fetchedUserData._id,
+            name: `${fetchedUserData?.firstName || ""} ${fetchedUserData.lastName || ""}`.trim(),
+            alreadyRegistered:
+              eventData.registeredUsers.some((user: { user: string }) => user.user === fetchedUserData._id) || false,
+            family,
+          });
+
+          console.log("User Info:", event?.registeredUsers);
         }
       } catch (error) {
-        console.error("Error fetching user data:", error);
+        console.error("Error fetching event data:", error);
       }
     };
-
-    fetchEvent();
-    fetchUserData();
+    fetchEventandUser();
   }, [isLoaded, user]);
 
   return (
@@ -76,6 +95,7 @@ const RegisterPage = () => {
           images={event.images}
           registeredUsers={event.registeredUsers}
           registeredChildren={event.registeredChildren}
+          userInfo={userInfo}
         />
       )}
     </div>
