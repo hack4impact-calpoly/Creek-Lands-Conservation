@@ -1,18 +1,25 @@
+import type React from "react";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import React from "react";
 
-const WaiverSignatureSkeleton = () => {
+const WaiverSignatureSkeleton: React.FC = () => {
   return (
-    <Card className="flex w-full items-center justify-between gap-3 rounded-lg bg-gray-50 p-2 shadow-md">
-      <div className="flex flex-wrap items-center gap-2 md:gap-4 xl:gap-10">
-        <Skeleton className="h-5 w-24 sm:h-6 sm:w-32" />
-        <Skeleton className="h-6 w-32 sm:h-7 sm:w-40 lg:h-8 lg:w-60" />
+    <Card className="flex w-full flex-col gap-3 rounded-lg p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex w-full flex-col gap-2">
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-6 w-48" />
+          <Skeleton className="h-5 w-20 rounded-full" />
+        </div>
+
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-3">
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-24" />
+          <Skeleton className="h-4 w-28" />
+        </div>
       </div>
 
-      <div className="flex items-center gap-2 sm:gap-4">
-        <Skeleton className="h-12 w-32 rounded-lg sm:h-14 sm:w-40 lg:h-16 lg:w-48" />
-        <Skeleton className="hidden h-16 w-56 rounded-lg lg:block" />
+      <div className="mt-2 flex items-center gap-2 sm:mt-0">
+        <Skeleton className="h-9 w-28" />
       </div>
     </Card>
   );
