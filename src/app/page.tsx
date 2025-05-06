@@ -57,7 +57,6 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const { isLoaded, user } = useUser();
 
-  // inside Home()
   const handleRegister = async (eventId: string, attendees: string[]) => {
     if (!userData) return;
 
