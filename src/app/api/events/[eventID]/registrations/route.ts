@@ -21,18 +21,46 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
     return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
   }
 
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: "Unauthorized. Please log in." }, { status: 401 });
+  // sus code
+  const authHeader = req.headers.get("authorization");
+  const isInternalCall = authHeader === `Bearer ${process.env.INTERNAL_API_SECRET}`;
+
+  let userId: string | null = null;
+  let body: any;
+  let attendees: string[] = [];
+
+  try {
+    body = await req.json();
+  } catch (error) {
+    console.error("Invalid or missing JSON body:", error);
+    return NextResponse.json({ error: "Invalid or missing JSON body" }, { status: 400 });
   }
+
+  if (isInternalCall) {
+    // handle stripe webhook req
+    userId = body.userId;
+
+    if (!userId) {
+      return new Response("Missing userId in internal request", { status: 400 });
+    }
+
+    attendees = body.attendees.attendees;
+  } else {
+    // handle normal req from client
+    userId = (await auth()).userId;
+    if (!userId) {
+      return NextResponse.json({ error: "Unauthorized. Please log in." }, { status: 401 });
+    }
+    attendees = body.attendees;
+  }
+  // sus code end
+  // might be better to remove this from the isPublicRoute check in middleware.ts
+  // and make another api route for stripe webhooks
 
   const user = await User.findOne({ clerkID: userId });
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
-
-  const body = await req.json();
-  const attendees: string[] = body.attendees;
 
   if (
     !Array.isArray(attendees) ||

@@ -24,7 +24,14 @@ export async function POST(req: Request) {
     const session = event.data.object as Stripe.Checkout.Session;
     const eventId = session.metadata?.eventId;
     const attendeesRaw = session.metadata?.attendees;
-    console.log("attendees", attendeesRaw);
+
+    // sus code
+    const clerkId = session.metadata?.clerkId;
+
+    if (!clerkId) {
+      return new Response("Missing userId metadata", { status: 400 });
+    }
+    // sus code end
 
     try {
       if (!attendeesRaw) {
@@ -49,8 +56,9 @@ export async function POST(req: Request) {
 
       const response = await fetch(`https://golden-oryx-evidently.ngrok-free.app/api/events/${eventId}/registrations`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(attendeesPayload),
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.INTERNAL_API_SECRET!}` },
+        body: JSON.stringify({ userId: clerkId, attendees: attendeesPayload }),
+        credentials: "include",
       });
 
       const result = await response.json();
