@@ -30,7 +30,7 @@ const CheckoutButton = ({ title, startDate, fee, attendees, eventId, clerkId }: 
     quantity: attendees.length,
     eventId: eventId,
     attendees: attendees.map((attendee) => attendee.userID), // only pass userID
-    clerkId: clerkId, // Clerk ID of the user making the payment
+    clerkId: clerkId, // Clerk ID of the user making the payment, sus code remove later
   };
 
   console.log(attendees.map((attendee) => attendee.userID));

@@ -54,12 +54,15 @@ export async function POST(req: Request) {
 
       console.log("Parsed attendees:", attendeesPayload.attendees);
 
-      const response = await fetch(`https://golden-oryx-evidently.ngrok-free.app/api/events/${eventId}/registrations`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.INTERNAL_API_SECRET!}` },
-        body: JSON.stringify({ userId: clerkId, attendees: attendeesPayload }),
-        credentials: "include",
-      });
+      const response = await fetch(
+        `https://golden-oryx-evidently.ngrok-free.app/api/events/${eventId}/registrations/stripe`,
+        {
+          method: "PUT",
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.INTERNAL_API_SECRET!}` },
+          body: JSON.stringify({ userId: clerkId, attendees: attendeesPayload }),
+          credentials: "include",
+        },
+      );
 
       const result = await response.json();
 

@@ -7,7 +7,7 @@ const isPublicRoute = createRouteMatcher([
   "/",
   "/api/webhooks/clerk",
   "/api/webhooks/stripe",
-  "/api/events/:eventId/registrations", // sus code, remove later
+  "/api/events/:eventId/registrations/stripe",
 ]);
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 
