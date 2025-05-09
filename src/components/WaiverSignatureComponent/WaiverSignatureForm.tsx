@@ -179,15 +179,17 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
           </div>
         </div>
 
-        <div className="flex justify-center">
-          <SignatureCanvas
-            eventId={eventId}
-            waiverId={currentWaiver._id}
-            fileKey={currentWaiver.fileKey}
-            participants={participants}
-            onSigned={() => setSigned(true)}
-          />
-        </div>
+        {!signed && (
+          <div className="flex justify-center">
+            <SignatureCanvas
+              eventId={eventId}
+              waiverId={currentWaiver._id}
+              fileKey={currentWaiver.fileKey}
+              participants={participants}
+              onSigned={() => setSigned(true)}
+            />
+          </div>
+        )}
 
         <div className="flex justify-center">
           <Button
