@@ -26,13 +26,13 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
     return NextResponse.json({ error: "Unauthorized. Please log in." }, { status: 401 });
   }
 
-  const body = await req.json();
-  const attendees: string[] = body.attendees;
-
   const user = await User.findOne({ clerkID: userId });
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
+
+  const body = await req.json();
+  const attendees: string[] = body.attendees;
 
   if (
     !Array.isArray(attendees) ||

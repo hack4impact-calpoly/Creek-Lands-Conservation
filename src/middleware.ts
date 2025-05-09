@@ -12,6 +12,11 @@ const isPublicRoute = createRouteMatcher([
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
+  if (isPublicRoute(req)) {
+    console.log("Public route, skipping Clerk middleware.", req.url);
+    return NextResponse.next();
+  }
+
   const { userId, sessionClaims, redirectToSignIn } = await auth();
   const role = sessionClaims?.metadata?.userRole;
 

@@ -1,19 +1,58 @@
 // src/app/api/events/[eventID]/registration/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
 import connectDB from "@/database/db";
 import Event from "@/database/eventSchema";
 import User from "@/database/userSchema";
 import mongoose from "mongoose";
 import { RawRegisteredUser, RawRegisteredChild } from "@/types/events";
+import { Stripe } from "stripe";
+import { headers } from "next/headers";
 
 interface RawChild {
   _id: mongoose.Types.ObjectId;
   registeredEvents: mongoose.Types.ObjectId[];
 }
 
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+
 // PUT: Register for an event
 export async function PUT(req: NextRequest, { params }: { params: { eventID: string } }) {
+  console.log("Incoming Headers:", Object.fromEntries(req.headers.entries()));
+
+  const sig = headers().get("Stripe-Signature") || headers().get("Stripe-Signature");
+  if (!sig) {
+    console.error("Missing stripe-signature header");
+    return NextResponse.json({ error: "Missing Stripe signature" }, { status: 400 });
+  }
+
+  const secret = process.env.STRIPE_WEBHOOK_SECRET!;
+
+  // Read raw stream
+  const chunks: Uint8Array[] = [];
+  const reader = req.body!.getReader();
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    if (value) chunks.push(value);
+  }
+
+  const rawBody = Buffer.concat(chunks).toString("utf8");
+
+  let stripeEvent: Stripe.Event;
+
+  try {
+    stripeEvent = stripe.webhooks.constructEvent(rawBody, sig, secret);
+    console.log("✅ Stripe event verified:", stripeEvent.type);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Unknown error";
+    console.error("❌ Webhook verification failed:", message);
+    return NextResponse.json({ message: `Webhook Error: ${message}` }, { status: 400 });
+  }
+
+  // Successfully constructed event.
+  console.log("✅ Success:", stripeEvent.id);
+
   await connectDB();
   const { eventID } = params;
 
@@ -21,29 +60,16 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
     return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
   }
 
-  // sus code
-  const authHeader = req.headers.get("authorization");
-  // const isInternalCall = authHeader === `Bearer ${process.env.INTERNAL_API_SECRET}`;
+  const body = await req.json();
+  const attendees: string[] = body.attendees;
 
-  let userId: string | null = null;
-  let body: any;
-  let attendees: string[] = [];
-
-  try {
-    body = await req.json();
-  } catch (error) {
-    console.error("Invalid or missing JSON body:", error);
-    return NextResponse.json({ error: "Invalid or missing JSON body" }, { status: 400 });
-  }
-
-  // handle stripe webhook req
-  userId = body.userId;
+  // handle stripe webhook req, sus code
+  const userId = body.userId;
 
   if (!userId) {
     return new Response("Missing userId in internal request", { status: 400 });
   }
 
-  attendees = body.attendees.attendees;
   // sus code end
   // might be better to remove this from the isPublicRoute check in middleware.ts
   // and make another api route for stripe webhooks
@@ -139,3 +165,9 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
     { status: 200 },
   );
 }
+
+export const config = {
+  api: {
+    bodyParser: false, // Disable body parsing for this route
+  },
+};
