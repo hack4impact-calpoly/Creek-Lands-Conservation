@@ -197,30 +197,51 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
 
       const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.amazonaws.com/${fileKey}`;
       signedPdfUrls.push(fileUrl);
-
-      const newWaiver = await Waiver.create({
-        fileKey,
-        fileName,
-        uploadedBy: user._id,
-        belongsToUser: user._id,
-        isForChild: participant.isChild,
-        childSubdocId: participant.isChild ? participant.userID : undefined,
-        type: "completed",
+      // Check if a waiver already exists for this participant and event
+      const existingWaiver = await Waiver.findOne({
+        eventId: eventID,
         templateRef: waiverID,
-        eventId: new mongoose.Types.ObjectId(eventID),
+        type: "completed",
+        ...(participant.isChild ? { childSubdocId: participant.userID } : { belongsToUser: user._id }),
       });
 
-      if (participant.isChild) {
-        const child = user.children.id(participant.userID);
-        if (child) {
-          child.waiversSigned.push(newWaiver._id);
-          await user.save();
-        } else {
-          console.warn(`Child with ID ${participant.userID} not found in user ${user._id}`);
-        }
+      // check for waiver duplication
+      if (existingWaiver) {
+        console.log("Waiver object already exists in MongoDB");
+        // update the existing waiver
+        existingWaiver.fileKey = fileKey;
+        existingWaiver.fileName = fileName;
+        existingWaiver.uploadedBy = user._id;
+        existingWaiver.isForChild = participant.isChild;
+        existingWaiver.childSubdocId = participant.isChild ? participant.userID : undefined;
+        await existingWaiver.save();
       } else {
-        user.waiversSigned.push(newWaiver._id);
-        await user.save();
+        // create new waiver
+        const newWaiver = await Waiver.create({
+          fileKey,
+          fileName,
+          uploadedBy: user._id,
+          belongsToUser: user._id,
+          isForChild: participant.isChild,
+          childSubdocId: participant.isChild ? participant.userID : undefined,
+          type: "completed",
+          templateRef: waiverID,
+          eventId: new mongoose.Types.ObjectId(eventID),
+        });
+
+        // only push to user.children or user.waiversSigned if it's a new waiver
+        if (participant.isChild) {
+          const child = user.children.id(participant.userID);
+          if (child && !child.waiversSigned.includes(newWaiver._id)) {
+            child.waiversSigned.push(newWaiver._id);
+            await user.save();
+          }
+        } else {
+          if (!user.waiversSigned.includes(newWaiver._id)) {
+            user.waiversSigned.push(newWaiver._id);
+            await user.save();
+          }
+        }
       }
     }
 

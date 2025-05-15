@@ -191,6 +191,8 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
           </div>
         )}
 
+        {signed && <p className="flex justify-center text-sm italic text-green-600">Signed Successfully!</p>}
+
         <div className="flex justify-center">
           <Button
             type="button"
