@@ -201,62 +201,6 @@ export function EventInfoPreview({
     router.push(`/events/${id}/sign`);
   };
 
-  // const handleRegisterEvent = async (attendees: string[]) => {
-  //   if (!user) {
-  //     toast({
-  //       title: "Error",
-  //       description: "You must be logged in to register.",
-  //       variant: "destructive",
-  //     });
-  //     return;
-  //   }
-
-  //   setIsRegistering(true);
-
-  //   try {
-  //     console.log("Registering attendees:", attendees, "User ID:", userInfo.id);
-  //     const response = await fetch(`/api/events/${id}/registrations`, {
-  //       method: "PUT",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ attendees }),
-  //     });
-
-  //     const responseData = await response.json();
-  //     if (!response.ok) throw new Error(responseData.error || "Failed to register for event.");
-
-  //     // Update local state
-  //     setIsRegistered(true);
-  //     setUserInfo((prev) => {
-  //       const userIsAttendee = attendees.includes(prev.id);
-  //       console.log("User is attendee:", userIsAttendee);
-  //       return {
-  //         ...prev,
-  //         alreadyRegistered: userIsAttendee ? true : prev.alreadyRegistered,
-  //         family: prev.family.map((member) => ({
-  //           ...member,
-  //           alreadyRegistered: attendees.includes(member.id) ? true : member.alreadyRegistered,
-  //         })),
-  //       };
-  //     });
-
-  //     console.log("Parent Signup");
-  //     onRegister?.(id, attendees);
-  //     toast({
-  //       title: "Registration successful",
-  //       description: "You have been registered for the event.",
-  //     });
-  //   } catch (error) {
-  //     toast({
-  //       title: "Error",
-  //       description: error instanceof Error ? error.message : "Failed to register for the event.",
-  //       variant: "destructive",
-  //     });
-  //   } finally {
-  //     setIsRegistering(false);
-  //     setIsRegisterDialogOpen(false);
-  //   }
-  // };
-
   const handleEditEvent = () => {
     router.push(`/admin/events/edit/${id}`);
   };

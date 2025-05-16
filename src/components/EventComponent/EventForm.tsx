@@ -109,6 +109,7 @@ export default function CreateEventForm() {
       console.log("Event created:", createdEvent);
       const eventId = createdEvent.id;
       console.log("Event ID in Form:", eventId);
+
       const imageUrls = fileUploadRef.current
         ? await fileUploadRef.current.uploadFiles(eventId) // Pass eventId
         : [];
@@ -124,7 +125,6 @@ export default function CreateEventForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ images: imageUrls, waiverTemplates: pdfInfos }),
       });
-
       if (!updateResponse.ok) {
         const errorData = await updateResponse.json();
         console.error("PATCH failed:", errorData);
