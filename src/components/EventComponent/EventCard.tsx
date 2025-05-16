@@ -119,3 +119,12 @@ export default function EventCard(props: EventCardProps) {
     </Card>
   );
 }
+
+export function Something({ id, eventID }: { id: string; eventID: string }) {
+  return (
+    <div>
+      <h1>Event ID: {eventID}</h1>
+      <p>Event ID: {id}</p>
+    </div>
+  );
+}

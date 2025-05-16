@@ -261,6 +261,10 @@ export function EventInfoPreview({
     router.push(`/admin/events/edit/${id}`);
   };
 
+  const handleViewEvent = () => {
+    router.push(`/admin/events/${id}/participants`);
+  };
+
   return (
     <>
       <Dialog>
@@ -363,6 +367,9 @@ export function EventInfoPreview({
 
             {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
+                <Button variant="outline" onClick={() => handleViewEvent()}>
+                  View Event
+                </Button>
                 <Button variant="outline" onClick={() => handleEditEvent()}>
                   Edit Event
                 </Button>
