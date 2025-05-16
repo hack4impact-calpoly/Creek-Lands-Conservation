@@ -11,10 +11,10 @@ interface CheckoutButtonProps {
   fee: number;
   attendees: Attendee[];
   eventId: string;
-  clerkId: string;
+  userId: string;
 }
 
-const CheckoutButton = ({ title, startDate, fee, attendees, eventId, clerkId }: CheckoutButtonProps) => {
+const CheckoutButton = ({ title, startDate, fee, attendees, eventId, userId }: CheckoutButtonProps) => {
   fee = Math.round(fee * 100); // Convert to cents
   const eventData = {
     title: title,
@@ -30,7 +30,7 @@ const CheckoutButton = ({ title, startDate, fee, attendees, eventId, clerkId }: 
     quantity: attendees.length,
     eventId: eventId,
     attendees: attendees.map((attendee) => attendee.userID), // only pass userID
-    clerkId: clerkId, // Clerk ID of the user making the payment, sus code remove later
+    userId: userId,
   };
 
   console.log(attendees.map((attendee) => attendee.userID));

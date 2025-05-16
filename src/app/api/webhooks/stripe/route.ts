@@ -25,14 +25,12 @@ export async function POST(req: Request) {
     const session = event.data.object as Stripe.Checkout.Session;
     const eventId = session.metadata?.eventId;
     const attendeesRaw = session.metadata?.attendees;
+    const userId = session.metadata?.userId;
+    const url = session.metadata?.url;
 
-    // sus code
-    const clerkId = session.metadata?.clerkId;
-
-    if (!clerkId) {
+    if (!userId) {
       return new Response("Missing userId metadata", { status: 400 });
     }
-    // sus code end
 
     try {
       if (!attendeesRaw) {
@@ -41,15 +39,12 @@ export async function POST(req: Request) {
 
       const attendeesPayload = JSON.parse(attendeesRaw);
 
-      console.log("raw attendees:", attendeesRaw);
-      console.log("Parsed attendees:", attendeesPayload);
-
       const response = await fetch(
-        `https://golden-oryx-evidently.ngrok-free.app/api/events/${eventId}/registrations/stripe`,
+        `${url}/api/events/${eventId}/registrations/stripe`, // this should be changed to the deployment url
         {
           method: "PUT",
-          headers: { "Content-Type": "application/json", Authorization: `Bearer ${process.env.INTERNAL_API_SECRET!}` },
-          body: JSON.stringify({ userId: clerkId, attendees: attendeesPayload }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ userId: userId, attendees: attendeesPayload }),
           credentials: "include",
         },
       );

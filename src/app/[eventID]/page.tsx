@@ -191,7 +191,7 @@ const RegisterPage = () => {
                   fee={event.fee}
                   attendees={selectedAttendees}
                   eventId={event.id}
-                  clerkId={userData?.clerkID || ""}
+                  userId={userData?._id || ""}
                 />
               )}
           </div>
@@ -215,7 +215,7 @@ const RegisterPage = () => {
               fee={event.fee}
               attendees={selectedAttendees}
               eventId={event.id}
-              clerkId={userData?.clerkID || ""}
+              userId={userData?._id || ""}
             />
           )}
           {!event?.fee && <Button>test</Button>}

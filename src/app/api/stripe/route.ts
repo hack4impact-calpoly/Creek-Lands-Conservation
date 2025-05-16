@@ -6,10 +6,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 export async function POST(req: Request) {
   try {
     const origin = req.headers.get("origin");
-    const { title, description, fee, quantity, eventId, attendees, clerkId } = await req.json();
-    // including clerkid in the metadata might introduce security issues
-    // investigate storing stripe checkout session id in db - link to user
-    // and using that to verity the user in the webhook
+    const { title, description, fee, quantity, eventId, attendees, userId } = await req.json();
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -32,7 +29,8 @@ export async function POST(req: Request) {
       metadata: {
         eventId: eventId,
         attendees: JSON.stringify(attendees),
-        clerkId: clerkId,
+        userId: userId,
+        url: origin,
       },
     });
 

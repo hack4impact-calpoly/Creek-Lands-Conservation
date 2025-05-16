@@ -1,12 +1,9 @@
-// src/app/api/events/[eventID]/registration/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import connectDB from "@/database/db";
 import Event from "@/database/eventSchema";
 import User from "@/database/userSchema";
 import mongoose from "mongoose";
 import { RawRegisteredUser, RawRegisteredChild } from "@/types/events";
-import { Stripe } from "stripe";
-import { headers } from "next/headers";
 
 interface RawChild {
   _id: mongoose.Types.ObjectId;
@@ -25,16 +22,13 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
   const body = await req.json();
   const attendees: string[] = body.attendees;
 
-  // handle stripe webhook req, sus code
   const userId = body.userId;
-  console.log("attendees:", attendees);
-  console.log("userid:", userId);
 
   if (!userId) {
     return new Response("Missing userId in internal request", { status: 400 });
   }
 
-  const user = await User.findOne({ clerkID: userId });
+  const user = await User.findById(userId);
   if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
