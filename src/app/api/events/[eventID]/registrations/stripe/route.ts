@@ -13,46 +13,8 @@ interface RawChild {
   registeredEvents: mongoose.Types.ObjectId[];
 }
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
 // PUT: Register for an event
 export async function PUT(req: NextRequest, { params }: { params: { eventID: string } }) {
-  console.log("Incoming Headers:", Object.fromEntries(req.headers.entries()));
-
-  const sig = headers().get("Stripe-Signature") || headers().get("Stripe-Signature");
-  if (!sig) {
-    console.error("Missing stripe-signature header");
-    return NextResponse.json({ error: "Missing Stripe signature" }, { status: 400 });
-  }
-
-  const secret = process.env.STRIPE_WEBHOOK_SECRET!;
-
-  // Read raw stream
-  const chunks: Uint8Array[] = [];
-  const reader = req.body!.getReader();
-
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    if (value) chunks.push(value);
-  }
-
-  const rawBody = Buffer.concat(chunks).toString("utf8");
-
-  let stripeEvent: Stripe.Event;
-
-  try {
-    stripeEvent = stripe.webhooks.constructEvent(rawBody, sig, secret);
-    console.log("✅ Stripe event verified:", stripeEvent.type);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("❌ Webhook verification failed:", message);
-    return NextResponse.json({ message: `Webhook Error: ${message}` }, { status: 400 });
-  }
-
-  // Successfully constructed event.
-  console.log("✅ Success:", stripeEvent.id);
-
   await connectDB();
   const { eventID } = params;
 
@@ -65,14 +27,12 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
 
   // handle stripe webhook req, sus code
   const userId = body.userId;
+  console.log("attendees:", attendees);
+  console.log("userid:", userId);
 
   if (!userId) {
     return new Response("Missing userId in internal request", { status: 400 });
   }
-
-  // sus code end
-  // might be better to remove this from the isPublicRoute check in middleware.ts
-  // and make another api route for stripe webhooks
 
   const user = await User.findOne({ clerkID: userId });
   if (!user) {

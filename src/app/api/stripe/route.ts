@@ -31,12 +31,10 @@ export async function POST(req: Request) {
       cancel_url: `${origin}/${eventId}`,
       metadata: {
         eventId: eventId,
-        attendees: JSON.stringify({ attendees }),
+        attendees: JSON.stringify(attendees),
         clerkId: clerkId,
       },
     });
-
-    console.log("Stripe session created:", session);
 
     return NextResponse.json({ sessionUrl: session.url });
   } catch (error: any) {
