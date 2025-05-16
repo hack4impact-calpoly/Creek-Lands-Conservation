@@ -119,9 +119,3 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
     { status: 200 },
   );
 }
-
-export const config = {
-  api: {
-    bodyParser: false, // Disable body parsing for this route
-  },
-};
