@@ -8,9 +8,8 @@ export async function POST(req: Request) {
     if (!stripeSecretKey) {
       throw new Error("Missing STRIPE_SECRET_KEY in environment variables.");
     }
-    const stripe = new Stripe(stripeSecretKey, {
-      apiVersion: "2022-11-15",
-    });
+    const stripe = new Stripe(stripeSecretKey);
+
     const origin = req.headers.get("origin");
     const { title, description, fee, quantity, eventId, attendees, userId } = await req.json();
 
