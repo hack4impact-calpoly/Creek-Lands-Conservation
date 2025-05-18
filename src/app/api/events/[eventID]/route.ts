@@ -21,7 +21,10 @@ export async function GET(req: NextRequest, { params }: { params: { eventID: str
   }
 
   try {
-    const event = (await Event.findById(eventID).lean()) as RawEvent | null;
+    const event = (await Event.findById(eventID)
+      .populate("registeredUsers.user") // Populate user details for registeredUsers
+      .populate("registeredChildren.parent") // Populate parent details for registeredChildren
+      .lean()) as RawEvent | null;
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
