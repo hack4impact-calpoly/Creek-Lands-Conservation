@@ -7,7 +7,7 @@ import { authenticateAdmin } from "@/lib/auth";
 import User from "@/database/userSchema";
 import Event from "@/database/eventSchema";
 import Waiver from "@/database/waiverSchema";
-import { RawRegisteredUser, RawRegisteredChild } from "@/types/events";
+import { RawRegisteredUser, RawRegisteredChild, RawUser } from "@/types/events";
 
 export async function GET(req: NextRequest) {
   const { userId } = getAuth(req);
@@ -42,8 +42,14 @@ export async function GET(req: NextRequest) {
     if (!event.isDraft) {
     } else {
       const isRegistered =
-        event.registeredUsers.some((u: RawRegisteredUser) => u.user.equals(user._id)) ||
-        event.registeredChildren.some((c: RawRegisteredChild) => c.parent.equals(user._id));
+        event.registeredUsers.some((u: RawRegisteredUser) => {
+          const userObj = u.user as RawUser;
+          return userObj._id === user._id.toString();
+        }) ||
+        event.registeredChildren.some((c: RawRegisteredChild) => {
+          const parentObj = c.parent as RawUser;
+          return parentObj._id === user._id.toString();
+        });
       if (!isRegistered && !isAdmin) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
