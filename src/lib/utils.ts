@@ -6,6 +6,7 @@ import {
   RawEventWaiverTemplate,
   RawRegisteredChild,
   RawRegisteredUser,
+  RawUser,
   RawWaiverSigned,
 } from "@/types/events";
 
@@ -45,20 +46,98 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
       waiverId: w.waiverId.toString(),
       required: w.required,
     })),
-    registeredUsers: doc.registeredUsers.map((u: RawRegisteredUser) => ({
-      user: u.user.toString(),
-      waiversSigned: u.waiversSigned.map((s: RawWaiverSigned) => ({
-        waiverId: s.waiverId.toString(),
-        signed: s.signed,
-      })),
-    })),
-    registeredChildren: doc.registeredChildren.map((c: RawRegisteredChild) => ({
-      parent: c.parent.toString(),
-      childId: c.childId.toString(),
-      waiversSigned: c.waiversSigned.map((s: RawWaiverSigned) => ({
-        waiverId: s.waiverId.toString(),
-        signed: s.signed,
-      })),
-    })),
+    registeredUsers: doc.registeredUsers.map((u: RawRegisteredUser) => {
+      const user = u.user as RawUser; // Assert that u.user is a populated user object
+      return {
+        user: {
+          _id: user._id.toString(),
+          clerkID: user.clerkID,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
+          gender: user.gender || "",
+          birthday: user.birthday ? new Date(user.birthday).toISOString() : null,
+          phoneNumbers: {
+            cell: user.phoneNumbers?.cell || "",
+            work: user.phoneNumbers?.work || "",
+          },
+          address: {
+            home: user.address?.home || "",
+            city: user.address?.city || "",
+            zipCode: user.address?.zipCode || "",
+          },
+          children: user.children.map((child) => ({
+            _id: child._id.toString(),
+            firstName: child.firstName,
+            lastName: child.lastName,
+            birthday: child.birthday ? new Date(child.birthday).toISOString() : null,
+            gender: child.gender || "",
+            emergencyContacts: child.emergencyContacts || [],
+            medicalInfo: child.medicalInfo || {
+              allergies: "",
+              dietaryRestrictions: "",
+              photoRelease: false,
+              insurance: "",
+              doctorName: "",
+              doctorPhone: "",
+              behaviorNotes: "",
+              otherNotes: "",
+            },
+          })),
+          emergencyContacts: user.emergencyContacts || [],
+        },
+        waiversSigned: u.waiversSigned.map((s: RawWaiverSigned) => ({
+          waiverId: s.waiverId.toString(),
+          signed: s.signed,
+        })),
+      };
+    }),
+    registeredChildren: doc.registeredChildren.map((c: RawRegisteredChild) => {
+      const parent = c.parent as RawUser; // Assert that c.parent is a populated user object
+      return {
+        parent: {
+          _id: parent._id.toString(),
+          clerkID: parent.clerkID,
+          firstName: parent.firstName,
+          lastName: parent.lastName,
+          email: parent.email,
+          gender: parent.gender || "",
+          birthday: parent.birthday ? new Date(parent.birthday).toISOString() : null,
+          phoneNumbers: {
+            cell: parent.phoneNumbers?.cell || "",
+            work: parent.phoneNumbers?.work || "",
+          },
+          address: {
+            home: parent.address?.home || "",
+            city: parent.address?.city || "",
+            zipCode: parent.address?.zipCode || "",
+          },
+          children: parent.children.map((child) => ({
+            _id: child._id.toString(),
+            firstName: child.firstName,
+            lastName: child.lastName,
+            birthday: child.birthday ? new Date(child.birthday).toISOString() : null,
+            gender: child.gender || "",
+            emergencyContacts: child.emergencyContacts || [],
+            medicalInfo: child.medicalInfo || {
+              allergies: "",
+              dietaryRestrictions: "",
+              photoRelease: false,
+              insurance: "",
+              doctorName: "",
+              doctorPhone: "",
+              behaviorNotes: "",
+              otherNotes: "",
+            },
+          })),
+          emergencyContacts: parent.emergencyContacts || [],
+        },
+        childId: c.childId.toString(),
+        waiversSigned: c.waiversSigned.map((s: RawWaiverSigned) => ({
+          waiverId: s.waiverId.toString(),
+          signed: s.signed,
+        })),
+      };
+    }),
   };
 }
