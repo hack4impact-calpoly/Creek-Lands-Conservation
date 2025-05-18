@@ -66,7 +66,7 @@ export interface RawWaiverSigned {
 
 // Define a raw user type for populated user objects (matching the User schema)
 export interface RawUser {
-  _id: mongoose.Types.ObjectId;
+  _id: string;
   clerkID: string;
   firstName: string;
   lastName: string;
@@ -92,6 +92,7 @@ export interface RawUser {
     medicalInfo: MedicalInfo;
   }[];
   emergencyContacts: EmergencyContact[];
+  medicalInfo: MedicalInfo;
 }
 
 // Update RawRegisteredUser and RawRegisteredChild to allow for populated user objects
@@ -131,7 +132,7 @@ interface RawEventData {
 }
 
 export interface RawEvent {
-  _id: mongoose.Types.ObjectId;
+  _id: mongoose.Types.ObjectId | string;
   title: string;
   description?: string;
   startDate: Date;
@@ -184,6 +185,16 @@ export interface UserInfo {
     emergencyContacts: EmergencyContact[];
     medicalInfo: MedicalInfo;
   }[];
+  medicalInfo: {
+    photoRelease: boolean;
+    allergies: string;
+    dietaryRestrictions: string;
+    insurance: string;
+    doctorName: string;
+    doctorPhone: string;
+    behaviorNotes: string;
+    otherNotes: string;
+  };
   emergencyContacts: EmergencyContact[];
 }
 

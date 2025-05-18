@@ -2,12 +2,14 @@ import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 import {
   FormattedEvent,
+  LimitedEventInfo,
   RawEvent,
   RawEventWaiverTemplate,
   RawRegisteredChild,
   RawRegisteredUser,
   RawUser,
   RawWaiverSigned,
+  UserInfo,
 } from "@/types/events";
 
 export function cn(...inputs: ClassValue[]) {
@@ -47,10 +49,10 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
       required: w.required,
     })),
     registeredUsers: doc.registeredUsers.map((u: RawRegisteredUser) => {
-      const user = u.user as RawUser; // Assert that u.user is a populated user object
+      const user = u.user as RawUser;
       return {
         user: {
-          _id: user._id.toString(),
+          _id: user._id,
           clerkID: user.clerkID,
           firstName: user.firstName,
           lastName: user.lastName,
@@ -67,7 +69,7 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
             zipCode: user.address?.zipCode || "",
           },
           children: user.children.map((child) => ({
-            _id: child._id.toString(),
+            _id: child._id.toString(), // Convert ObjectId to string
             firstName: child.firstName,
             lastName: child.lastName,
             birthday: child.birthday ? new Date(child.birthday).toISOString() : null,
@@ -84,6 +86,16 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
               otherNotes: "",
             },
           })),
+          medicalInfo: user.medicalInfo || {
+            photoRelease: false,
+            allergies: "",
+            insurance: "",
+            doctorName: "",
+            doctorPhone: "",
+            behaviorNotes: "",
+            dietaryRestrictions: "",
+            otherNotes: "",
+          },
           emergencyContacts: user.emergencyContacts || [],
         },
         waiversSigned: u.waiversSigned.map((s: RawWaiverSigned) => ({
@@ -93,10 +105,10 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
       };
     }),
     registeredChildren: doc.registeredChildren.map((c: RawRegisteredChild) => {
-      const parent = c.parent as RawUser; // Assert that c.parent is a populated user object
+      const parent = c.parent as RawUser;
       return {
         parent: {
-          _id: parent._id.toString(),
+          _id: parent._id,
           clerkID: parent.clerkID,
           firstName: parent.firstName,
           lastName: parent.lastName,
@@ -113,7 +125,7 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
             zipCode: parent.address?.zipCode || "",
           },
           children: parent.children.map((child) => ({
-            _id: child._id.toString(),
+            _id: child._id.toString(), // Convert ObjectId to string
             firstName: child.firstName,
             lastName: child.lastName,
             birthday: child.birthday ? new Date(child.birthday).toISOString() : null,
@@ -130,6 +142,16 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
               otherNotes: "",
             },
           })),
+          medicalInfo: parent.medicalInfo || {
+            photoRelease: false,
+            allergies: "",
+            insurance: "",
+            doctorName: "",
+            doctorPhone: "",
+            behaviorNotes: "",
+            dietaryRestrictions: "",
+            otherNotes: "",
+          },
           emergencyContacts: parent.emergencyContacts || [],
         },
         childId: c.childId.toString(),
@@ -139,5 +161,28 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
         })),
       };
     }),
+  };
+}
+
+export function formatLimitedEvents(doc: RawEvent): LimitedEventInfo {
+  return {
+    id: doc._id.toString(),
+    title: doc.title,
+    description: doc.description,
+    startDate: doc.startDate.toISOString(),
+    endDate: doc.endDate.toISOString(),
+    location: doc.location,
+    capacity: doc.capacity,
+    registrationDeadline: doc.registrationDeadline?.toISOString(),
+    images: doc.images,
+    fee: doc.fee,
+    stripePaymentId: doc.stripePaymentId ?? null,
+    paymentNote: doc.paymentNote ?? "",
+    eventWaiverTemplates: doc.eventWaiverTemplates.map((w: RawEventWaiverTemplate) => ({
+      waiverId: w.waiverId.toString(),
+      required: w.required,
+    })),
+    currentRegistrations: doc.registeredUsers.length + doc.registeredChildren.length,
+    isDraft: doc.isDraft,
   };
 }
