@@ -43,7 +43,6 @@ export function EventRegisterPreview({
   const [waiverSigned, setWaiverSigned] = useState(false);
   const remainingCapacity = capacityLeft;
   const { toast } = useToast();
-  console.log(remainingCapacity);
 
   const allRegistered = userInfo.alreadyRegistered && userInfo.family.every((member) => member.alreadyRegistered);
 

@@ -2,7 +2,7 @@
 
 import { Card, CardContent } from "@/components/ui/card";
 import { EventInfoPreview } from "./EventInfoPreview";
-import { Calendar, Clock, Users, CalendarClock, LucideProps } from "lucide-react";
+import { Clock1, Clock5, Users, CalendarClock, LucideProps } from "lucide-react";
 import Image from "next/image";
 
 export interface EventCardProps {
@@ -66,33 +66,56 @@ export default function EventCard(props: EventCardProps) {
     "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg";
 
   return (
-    <Card className="relative w-full min-w-[312px] max-w-sm overflow-hidden rounded-lg shadow-lg">
-      <BackgroundImageLayer imageUrl={backgroundImage} altText={eventTitle} />
+    <Card className="relative w-full min-w-[312px] max-w-sm overflow-hidden rounded-lg bg-[#E5F4FA] shadow-lg">
+      {/* <BackgroundImageLayer imageUrl={backgroundImage} altText={eventTitle} /> */}
 
-      <CardContent className="relative flex flex-col gap-4 p-6 text-white">
-        <h2 className="line-clamp-2 h-16 overflow-hidden text-2xl font-medium">{eventTitle}</h2>
+      <CardContent className="relative flex flex-col gap-4 p-6">
+        <h2 className="line-clamp-2 overflow-hidden text-2xl font-medium">{eventTitle}</h2>
 
         <div className="space-y-2 text-base lg:text-lg">
-          <InfoRow icon={Calendar}>
-            <h1>
-              {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
-              {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"}
-            </h1>
+          <InfoRow icon={Clock1}>
+            {startDateTime
+              ? new Date(startDateTime)
+                  .toLocaleString("en-US", {
+                    month: "2-digit",
+                    day: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  })
+                  .replace(",", " -")
+              : "TBD"}
           </InfoRow>
 
-          <InfoRow icon={Clock}>
-            <h1>
-              {startDateTime
-                ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                : "TBD"}{" "}
-              -{" "}
-              {endDateTime
-                ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                : "TBD"}
-            </h1>
+          <InfoRow icon={Clock5}>
+            {endDateTime
+              ? new Date(endDateTime)
+                  .toLocaleString("en-US", {
+                    month: "2-digit",
+                    day: "2-digit",
+                    year: "numeric",
+                    hour: "2-digit",
+                    minute: "2-digit",
+                    hour12: true,
+                  })
+                  .replace(",", " -")
+              : "TBD"}
           </InfoRow>
 
-          <InfoRow icon={CalendarClock}>Deadline: {registrationDeadline?.toLocaleString() || "TBD"}</InfoRow>
+          <InfoRow icon={CalendarClock}>
+            Deadline:{" "}
+            {registrationDeadline
+              ?.toLocaleString("en-US", {
+                month: "2-digit",
+                day: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })
+              .replace(",", " -") || "TBD"}
+          </InfoRow>
 
           <InfoRow icon={Users}>
             {currentRegistrations} / {capacity} spots filled

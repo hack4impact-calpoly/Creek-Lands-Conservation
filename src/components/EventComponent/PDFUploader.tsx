@@ -519,10 +519,10 @@ const EnhancedPDFSelector = forwardRef<EnhancedPDFSelectorHandle, EnhancedPDFSel
                 {files.map((file) => (
                   <CarouselItem key={file.name + file.size}>
                     <div className="flex h-full w-full flex-col space-y-4">
-                      <p className="truncate text-sm font-medium">{file.name}</p>
+                      <p className="text-sm font-medium">{file.name}</p>
                       <iframe
                         src={`${file.preview}#toolbar=0`}
-                        className="h-[70vh] w-full rounded-lg"
+                        className="h-[65vh] w-full rounded-lg"
                         title={file.name}
                       />
                     </div>
@@ -539,9 +539,9 @@ const EnhancedPDFSelector = forwardRef<EnhancedPDFSelectorHandle, EnhancedPDFSel
         <Dialog open={previewPdf !== null} onOpenChange={(open) => !open && setPreviewPdf(null)}>
           <DialogContent className="h-[80vh] w-full max-w-[60vw] p-6">
             <div className="flex h-full w-full flex-col space-y-4">
-              <p className="truncate text-sm font-medium">{previewPdf ? previewPdf.split("/").pop() : "PDF Preview"}</p>
+              <p className="text-sm font-medium">{previewPdf ? previewPdf.split("/").pop() : "PDF Preview"}</p>
               {previewPdf && (
-                <iframe src={`${previewPdf}#toolbar=0`} className="h-[70vh] w-full rounded-lg" title="PDF Preview" />
+                <iframe src={`${previewPdf}#toolbar=0`} className="h-[65vh] w-full rounded-lg" title="PDF Preview" />
               )}
             </div>
           </DialogContent>

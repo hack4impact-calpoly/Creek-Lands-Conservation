@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Calendar, Clock, MapPin, Mail, Text, Image as ImageIcon, Users, CalendarClock } from "lucide-react";
+import { Clock1, Clock5, MapPin, Mail, Text, Image as ImageIcon, Users, CalendarClock } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import {
@@ -121,9 +121,14 @@ export function EventInfoPreview({
     }
   };
 
+  const handleRedirect = () => {
+    router.push(`${id}`);
+  };
+
   const handleOpenRegisterDialog = () => {
-    fetchUserFamily();
-    setIsRegisterDialogOpen(true);
+    // fetchUserFamily();
+    // setIsRegisterDialogOpen(true);
+    handleRedirect();
   };
 
   const handleDeleteEvent = async () => {
@@ -167,6 +172,8 @@ export function EventInfoPreview({
 
     try {
       console.log("Registering attendees:", attendees, "User ID:", userInfo.id);
+      console.log("attendees", attendees);
+      console.log("attendees stringed", JSON.stringify({ attendees }));
       const response = await fetch(`/api/events/${id}/registrations`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -217,7 +224,7 @@ export function EventInfoPreview({
     <>
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="outline" className="border-gray-400 bg-[#488644] text-white">
+          <Button variant="outline" className="border-gray-400 bg-[#45575E] text-white">
             View Event Details
           </Button>
         </DialogTrigger>
@@ -228,14 +235,29 @@ export function EventInfoPreview({
           <div className="max-h-[60vh] overflow-y-auto px-4 md:px-6">
             <div className="grid grid-cols-1 gap-6 py-4 sm:grid-cols-2">
               <div className="grid grid-cols-[auto_1fr] items-center gap-4">
-                <Calendar className="h-5 w-5" />
+                {/* <Calendar className="h-5 w-5" />
                 <h1>
                   {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
                   {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"}
+                </h1> */}
+                <Clock1 className="h-5 w-5" />
+                <h1>
+                  {startDateTime
+                    ? new Date(startDateTime)
+                        .toLocaleString("en-US", {
+                          month: "2-digit",
+                          day: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                        .replace(",", " -")
+                    : "TBD"}
                 </h1>
               </div>
               <div className="grid grid-cols-[auto_1fr] items-center gap-4">
-                <Clock className="h-5 w-5" />
+                {/* <Clock className="h-5 w-5" />
                 <h1>
                   {startDateTime
                     ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
@@ -243,6 +265,21 @@ export function EventInfoPreview({
                   -{" "}
                   {endDateTime
                     ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                    : "TBD"}
+                </h1> */}
+                <Clock5 className="h-5 w-5" />
+                <h1>
+                  {endDateTime
+                    ? new Date(endDateTime)
+                        .toLocaleString("en-US", {
+                          month: "2-digit",
+                          day: "2-digit",
+                          year: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          hour12: true,
+                        })
+                        .replace(",", " -")
                     : "TBD"}
                 </h1>
               </div>
@@ -259,12 +296,15 @@ export function EventInfoPreview({
                 <h1>
                   Deadline:{" "}
                   {registrationDeadline
-                    ? registrationDeadline.toLocaleDateString() +
-                      " " +
-                      "-" +
-                      " " +
-                      registrationDeadline.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                    : "TBD"}
+                    ?.toLocaleString("en-US", {
+                      month: "2-digit",
+                      day: "2-digit",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    })
+                    .replace(",", " -") || "TBD"}
                 </h1>
               </div>
               <div className="grid grid-cols-[auto_1fr] items-center gap-4">
@@ -273,11 +313,6 @@ export function EventInfoPreview({
                   {currentRegistrations} / {capacity} spots filled
                 </h1>
               </div>
-            </div>
-
-            <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
-              <Text className="h-5 w-5" />
-              <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizedDescription }} />
             </div>
 
             <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
@@ -295,6 +330,11 @@ export function EventInfoPreview({
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
+              <Text className="h-5 w-5" />
+              <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizedDescription }} />
             </div>
           </div>
           <DialogFooter className="flex justify-between">
