@@ -1,10 +1,15 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
 export async function POST(req: Request) {
   try {
+    const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+
+    if (!stripeSecretKey) {
+      throw new Error("Missing STRIPE_SECRET_KEY in environment variables.");
+    }
+    const stripe = new Stripe(stripeSecretKey);
+
     const origin = req.headers.get("origin");
     const { title, description, fee, quantity, eventId, attendees, userId } = await req.json();
 
