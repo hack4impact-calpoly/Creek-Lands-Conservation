@@ -30,7 +30,7 @@ const RegisterPage = () => {
   const [registrationStage, setRegistrationState] = useState<"selectParticipants" | "signWaivers">(
     "selectParticipants",
   );
-  const [paymentStage, setPaymentStage] = useState<boolean>(true); // SET TO FALSE
+  const [paymentStage, setPaymentStage] = useState<boolean>(false);
   const [userInfo, setUserInfo] = useState<{
     id: string;
     firstName: string;
@@ -173,7 +173,7 @@ const RegisterPage = () => {
             setSelectedAttendees={setSelectedAttendees}
           />
           <div className="flex justify-center">
-            {event.eventWaiverTemplates.length != 0 && ( // waivers
+            {event.eventWaiverTemplates.length != 0 && (
               <Button
                 type="button"
                 onClick={handleSelectSubmit}
@@ -183,8 +183,8 @@ const RegisterPage = () => {
                 {selectedAttendees.length > 0 ? "Proceed to Waiver" : "Select Participants"}
               </Button>
             )}
-            {event?.fee &&
-              event.eventWaiverTemplates.length == 0 && ( // waivers and event fee
+            {event.fee > 0 &&
+              event.eventWaiverTemplates.length == 0 && ( // fee only
                 <CheckoutButton
                   title={event.title}
                   startDate={event.startDate}
@@ -193,6 +193,17 @@ const RegisterPage = () => {
                   eventId={event.id}
                   userId={userData?._id || ""}
                 />
+              )}
+            {event.eventWaiverTemplates.length == 0 &&
+              event.fee == 0 && ( // no waiver and no fee
+                <Button
+                  type="button"
+                  onClick={() => handleRegisterEvent(selectedAttendees.map((a) => a.userID))}
+                  className="mb-10 bg-[#488644] text-white hover:bg-[#3a6d37]"
+                  disabled={selectedAttendees.length === 0}
+                >
+                  Register for Event
+                </Button>
               )}
           </div>
         </>
@@ -208,7 +219,7 @@ const RegisterPage = () => {
       )}
       {event && registrationStage != "selectParticipants" && (paymentStage || !event.eventWaiverTemplates.length) && (
         <div className="flex justify-center">
-          {event?.fee && (
+          {event.fee > 0 && (
             <CheckoutButton
               title={event.title}
               startDate={event.startDate}
@@ -218,7 +229,16 @@ const RegisterPage = () => {
               userId={userData?._id || ""}
             />
           )}
-          {!event?.fee && <Button>test</Button>}
+          {event.fee == 0 && ( // waiver and no fee
+            <Button
+              type="button"
+              onClick={() => handleRegisterEvent(selectedAttendees.map((a) => a.userID))}
+              className="mb-10 bg-[#488644] text-white hover:bg-[#3a6d37]"
+              disabled={selectedAttendees.length === 0}
+            >
+              Register for Event
+            </Button>
+          )}
         </div>
       )}
     </div>
