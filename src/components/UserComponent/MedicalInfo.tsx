@@ -42,6 +42,7 @@ export default function MedicalInfoSection({ data, isEditing, onUpdate }: Medica
             <label className="flex items-center gap-2">
               <input
                 type="radio"
+                name="photoRelease"
                 checked={data.photoRelease === true}
                 disabled={!isEditing}
                 onChange={() => onUpdate({ ...data, photoRelease: true })}
