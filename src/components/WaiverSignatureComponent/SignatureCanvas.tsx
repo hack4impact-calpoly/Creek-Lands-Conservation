@@ -60,10 +60,10 @@ function SignatureCanvas({ eventId, waiverId, fileKey, participants, onSigned }:
   const saveSignature = async () => {
     if (signaturePadRef.current && !signaturePadRef.current.isEmpty()) {
       setIsSaving(true);
-      console.log("Submitting to:", `/api/events/${eventId}/waivers`);
+      //console.log("Submitting to:", `/api/events/${eventId}/waivers`);
       try {
         const dataURL = signaturePadRef.current.toDataURL();
-        console.log(`Signature: ${dataURL}`);
+        //console.log(`Signature: ${dataURL}`);
 
         const res = await fetch(`/api/events/${eventId}/waivers`, {
           method: "POST",
@@ -82,7 +82,7 @@ function SignatureCanvas({ eventId, waiverId, fileKey, participants, onSigned }:
 
         if (res.ok) {
           setSuccessMsg("Waiver signed successfully!");
-          console.log("Signed PDF URL:", result.signedPdfUrl);
+          //console.log("Signed PDF URL:", result.signedPdfUrl);
           clearSignature();
           onSigned(); // to tell parent component successfully signed
         } else {

@@ -300,15 +300,16 @@ async function streamToBuffer(stream: any): Promise<Buffer> {
   });
 }
 
+// Commenting out the logs directory creation for now
 // Ensure logs directory exists
-const logsDir = path.join(process.cwd(), "logs");
+/*const logsDir = path.join(process.cwd(), "logs");
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
 // Generate log file path with timestamp
 const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-const logFilePath = path.join(logsDir, `pdf-text-log-${timestamp}.txt`);
+const logFilePath = path.join(logsDir, `pdf-text-log-${timestamp}.txt`);*/
 
 async function findDatePosition(
   pdfBytes: Buffer,
@@ -321,7 +322,7 @@ async function findDatePosition(
       if (err) {
         const errorMessage = `[DEBUG_ERROR] Error processing PDF: ${err}\n`;
         console.error(errorMessage);
-        fs.appendFileSync(logFilePath, errorMessage, "utf8");
+        //fs.appendFileSync(logFilePath, errorMessage, "utf8");
         return reject(err);
       }
 
@@ -329,14 +330,14 @@ async function findDatePosition(
         currentPage = item.page;
         const logMessage = `[DEBUG] Processing Page ${currentPage}\n`;
         console.log(logMessage);
-        fs.appendFileSync(logFilePath, logMessage, "utf8");
+        //fs.appendFileSync(logFilePath, logMessage, "utf8");
       }
 
       if (item && item.text && typeof item.x === "number" && typeof item.y === "number") {
         const text = item.text.trim();
         const logMessage = `[DEBUG_RAW] Text="${text}", x=${item.x}, y=${item.y}, width=${item.w || "undefined"}\n`;
         console.log(logMessage);
-        fs.appendFileSync(logFilePath, logMessage, "utf8");
+        //fs.appendFileSync(logFilePath, logMessage, "utf8");
 
         // Check for the specific underline for the date field
         if (
@@ -354,7 +355,7 @@ async function findDatePosition(
           };
           const foundMessage = `[DEBUG] Found date underline at: ${JSON.stringify(result)}\n`;
           console.log(foundMessage);
-          fs.appendFileSync(logFilePath, foundMessage, "utf8");
+          //fs.appendFileSync(logFilePath, foundMessage, "utf8");
           resolve(result);
           return;
         }
@@ -364,7 +365,7 @@ async function findDatePosition(
         // Only log and resolve null if not found
         const logMessage = "[DEBUG] No matching date underline found in the document.\n";
         console.log(logMessage);
-        fs.appendFileSync(logFilePath, logMessage, "utf8");
+        //fs.appendFileSync(logFilePath, logMessage, "utf8");
         resolve(null);
       }
     });
@@ -380,7 +381,7 @@ async function logAllPdfText(pdfBytes: Buffer): Promise<void> {
       if (err) {
         const errorMessage = `[PDF_TEXT_ERROR] Error processing PDF: ${err}\n`;
         console.error(errorMessage);
-        fs.appendFileSync(logFilePath, errorMessage, "utf8");
+        //fs.appendFileSync(logFilePath, errorMessage, "utf8");
         return reject(err);
       }
 
@@ -388,14 +389,14 @@ async function logAllPdfText(pdfBytes: Buffer): Promise<void> {
         currentPage = item.page;
         const logMessage = `[PDF_TEXT] Page ${currentPage}:\n`;
         console.log(logMessage);
-        fs.appendFileSync(logFilePath, logMessage, "utf8");
+        //fs.appendFileSync(logFilePath, logMessage, "utf8");
       }
 
       if (item && item.text && typeof item.x === "number" && typeof item.y === "number") {
         const text = item.text.trim();
         const logMessage = `[PDF_TEXT_RAW] Text="${text}", x=${item.x}, y=${item.y}, width=${item.w || "undefined"}\n`;
         console.log(logMessage);
-        fs.appendFileSync(logFilePath, logMessage, "utf8");
+        //fs.appendFileSync(logFilePath, logMessage, "utf8");
 
         // Group text items by y-coordinate
         let line = lines.find((l) => Math.abs(l.y - item.y) < 0.1);
@@ -425,7 +426,7 @@ async function logAllPdfText(pdfBytes: Buffer): Promise<void> {
               if (currentWord) {
                 const wordMessage = `[PDF_TEXT_WORD] Reconstructed Word="${currentWord}", x=${startX}, y=${line.y}, width=${totalWidth}\n`;
                 console.log(wordMessage);
-                fs.appendFileSync(logFilePath, wordMessage, "utf8");
+                //fs.appendFileSync(logFilePath, wordMessage, "utf8");
               }
               currentWord = "";
               totalWidth = 0;
@@ -443,7 +444,7 @@ async function logAllPdfText(pdfBytes: Buffer): Promise<void> {
 
         const logMessage = "[PDF_TEXT] Finished processing PDF.\n";
         console.log(logMessage);
-        fs.appendFileSync(logFilePath, logMessage, "utf8");
+        //fs.appendFileSync(logFilePath, logMessage, "utf8");
         resolve();
       }
     });
