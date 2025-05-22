@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import WaiverSignatureForm from "@/components/WaiverSignatureComponent/WaiverSignatureForm";
 import { toast } from "@/hooks/use-toast";
+import WaiverSignatureFormSkeleton from "@/components/WaiverSignatureComponent/WaiverSignatureFormSkeleton";
 
 type Participant = {
   firstName: string;
@@ -45,6 +46,6 @@ export default function WaiverSignPage({ params }: { params: { eventId: string }
   return participants ? (
     <WaiverSignatureForm eventId={params.eventId} participants={participants} onAllSigned={handleAllSigned} />
   ) : (
-    <div className="p-8 text-center text-gray-600">Loading waiver form...</div>
+    <WaiverSignatureFormSkeleton />
   );
 }
