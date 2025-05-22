@@ -1,3 +1,4 @@
+// src/app/components/UserComponent/PersonalInfo.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -9,7 +10,9 @@ import EmergencyContactsSection from "@/components/UserComponent/EmergencyContac
 import MedicalInfoSection from "@/components/UserComponent/MedicalInfo";
 import AddChildModal from "./AddChildModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Child, EmergencyContact, Gender, MedicalInfo } from "@/components/UserComponent/UserInfo";
+import { toast } from "@/hooks/use-toast"; // Assuming you have a toast hook
+import { Child, Gender, MedicalInfo } from "./UserInfo";
+import { EmergencyContact } from "@/database/userSchema";
 
 const defaultMedicalInfo: MedicalInfo = {
   photoRelease: false,
@@ -141,8 +144,17 @@ export default function PersonalInfo() {
       if (!res.ok) throw new Error(result.error || "Update failed");
 
       setEditingMemberId(null);
+      toast({
+        title: "Profile Updated",
+        description: "Your changes have been saved successfully.",
+      });
     } catch (err) {
       console.error("Save failed:", err);
+      toast({
+        title: "Error",
+        description: "Failed to save changes. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -167,8 +179,91 @@ export default function PersonalInfo() {
       if (!res.ok) throw new Error(result.error || "Child creation failed");
 
       setChildren((prev) => [...prev, { ...result.child, localId: prev.length + 1 }]);
+      toast({
+        title: "Child Added",
+        description: `${childData.firstName} ${childData.lastName} has been added successfully.`,
+      });
+      setShowModal(false);
     } catch (err) {
       console.error("Failed to add child:", err);
+      toast({
+        title: "Error",
+        description: "Failed to add child. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteChild = async (localId: number, childId?: string) => {
+    try {
+      if (!childId) {
+        throw new Error("Child ID is missing");
+      }
+      if (!user?.id) {
+        throw new Error("User ID is missing");
+      }
+
+      const child = children.find((c) => c.localId === localId);
+      if (!confirm(`Are you sure you want to remove ${child?.firstName} ${child?.lastName}?`)) {
+        return;
+      }
+
+      console.log(`[FRONTEND] Deleting child with localId: ${localId}, childId: ${childId}, clerkID: ${user.id}`);
+
+      // Make API call to delete child
+      const res = await fetch(`/api/users/${user.id}/child/${childId}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+      });
+
+      const result = await res.json();
+      if (!res.ok) {
+        console.error(`[FRONTEND] Delete failed: ${result.error}`);
+        throw new Error(result.error || "Failed to remove child");
+      }
+
+      // Refresh children from backend to ensure consistency
+      const userRes = await fetch(`/api/users/${user.id}`);
+      const userData = await userRes.json();
+      if (!userRes.ok) {
+        throw new Error(userData.error || "Failed to fetch updated user data");
+      }
+
+      setChildren(
+        userData.children.map((c: any, i: number) => ({
+          ...c,
+          localId: i + 1,
+          birthday: c.birthday?.split("T")[0] || "",
+          emergencyContacts: (c.emergencyContacts || []).slice(0, 2).concat(
+            Array(2 - (c.emergencyContacts?.length || 0)).fill({
+              name: "",
+              phone: "",
+              work: "",
+              relationship: "",
+              canPickup: false,
+            }),
+          ),
+          medicalInfo: c.medicalInfo || defaultMedicalInfo,
+        })),
+      );
+
+      // If the deleted child was the active profile, switch to primary
+      if (activeMemberId === localId.toString()) {
+        setActiveMemberId("primary");
+        setEditingMemberId(null);
+      }
+
+      toast({
+        title: "Child Removed",
+        description: `${child?.firstName} ${child?.lastName} has been removed successfully.`,
+      });
+    } catch (err: any) {
+      console.error(`[FRONTEND] Failed to remove child (localId: ${localId}, childId: ${childId}):`, err);
+      toast({
+        title: "Error",
+        description: err.message || "Failed to remove child. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -265,7 +360,6 @@ export default function PersonalInfo() {
               setPrimaryEmergencyContacts(updated.slice(0, 2));
             }}
           />
-
           <MedicalInfoSection
             isEditing={editingMemberId === activeMemberId}
             data={primaryMedicalInfo}
@@ -281,7 +375,7 @@ export default function PersonalInfo() {
               onEdit={(id, field, value) =>
                 setChildren((prev) => prev.map((c) => (c.localId === id ? { ...c, [field]: value } : c)))
               }
-              onDelete={(id) => setChildren((prev) => prev.filter((c) => c.localId !== id))}
+              onDelete={handleDeleteChild} // Use the new handler
             />
             <EmergencyContactsSection
               isEditing={editingMemberId === activeMemberId}
@@ -301,7 +395,6 @@ export default function PersonalInfo() {
                 );
               }}
             />
-
             <MedicalInfoSection
               isEditing={editingMemberId === activeMemberId}
               data={selectedChild.medicalInfo || defaultMedicalInfo}
