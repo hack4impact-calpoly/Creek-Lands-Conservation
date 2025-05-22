@@ -54,6 +54,9 @@ export function EventInfoPreview({
   onDelete,
   onRegister,
 }: EventInfoProps) {
+  // TODO: replace when email API is implemented
+  const mockEmailList = ["alice@example.com", "bob@example.com", "carol.parent@example.com", "dave.parent@example.com"];
+
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -213,6 +216,16 @@ export function EventInfoPreview({
     router.push(`/admin/events/edit/${id}`);
   };
 
+  const createMailtoLink = (emails: string[]) => {
+    if (!emails.length) return null;
+
+    const subject = encodeURIComponent("Event Update from CreekLands");
+    const body = encodeURIComponent(
+      `Hi everyone,\n\nThis is an update regarding the upcoming event "${title}".\n\nThank you!`,
+    );
+    return `mailto:?bcc=${emails.join(",")}&subject=${subject}&body=${body}`;
+  };
+
   return (
     <>
       <Dialog>
@@ -312,6 +325,26 @@ export function EventInfoPreview({
                   <Button className="bg-[#488644] text-white hover:bg-[#3a6d37]">Sign In to Register</Button>
                 </SignInButton>
               ))}
+
+            {isAdmin && (
+              <Button
+                variant="outline"
+                onClick={() => {
+                  const mailto = createMailtoLink(mockEmailList);
+                  if (mailto) {
+                    window.location.href = mailto;
+                  } else {
+                    toast({
+                      title: "No recipients",
+                      description: "There are no emails to send to.",
+                      variant: "destructive",
+                    });
+                  }
+                }}
+              >
+                Send Email to All
+              </Button>
+            )}
 
             {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
