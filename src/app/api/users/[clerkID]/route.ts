@@ -38,11 +38,6 @@ export async function PUT(req: NextRequest, { params }: { params: { clerkID: str
       medicalInfo, // <-- for primary user
     } = data;
 
-    console.log("📦 Incoming PUT data:");
-    console.log("First Name:", firstName);
-    console.log("Last Name:", lastName);
-    console.log("Children:", children);
-    console.log("Medical Info (Primary):", medicalInfo);
     // ✅ Validation
     const errors: string[] = [];
 
@@ -81,12 +76,6 @@ export async function PUT(req: NextRequest, { params }: { params: { clerkID: str
       },
       { new: true },
     );
-
-    console.log("📎 Saved Medical Info:", updatedUser?.medicalInfo);
-
-    updatedUser.markModified("medicalInfo");
-
-    console.log("✅ Updated user document for clerkID:", params.clerkID);
 
     if (!updatedUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
