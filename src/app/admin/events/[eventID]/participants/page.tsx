@@ -49,7 +49,6 @@ function getEventAttendees(eventData: APIEvent) {
     address?: { home: string; city: string; zipCode: string };
   }[] = [];
 
-  // Add children registered for this event
   eventData.registeredChildren.forEach((child: RegisteredChildInfo) => {
     const childData = child.parent.children.find((c) => c._id === child.childId);
     if (childData) {
@@ -83,7 +82,6 @@ function getEventAttendees(eventData: APIEvent) {
     }
   });
 
-  // Add users who registered themselves for this event
   eventData.registeredUsers.forEach((user: RegisteredUserInfo) => {
     attendees.push({
       id: user.user._id,
@@ -164,7 +162,6 @@ export default function EventParticipantsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  // Fetch event and participant data from the API
   useEffect(() => {
     const fetchEventData = async () => {
       try {
@@ -174,7 +171,6 @@ export default function EventParticipantsPage() {
         }
         const eventData: APIEvent = await response.json();
 
-        // Set event details
         setEvent({
           id: eventData.id,
           name: eventData.title,
@@ -184,7 +180,6 @@ export default function EventParticipantsPage() {
           location: eventData.location,
         });
 
-        // Get attendees for this event (both children and adults)
         const eventAttendees = getEventAttendees(eventData);
         setAttendees(eventAttendees);
       } catch (err) {
@@ -196,7 +191,64 @@ export default function EventParticipantsPage() {
     fetchEventData();
   }, [eventID]);
 
-  // Filter attendees based on search term
+  // Function to format attendees data for CSV
+  const formatAttendeesForCSV = (attendees: any[]) => {
+    return attendees.map((attendee) => ({
+      "Attendee Name": `${attendee.firstName} ${attendee.lastName}`,
+      "Parent/Guardian": attendee.parent ? `${attendee.parent.firstName} ${attendee.parent.lastName}` : "N/A (Self)",
+      "Contact Email": attendee.parent ? attendee.parent.email : attendee.email || "Not provided",
+      "Contact Phone": attendee.parent
+        ? attendee.parent.phoneNumbers?.cell || "Not provided"
+        : attendee.phoneNumbers?.cell || "Not provided",
+      "Photo Release": attendee.medicalInfo.photoRelease ? "Yes" : "No",
+      Birthday: attendee.birthday ? attendee.birthday.toLocaleDateString() : "Not provided",
+      Gender: attendee.gender || "Not provided",
+      Age: attendee.birthday ? calculateAge(attendee.birthday) : "Not provided",
+      "Street Address": attendee.parent
+        ? attendee.parent.address?.home || "Not provided"
+        : attendee.address?.home || "Not provided",
+      City: attendee.parent
+        ? attendee.parent.address?.city || "Not provided"
+        : attendee.address?.city || "Not provided",
+      "Zip Code": attendee.parent
+        ? attendee.parent.address?.zipCode || "Not provided"
+        : attendee.address?.zipCode || "Not provided",
+      Allergies: attendee.medicalInfo.allergies || "None",
+      "Dietary Restrictions": attendee.medicalInfo.dietaryRestrictions || "None",
+      "Behavior Notes": attendee.medicalInfo.behaviorNotes || "None",
+      "Other Notes": attendee.medicalInfo.otherNotes || "None",
+      Insurance: attendee.medicalInfo.insurance || "None",
+      "Doctor Name": attendee.medicalInfo.doctorName || "None",
+      "Doctor Phone": attendee.medicalInfo.doctorPhone || "None",
+    }));
+  };
+
+  // Function to generate CSV content
+  const generateCSV = (data: any[]) => {
+    if (data.length === 0) return "";
+    const headers = Object.keys(data[0]).join(",");
+    const rows = data.map((row) =>
+      Object.values(row)
+        .map((value) => `"${String(value).replace(/"/g, '""')}"`) // Escape quotes and wrap in quotes
+        .join(","),
+    );
+    return [headers, ...rows].join("\n");
+  };
+
+  // Function to handle export
+  const handleExport = () => {
+    const formattedData = formatAttendeesForCSV(attendees);
+    const csvContent = generateCSV(formattedData);
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `${event?.name || "event"}-participants.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const filteredAttendees = attendees.filter(
     (attendee) =>
       `${attendee.firstName} ${attendee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -225,7 +277,7 @@ export default function EventParticipantsPage() {
             {event.endDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} at {event.location}
           </p>
         </div>
-        <Button>Export Participant List</Button>
+        <Button onClick={handleExport}>Export Participant List</Button>
       </div>
 
       <Card>
@@ -279,6 +331,8 @@ export default function EventParticipantsPage() {
   );
 }
 
+// Rest of the component (AttendeeRow, InfoCard, InfoItem, calculateAge, ParticipantPageSkeleton) remains unchanged
+// Include them as they are from the original code
 function AttendeeRow({
   attendee,
 }: {
@@ -321,13 +375,10 @@ function AttendeeRow({
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
-  // Determine contact information with proper null checks
   const contactEmail = attendee.parent ? attendee.parent.email : attendee.email || "Not provided";
   const contactPhone = attendee.parent
     ? attendee.parent.phoneNumbers?.cell || "Not provided"
     : attendee.phoneNumbers?.cell || "Not provided";
-
-  // Determine parent/guardian display
   const parentDisplay = attendee.parent ? `${attendee.parent.firstName} ${attendee.parent.lastName}` : "N/A (Self)";
 
   return (
@@ -522,7 +573,6 @@ function InfoItem({ label, value, valueClassName = "" }: { label: string; value:
   );
 }
 
-// Helper function to calculate age from birthday
 function calculateAge(birthday: Date): number {
   const today = new Date();
   let age = today.getFullYear() - birthday.getFullYear();
@@ -538,7 +588,6 @@ function calculateAge(birthday: Date): number {
 function ParticipantPageSkeleton() {
   return (
     <div className="container mx-auto space-y-6 py-6">
-      {/* Event Header Skeleton */}
       <div className="flex items-center justify-between">
         <div>
           <div className="h-8 w-64 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
@@ -547,7 +596,6 @@ function ParticipantPageSkeleton() {
         <div className="h-10 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
       </div>
 
-      {/* Search Card Skeleton */}
       <Card>
         <CardHeader>
           <div className="h-6 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
@@ -560,7 +608,6 @@ function ParticipantPageSkeleton() {
         </CardContent>
       </Card>
 
-      {/* Participants Table Skeleton */}
       <Card>
         <CardHeader>
           <div className="h-6 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
