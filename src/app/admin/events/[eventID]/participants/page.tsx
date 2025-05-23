@@ -219,7 +219,10 @@ export default function EventParticipantsPage() {
         <div>
           <h1 className="text-3xl font-bold">{event.name} - Participants</h1>
           <p className="text-muted-foreground">
-            {event.startDate.toLocaleDateString()} to {event.endDate.toLocaleDateString()} at {event.location}
+            {event.startDate.toLocaleDateString()} at{" "}
+            {event.startDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} to{" "}
+            {event.endDate.toLocaleDateString()} at{" "}
+            {event.endDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} at {event.location}
           </p>
         </div>
         <Button>Export Participant List</Button>
