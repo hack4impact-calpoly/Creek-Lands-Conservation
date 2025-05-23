@@ -2,10 +2,9 @@
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { Calendar, Clock, MapPin, Mail, Check, Download } from "lucide-react";
+import { Calendar, Clock, MapPin, Mail } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 interface RegisterDialogProps {
@@ -40,8 +39,6 @@ export function EventRegisterPreview({
   onConfirm,
 }: RegisterDialogProps) {
   const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
-  const [waiverEmail, setWaiverEmail] = useState("");
-  const [waiverSigned, setWaiverSigned] = useState(false);
   const remainingCapacity = capacityLeft;
   const { toast } = useToast();
 
@@ -62,8 +59,6 @@ export function EventRegisterPreview({
   useEffect(() => {
     if (!isOpen) {
       setSelectedAttendees([]);
-      setWaiverEmail("");
-      setWaiverSigned(false);
     }
   }, [isOpen]);
 
@@ -95,128 +90,78 @@ export function EventRegisterPreview({
           </div>
         </DialogHeader>
 
-        <div className="mt-2 grid grid-cols-1 gap-6 md:grid-cols-2">
-          <div className="w-full">
-            <h3 className="mb-4 font-semibold">Who&apos;s attending?</h3>
-            <div className="space-y-3">
-              <div className="flex items-center space-x-3">
+        <div className="mt-2">
+          <h3 className="mb-4 font-semibold">Who&apos;s attending?</h3>
+          <div className="space-y-3">
+            <div className="flex items-center space-x-3">
+              <Checkbox
+                id={userInfo.id}
+                checked={selectedAttendees.includes(userInfo.id) || userInfo.alreadyRegistered}
+                onCheckedChange={(checked) => {
+                  setSelectedAttendees((prev) =>
+                    checked ? [...prev, userInfo.id] : prev.filter((id) => id !== userInfo.id),
+                  );
+                }}
+                disabled={
+                  userInfo.alreadyRegistered ||
+                  (!selectedAttendees.includes(userInfo.id) && selectedAttendees.length >= remainingCapacity)
+                }
+              />
+              <label
+                htmlFor={userInfo.id}
+                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+              >
+                {userInfo.firstName} {userInfo.lastName}
+                {(userInfo.alreadyRegistered ||
+                  (!selectedAttendees.includes(userInfo.id) && selectedAttendees.length >= remainingCapacity)) && (
+                  <span className="ml-2 text-xs italic text-gray-500">
+                    {userInfo.alreadyRegistered ? "(Already registered)" : " (Capacity full)"}
+                  </span>
+                )}
+              </label>
+            </div>
+            {userInfo.family.map((member) => (
+              <div key={member.id} className="flex items-center space-x-3">
                 <Checkbox
-                  id={userInfo.id}
-                  checked={selectedAttendees.includes(userInfo.id) || userInfo.alreadyRegistered}
+                  id={member.id}
+                  checked={selectedAttendees.includes(member.id) || member.alreadyRegistered}
                   onCheckedChange={(checked) => {
                     setSelectedAttendees((prev) =>
-                      checked ? [...prev, userInfo.id] : prev.filter((id) => id !== userInfo.id),
+                      checked ? [...prev, member.id] : prev.filter((id) => id !== member.id),
                     );
                   }}
                   disabled={
-                    userInfo.alreadyRegistered ||
-                    (!selectedAttendees.includes(userInfo.id) && selectedAttendees.length >= remainingCapacity)
+                    member.alreadyRegistered ||
+                    (!selectedAttendees.includes(member.id) && selectedAttendees.length >= remainingCapacity)
                   }
                 />
                 <label
-                  htmlFor={userInfo.id}
+                  htmlFor={member.id}
                   className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
                 >
-                  {userInfo.firstName} {userInfo.lastName}
-                  {(userInfo.alreadyRegistered ||
-                    (!selectedAttendees.includes(userInfo.id) && selectedAttendees.length >= remainingCapacity)) && (
-                    <span className="ml-2 text-xs italic text-gray-500">
-                      {userInfo.alreadyRegistered ? "(Already registered)" : " (Capacity full)"}
-                    </span>
-                  )}
+                  {member.firstName} {member.lastName}
+                  <span className="ml-2 text-xs italic text-gray-500">
+                    {(member.alreadyRegistered ||
+                      (!selectedAttendees.includes(member.id) && selectedAttendees.length >= remainingCapacity)) && (
+                      <span className="ml-2 text-xs italic text-gray-500">
+                        {member.alreadyRegistered ? "(Already registered)" : " (Capacity full)"}
+                      </span>
+                    )}
+                  </span>
                 </label>
               </div>
-              {userInfo.family.map((member) => (
-                <div key={member.id} className="flex items-center space-x-3">
-                  <Checkbox
-                    id={member.id}
-                    checked={selectedAttendees.includes(member.id) || member.alreadyRegistered}
-                    onCheckedChange={(checked) => {
-                      setSelectedAttendees((prev) =>
-                        checked ? [...prev, member.id] : prev.filter((id) => id !== member.id),
-                      );
-                    }}
-                    disabled={
-                      member.alreadyRegistered ||
-                      (!selectedAttendees.includes(member.id) && selectedAttendees.length >= remainingCapacity)
-                    }
-                  />
-                  <label
-                    htmlFor={member.id}
-                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    {member.firstName} {member.lastName}
-                    <span className="ml-2 text-xs italic text-gray-500">
-                      {(member.alreadyRegistered ||
-                        (!selectedAttendees.includes(member.id) && selectedAttendees.length >= remainingCapacity)) && (
-                        <span className="ml-2 text-xs italic text-gray-500">
-                          {member.alreadyRegistered ? "(Already registered)" : " (Capacity full)"}
-                        </span>
-                      )}
-                    </span>
-                  </label>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div>
-            <h3 className="mb-4 font-semibold">Waiver</h3>
-            <p className="mb-4 text-sm text-gray-600">
-              To attend this event, please sign this waiver first. You can sign it digitally or print, sign, and upload
-              it.
-            </p>
-
-            <div className="space-y-4">
-              <Button variant="secondary" className="w-full" onClick={() => window.open("/waiver.pdf", "_blank")}>
-                <Download className="mr-2 h-4 w-4" />
-                Download Waiver
-              </Button>
-
-              <div className="text-center text-sm text-gray-600">or</div>
-
-              <div>
-                <label className="text-sm text-gray-600">Send waiver to this email (for printing)</label>
-                <Input
-                  placeholder="e.g. jameshudson345@gmail.com"
-                  value={waiverEmail}
-                  onChange={(e) => setWaiverEmail(e.target.value)}
-                  className="mt-1 w-full"
-                />
-              </div>
-
-              {waiverSigned ? (
-                <Button variant="outline" className="w-full bg-[#488644] text-white hover:bg-[#3a6d37]">
-                  <Check className="mr-2 h-4 w-4" />
-                  Signed on {new Date().toLocaleDateString()}
-                  <span className="ml-2 text-sm">Click here to view</span>
-                </Button>
-              ) : (
-                <Button className="w-full bg-[#488644] text-white hover:bg-[#3a6d37]">Click here to sign waiver</Button>
-              )}
-            </div>
+            ))}
           </div>
         </div>
 
         <DialogFooter className="mt-6">
-          {!waiverSigned && (
-            <Button
-              className="mx-auto w-full bg-[#488644] text-white hover:bg-[#3a6d37] sm:w-2/5"
-              onClick={handleClick}
-              disabled={allRegistered}
-            >
-              {allRegistered ? "All Family Members Registered" : "Register for Event"}
-            </Button>
-          )}
-          {waiverSigned && (
-            <Button
-              className="mx-auto w-full bg-[#488644] text-white hover:bg-[#3a6d37] sm:w-2/5"
-              onClick={handleClick}
-              disabled={allRegistered}
-            >
-              {allRegistered ? "All Family Members Registered" : "Sign and Return to Events"}
-            </Button>
-          )}
+          <Button
+            className="mx-auto w-full bg-[#488644] text-white hover:bg-[#3a6d37] sm:w-2/5"
+            onClick={handleClick}
+            disabled={allRegistered}
+          >
+            {allRegistered ? "All Family Members Registered" : "Register for Event"}
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

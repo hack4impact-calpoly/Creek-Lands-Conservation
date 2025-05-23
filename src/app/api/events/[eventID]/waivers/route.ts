@@ -78,7 +78,7 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
     if (!datePosition) {
       console.warn("No 'date' (case-insensitive) found in the document.");
     } else {
-      console.log("Found 'date' at:", datePosition);
+      //console.log("Found 'date' at:", datePosition);
     }
 
     const positions = await extractTextAndFindSign(pdfBytes);
@@ -117,9 +117,9 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
         const scaledDateX = (datePosition.x / 100) * 2.7 * pdfWidth;
         const scaledDateY = pdfHeight - (datePosition.y / 100) * 2.05 * pdfHeight;
 
-        console.log(
+        /*console.log(
           `Injecting date '${formattedDate}' at page ${datePosition.page}, x=${scaledDateX}, y=${scaledDateY}`,
-        );
+        );*/
 
         const font = await pdfDoc.embedStandardFont(StandardFonts.Helvetica);
         const fontSize = 12;
@@ -184,7 +184,7 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
       const fileName = `${participant.userID}-${waiverID}.pdf`;
       const fileKey = `waivers/completed/${eventID}/${user._id}/${fileName}`;
 
-      console.log(fileKey);
+      //console.log(fileKey);
 
       await s3.send(
         new PutObjectCommand({
@@ -197,30 +197,51 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
 
       const fileUrl = `https://${process.env.AWS_BUCKET_NAME}.s3.amazonaws.com/${fileKey}`;
       signedPdfUrls.push(fileUrl);
-
-      const newWaiver = await Waiver.create({
-        fileKey,
-        fileName,
-        uploadedBy: user._id,
-        belongsToUser: user._id,
-        isForChild: participant.isChild,
-        childSubdocId: participant.isChild ? participant.userID : undefined,
-        type: "completed",
+      // Check if a waiver already exists for this participant and event
+      const existingWaiver = await Waiver.findOne({
+        eventId: eventID,
         templateRef: waiverID,
-        eventId: new mongoose.Types.ObjectId(eventID),
+        type: "completed",
+        ...(participant.isChild ? { childSubdocId: participant.userID } : { belongsToUser: user._id }),
       });
 
-      if (participant.isChild) {
-        const child = user.children.id(participant.userID);
-        if (child) {
-          child.waiversSigned.push(newWaiver._id);
-          await user.save();
-        } else {
-          console.warn(`Child with ID ${participant.userID} not found in user ${user._id}`);
-        }
+      // check for waiver duplication
+      if (existingWaiver) {
+        console.log("Waiver object already exists in MongoDB");
+        // update the existing waiver
+        existingWaiver.fileKey = fileKey;
+        existingWaiver.fileName = fileName;
+        existingWaiver.uploadedBy = user._id;
+        existingWaiver.isForChild = participant.isChild;
+        existingWaiver.childSubdocId = participant.isChild ? participant.userID : undefined;
+        await existingWaiver.save();
       } else {
-        user.waiversSigned.push(newWaiver._id);
-        await user.save();
+        // create new waiver
+        const newWaiver = await Waiver.create({
+          fileKey,
+          fileName,
+          uploadedBy: user._id,
+          belongsToUser: user._id,
+          isForChild: participant.isChild,
+          childSubdocId: participant.isChild ? participant.userID : undefined,
+          type: "completed",
+          templateRef: waiverID,
+          eventId: new mongoose.Types.ObjectId(eventID),
+        });
+
+        // only push to user.children or user.waiversSigned if it's a new waiver
+        if (participant.isChild) {
+          const child = user.children.id(participant.userID);
+          if (child && !child.waiversSigned.includes(newWaiver._id)) {
+            child.waiversSigned.push(newWaiver._id);
+            await user.save();
+          }
+        } else {
+          if (!user.waiversSigned.includes(newWaiver._id)) {
+            user.waiversSigned.push(newWaiver._id);
+            await user.save();
+          }
+        }
       }
     }
 
@@ -254,10 +275,10 @@ async function extractTextAndFindSign(
         const normalized = text.replace(/\s+/g, "").toLowerCase();
 
         if (/^signature$/.test(normalized)) {
-          console.log(`[MATCH: EXACT] Page ${currentPage}: "${text}"`);
+          //console.log(`[MATCH: EXACT] Page ${currentPage}: "${text}"`);
           exactMatches.push({ x: item.x, y: item.y, page: currentPage, text });
         } else if (/^signa/.test(normalized)) {
-          console.log(`[MATCH: FALLBACK] Page ${currentPage}: "${text}"`);
+          //console.log(`[MATCH: FALLBACK] Page ${currentPage}: "${text}"`);
           fallbackMatches.push({ x: item.x, y: item.y, page: currentPage, text });
         }
       }
@@ -279,15 +300,16 @@ async function streamToBuffer(stream: any): Promise<Buffer> {
   });
 }
 
+// Commenting out the logs directory creation for now
 // Ensure logs directory exists
-const logsDir = path.join(process.cwd(), "logs");
+/*const logsDir = path.join(process.cwd(), "logs");
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir, { recursive: true });
 }
 
 // Generate log file path with timestamp
 const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-const logFilePath = path.join(logsDir, `pdf-text-log-${timestamp}.txt`);
+const logFilePath = path.join(logsDir, `pdf-text-log-${timestamp}.txt`);*/
 
 async function findDatePosition(
   pdfBytes: Buffer,
@@ -300,22 +322,22 @@ async function findDatePosition(
       if (err) {
         const errorMessage = `[DEBUG_ERROR] Error processing PDF: ${err}\n`;
         console.error(errorMessage);
-        fs.appendFileSync(logFilePath, errorMessage, "utf8");
+        //fs.appendFileSync(logFilePath, errorMessage, "utf8");
         return reject(err);
       }
 
       if (item?.page) {
         currentPage = item.page;
-        const logMessage = `[DEBUG] Processing Page ${currentPage}\n`;
-        console.log(logMessage);
-        fs.appendFileSync(logFilePath, logMessage, "utf8");
+        //const logMessage = `[DEBUG] Processing Page ${currentPage}\n`;
+        //console.log(logMessage);
+        //fs.appendFileSync(logFilePath, logMessage, "utf8");
       }
 
       if (item && item.text && typeof item.x === "number" && typeof item.y === "number") {
         const text = item.text.trim();
-        const logMessage = `[DEBUG_RAW] Text="${text}", x=${item.x}, y=${item.y}, width=${item.w || "undefined"}\n`;
-        console.log(logMessage);
-        fs.appendFileSync(logFilePath, logMessage, "utf8");
+        //const logMessage = `[DEBUG_RAW] Text="${text}", x=${item.x}, y=${item.y}, width=${item.w || "undefined"}\n`;
+        //console.log(logMessage);
+        //fs.appendFileSync(logFilePath, logMessage, "utf8");
 
         // Check for the specific underline for the date field
         if (
@@ -331,9 +353,9 @@ async function findDatePosition(
             page: currentPage,
             width: item.w,
           };
-          const foundMessage = `[DEBUG] Found date underline at: ${JSON.stringify(result)}\n`;
-          console.log(foundMessage);
-          fs.appendFileSync(logFilePath, foundMessage, "utf8");
+          //const foundMessage = `[DEBUG] Found date underline at: ${JSON.stringify(result)}\n`;
+          //console.log(foundMessage);
+          //fs.appendFileSync(logFilePath, foundMessage, "utf8");
           resolve(result);
           return;
         }
@@ -341,9 +363,9 @@ async function findDatePosition(
 
       if (!item && !found) {
         // Only log and resolve null if not found
-        const logMessage = "[DEBUG] No matching date underline found in the document.\n";
-        console.log(logMessage);
-        fs.appendFileSync(logFilePath, logMessage, "utf8");
+        //const logMessage = "[DEBUG] No matching date underline found in the document.\n";
+        //console.log(logMessage);
+        //fs.appendFileSync(logFilePath, logMessage, "utf8");
         resolve(null);
       }
     });
@@ -359,22 +381,22 @@ async function logAllPdfText(pdfBytes: Buffer): Promise<void> {
       if (err) {
         const errorMessage = `[PDF_TEXT_ERROR] Error processing PDF: ${err}\n`;
         console.error(errorMessage);
-        fs.appendFileSync(logFilePath, errorMessage, "utf8");
+        //fs.appendFileSync(logFilePath, errorMessage, "utf8");
         return reject(err);
       }
 
       if (item?.page) {
         currentPage = item.page;
-        const logMessage = `[PDF_TEXT] Page ${currentPage}:\n`;
-        console.log(logMessage);
-        fs.appendFileSync(logFilePath, logMessage, "utf8");
+        //const logMessage = `[PDF_TEXT] Page ${currentPage}:\n`;
+        //console.log(logMessage);
+        //fs.appendFileSync(logFilePath, logMessage, "utf8");
       }
 
       if (item && item.text && typeof item.x === "number" && typeof item.y === "number") {
         const text = item.text.trim();
-        const logMessage = `[PDF_TEXT_RAW] Text="${text}", x=${item.x}, y=${item.y}, width=${item.w || "undefined"}\n`;
-        console.log(logMessage);
-        fs.appendFileSync(logFilePath, logMessage, "utf8");
+        //const logMessage = `[PDF_TEXT_RAW] Text="${text}", x=${item.x}, y=${item.y}, width=${item.w || "undefined"}\n`;
+        //console.log(logMessage);
+        //fs.appendFileSync(logFilePath, logMessage, "utf8");
 
         // Group text items by y-coordinate
         let line = lines.find((l) => Math.abs(l.y - item.y) < 0.1);
@@ -402,9 +424,9 @@ async function logAllPdfText(pdfBytes: Buffer): Promise<void> {
 
             if (isLast || (currentItem && lastX && currentItem.x - (lastX + lastWidth) > 2)) {
               if (currentWord) {
-                const wordMessage = `[PDF_TEXT_WORD] Reconstructed Word="${currentWord}", x=${startX}, y=${line.y}, width=${totalWidth}\n`;
-                console.log(wordMessage);
-                fs.appendFileSync(logFilePath, wordMessage, "utf8");
+                //const wordMessage = `[PDF_TEXT_WORD] Reconstructed Word="${currentWord}", x=${startX}, y=${line.y}, width=${totalWidth}\n`;
+                //console.log(wordMessage);
+                //fs.appendFileSync(logFilePath, wordMessage, "utf8");
               }
               currentWord = "";
               totalWidth = 0;
@@ -420,9 +442,9 @@ async function logAllPdfText(pdfBytes: Buffer): Promise<void> {
           }
         }
 
-        const logMessage = "[PDF_TEXT] Finished processing PDF.\n";
-        console.log(logMessage);
-        fs.appendFileSync(logFilePath, logMessage, "utf8");
+        //const logMessage = "[PDF_TEXT] Finished processing PDF.\n";
+        //console.log(logMessage);
+        //fs.appendFileSync(logFilePath, logMessage, "utf8");
         resolve();
       }
     });
