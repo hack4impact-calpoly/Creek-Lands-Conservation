@@ -78,7 +78,7 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
     if (!datePosition) {
       console.warn("No 'date' (case-insensitive) found in the document.");
     } else {
-      console.log("Found 'date' at:", datePosition);
+      //console.log("Found 'date' at:", datePosition);
     }
 
     const positions = await extractTextAndFindSign(pdfBytes);
@@ -117,9 +117,9 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
         const scaledDateX = (datePosition.x / 100) * 2.7 * pdfWidth;
         const scaledDateY = pdfHeight - (datePosition.y / 100) * 2.05 * pdfHeight;
 
-        console.log(
+        /*console.log(
           `Injecting date '${formattedDate}' at page ${datePosition.page}, x=${scaledDateX}, y=${scaledDateY}`,
-        );
+        );*/
 
         const font = await pdfDoc.embedStandardFont(StandardFonts.Helvetica);
         const fontSize = 12;
@@ -184,7 +184,7 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
       const fileName = `${participant.userID}-${waiverID}.pdf`;
       const fileKey = `waivers/completed/${eventID}/${user._id}/${fileName}`;
 
-      console.log(fileKey);
+      //console.log(fileKey);
 
       await s3.send(
         new PutObjectCommand({
@@ -275,10 +275,10 @@ async function extractTextAndFindSign(
         const normalized = text.replace(/\s+/g, "").toLowerCase();
 
         if (/^signature$/.test(normalized)) {
-          console.log(`[MATCH: EXACT] Page ${currentPage}: "${text}"`);
+          //console.log(`[MATCH: EXACT] Page ${currentPage}: "${text}"`);
           exactMatches.push({ x: item.x, y: item.y, page: currentPage, text });
         } else if (/^signa/.test(normalized)) {
-          console.log(`[MATCH: FALLBACK] Page ${currentPage}: "${text}"`);
+          //console.log(`[MATCH: FALLBACK] Page ${currentPage}: "${text}"`);
           fallbackMatches.push({ x: item.x, y: item.y, page: currentPage, text });
         }
       }
@@ -328,15 +328,15 @@ async function findDatePosition(
 
       if (item?.page) {
         currentPage = item.page;
-        const logMessage = `[DEBUG] Processing Page ${currentPage}\n`;
-        console.log(logMessage);
+        //const logMessage = `[DEBUG] Processing Page ${currentPage}\n`;
+        //console.log(logMessage);
         //fs.appendFileSync(logFilePath, logMessage, "utf8");
       }
 
       if (item && item.text && typeof item.x === "number" && typeof item.y === "number") {
         const text = item.text.trim();
-        const logMessage = `[DEBUG_RAW] Text="${text}", x=${item.x}, y=${item.y}, width=${item.w || "undefined"}\n`;
-        console.log(logMessage);
+        //const logMessage = `[DEBUG_RAW] Text="${text}", x=${item.x}, y=${item.y}, width=${item.w || "undefined"}\n`;
+        //console.log(logMessage);
         //fs.appendFileSync(logFilePath, logMessage, "utf8");
 
         // Check for the specific underline for the date field
@@ -353,8 +353,8 @@ async function findDatePosition(
             page: currentPage,
             width: item.w,
           };
-          const foundMessage = `[DEBUG] Found date underline at: ${JSON.stringify(result)}\n`;
-          console.log(foundMessage);
+          //const foundMessage = `[DEBUG] Found date underline at: ${JSON.stringify(result)}\n`;
+          //console.log(foundMessage);
           //fs.appendFileSync(logFilePath, foundMessage, "utf8");
           resolve(result);
           return;
@@ -363,8 +363,8 @@ async function findDatePosition(
 
       if (!item && !found) {
         // Only log and resolve null if not found
-        const logMessage = "[DEBUG] No matching date underline found in the document.\n";
-        console.log(logMessage);
+        //const logMessage = "[DEBUG] No matching date underline found in the document.\n";
+        //console.log(logMessage);
         //fs.appendFileSync(logFilePath, logMessage, "utf8");
         resolve(null);
       }
@@ -387,15 +387,15 @@ async function logAllPdfText(pdfBytes: Buffer): Promise<void> {
 
       if (item?.page) {
         currentPage = item.page;
-        const logMessage = `[PDF_TEXT] Page ${currentPage}:\n`;
-        console.log(logMessage);
+        //const logMessage = `[PDF_TEXT] Page ${currentPage}:\n`;
+        //console.log(logMessage);
         //fs.appendFileSync(logFilePath, logMessage, "utf8");
       }
 
       if (item && item.text && typeof item.x === "number" && typeof item.y === "number") {
         const text = item.text.trim();
-        const logMessage = `[PDF_TEXT_RAW] Text="${text}", x=${item.x}, y=${item.y}, width=${item.w || "undefined"}\n`;
-        console.log(logMessage);
+        //const logMessage = `[PDF_TEXT_RAW] Text="${text}", x=${item.x}, y=${item.y}, width=${item.w || "undefined"}\n`;
+        //console.log(logMessage);
         //fs.appendFileSync(logFilePath, logMessage, "utf8");
 
         // Group text items by y-coordinate
@@ -424,8 +424,8 @@ async function logAllPdfText(pdfBytes: Buffer): Promise<void> {
 
             if (isLast || (currentItem && lastX && currentItem.x - (lastX + lastWidth) > 2)) {
               if (currentWord) {
-                const wordMessage = `[PDF_TEXT_WORD] Reconstructed Word="${currentWord}", x=${startX}, y=${line.y}, width=${totalWidth}\n`;
-                console.log(wordMessage);
+                //const wordMessage = `[PDF_TEXT_WORD] Reconstructed Word="${currentWord}", x=${startX}, y=${line.y}, width=${totalWidth}\n`;
+                //console.log(wordMessage);
                 //fs.appendFileSync(logFilePath, wordMessage, "utf8");
               }
               currentWord = "";
@@ -442,8 +442,8 @@ async function logAllPdfText(pdfBytes: Buffer): Promise<void> {
           }
         }
 
-        const logMessage = "[PDF_TEXT] Finished processing PDF.\n";
-        console.log(logMessage);
+        //const logMessage = "[PDF_TEXT] Finished processing PDF.\n";
+        //console.log(logMessage);
         //fs.appendFileSync(logFilePath, logMessage, "utf8");
         resolve();
       }
