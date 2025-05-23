@@ -43,12 +43,22 @@ export async function GET(req: NextRequest) {
     } else {
       const isRegistered =
         event.registeredUsers.some((u: RawRegisteredUser) => {
-          const userObj = u.user as RawUser;
-          return userObj._id === user._id.toString();
+          if (typeof u.user === "object" && "_id" in u.user) {
+            const userObj = u.user as RawUser;
+            return userObj._id === user._id.toString();
+          } else if (typeof u.user === "string") {
+            return u.user === user._id.toString();
+          }
+          return false;
         }) ||
         event.registeredChildren.some((c: RawRegisteredChild) => {
-          const parentObj = c.parent as RawUser;
-          return parentObj._id === user._id.toString();
+          if (typeof c.parent === "object" && "_id" in c.parent) {
+            const parentObj = c.parent as RawUser;
+            return parentObj._id === user._id.toString();
+          } else if (typeof c.parent === "string") {
+            return c.parent === user._id.toString();
+          }
+          return false;
         });
       if (!isRegistered && !isAdmin) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
