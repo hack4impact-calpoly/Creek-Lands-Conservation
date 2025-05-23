@@ -8,7 +8,7 @@ import { authenticateAdmin } from "@/lib/auth";
 import mongoose from "mongoose";
 import { auth, getAuth } from "@clerk/nextjs/server";
 import { EventPayload, EventWaiverTemplateInput, RawEvent } from "@/types/events";
-import { formatEvents } from "@/lib/utils";
+import { formatEvents, formatLimitedEvents } from "@/lib/utils";
 
 // GET: Fetch a single event by ID
 export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
@@ -21,7 +21,10 @@ export async function GET(req: NextRequest, { params }: { params: { eventID: str
   }
 
   try {
-    const event = (await Event.findById(eventID).lean()) as RawEvent | null;
+    const event = (await Event.findById(eventID)
+      .populate("registeredUsers.user") // Populate user details for registeredUsers
+      .populate("registeredChildren.parent") // Populate parent details for registeredChildren
+      .lean()) as RawEvent | null;
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
@@ -119,7 +122,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  return NextResponse.json(formatEvents(updated), { status: 200 });
+  return NextResponse.json(formatLimitedEvents(updated), { status: 200 });
 }
 
 // PATCH: Update event images and waivers
@@ -171,7 +174,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { eventID: s
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    return NextResponse.json(formatEvents(event));
+    return NextResponse.json(formatLimitedEvents(event));
   } catch (error) {
     console.error("Error updating event:", error);
     return NextResponse.json({ error: "Failed to update event" }, { status: 500 });
