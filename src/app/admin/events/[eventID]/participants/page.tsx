@@ -210,7 +210,7 @@ export default function EventParticipantsPage() {
   }
 
   if (!event) {
-    return <div className="container mx-auto py-6">Loading event details...</div>;
+    return <ParticipantPageSkeleton />;
   }
 
   return (
@@ -530,4 +530,96 @@ function calculateAge(birthday: Date): number {
   }
 
   return age;
+}
+
+function ParticipantPageSkeleton() {
+  return (
+    <div className="container mx-auto space-y-6 py-6">
+      {/* Event Header Skeleton */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="h-8 w-64 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+          <div className="mt-2 h-4 w-48 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        </div>
+        <div className="h-10 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+      </div>
+
+      {/* Search Card Skeleton */}
+      <Card>
+        <CardHeader>
+          <div className="h-6 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+          <div className="h-4 w-64 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        </CardHeader>
+        <CardContent>
+          <div className="relative">
+            <div className="h-10 w-full animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Participants Table Skeleton */}
+      <Card>
+        <CardHeader>
+          <div className="h-6 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+          <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="w-[50px]">
+                  <div className="h-4 w-4 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                </TableHead>
+                <TableHead>
+                  <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                </TableHead>
+                <TableHead>
+                  <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                </TableHead>
+                <TableHead>
+                  <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                </TableHead>
+                <TableHead>
+                  <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                </TableHead>
+                <TableHead>
+                  <div className="h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {[...Array(3)].map((_, index) => (
+                <TableRow key={index}>
+                  <TableCell>
+                    <div className="h-6 w-6 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-2">
+                      <div className="h-6 w-6 animate-pulse rounded-full bg-gray-200 dark:bg-gray-700" />
+                      <div className="h-4 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="h-4 w-48 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="h-4 w-32 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex items-center gap-1">
+                      <div className="h-5 w-5 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                      <div className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
+    </div>
+  );
 }
