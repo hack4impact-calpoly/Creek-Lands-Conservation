@@ -120,6 +120,17 @@ export const childrenOnboarding = async (
     gender: child.gender as "Male" | "Female" | "Non-binary" | "Prefer Not to Say",
     registeredEvents: [],
     waiversSigned: [],
+    emergencyContacts: [],
+    medicalInfo: {
+      photoRelease: false,
+      allergies: "",
+      insurance: "",
+      doctorName: "",
+      doctorPhone: "",
+      behaviorNotes: "",
+      dietaryRestrictions: "",
+      otherNotes: "",
+    },
   }));
 
   // TODO verify which of the fields are required.

@@ -5,15 +5,21 @@ import Waiver from "@/database/waiverSchema";
 import User from "@/database/userSchema";
 import Event from "@/database/eventSchema";
 
-interface SignedWaiver {
-  waiverId: string;
+// Define the interface for the full waiver document returned by the server action
+interface FullSignedWaiver {
+  waiver: {
+    _id: string;
+    fileKey: string;
+    uploadedAt: Date;
+    isForChild: boolean;
+    childSubdocId?: string;
+    eventId: string;
+  };
   event: { title: string; startDate: string; endDate: string };
-  uploadedAt: string;
-  isForChild: boolean;
   childName?: string;
 }
 
-export async function getSignedWaiversForRegisteredEvents(userId: string): Promise<SignedWaiver[]> {
+export async function getSignedWaiversForRegisteredEvents(userId: string): Promise<FullSignedWaiver[]> {
   await connectDB();
 
   // Step 1: Fetch the user with registered events and children
@@ -77,6 +83,7 @@ export async function getSignedWaiversForRegisteredEvents(userId: string): Promi
     eventId: { $in: allEventIds },
   }).lean()) as unknown as Array<{
     _id: string;
+    fileKey: string;
     childSubdocId?: string;
     isForChild: boolean;
     uploadedAt: Date;
@@ -85,8 +92,8 @@ export async function getSignedWaiversForRegisteredEvents(userId: string): Promi
 
   console.log("Debug: Fetched waivers:", waivers);
 
-  // Step 4: Map waivers to the SignedWaiver format
-  const signedWaivers: SignedWaiver[] = waivers.map((waiver) => {
+  // Step 4: Map waivers to the FullSignedWaiver format
+  const signedWaivers: FullSignedWaiver[] = waivers.map((waiver) => {
     const event = eventMap.get(waiver.eventId.toString().trim());
     console.log("Debug: Looking up event for waiver:", {
       waiverId: waiver._id,
@@ -101,14 +108,19 @@ export async function getSignedWaiversForRegisteredEvents(userId: string): Promi
     }
 
     return {
-      waiverId: waiver._id,
+      waiver: {
+        _id: waiver._id,
+        fileKey: waiver.fileKey,
+        uploadedAt: waiver.uploadedAt,
+        isForChild: waiver.isForChild,
+        childSubdocId: waiver.childSubdocId,
+        eventId: waiver.eventId,
+      },
       event: {
         title: event?.title || "Generic Waiver",
         startDate: event?.startDate.toISOString() || "",
         endDate: event?.endDate.toISOString() || "",
       },
-      uploadedAt: waiver.uploadedAt.toISOString(),
-      isForChild: waiver.isForChild,
       childName,
     };
   });
