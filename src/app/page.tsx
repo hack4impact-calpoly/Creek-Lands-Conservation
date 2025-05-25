@@ -6,7 +6,6 @@ import { getEvents } from "@/app/actions/events/actions";
 import { EventInfo, LimitedEventInfo } from "@/types/events";
 import EventSection from "@/components/EventComponent/EventSection";
 import SkeletonEventSection from "@/components/EventComponent/EventSectionSkeleton";
-import { formatEvents } from "@/lib/utils";
 
 interface IChildData {
   _id: string;

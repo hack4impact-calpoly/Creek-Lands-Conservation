@@ -16,6 +16,7 @@ export interface EventCardProps {
   registrationDeadline: Date | null;
   capacity: number;
   currentRegistrations: number;
+  eventWaiverTemplates: { waiverId: string; required: boolean }[];
   onDelete?: (eventId: string) => void;
   onRegister?: (eventId: string, attendees: string[]) => void;
 }
@@ -57,6 +58,7 @@ export default function EventCard(props: EventCardProps) {
     registrationDeadline,
     capacity,
     currentRegistrations,
+    eventWaiverTemplates,
     onDelete,
     onRegister,
   } = props;
@@ -111,11 +113,21 @@ export default function EventCard(props: EventCardProps) {
             registrationDeadline,
             capacity,
             currentRegistrations,
+            eventWaiverTemplates,
             onDelete,
             onRegister,
           }}
         />
       </CardContent>
     </Card>
+  );
+}
+
+export function Something({ id, eventID }: { id: string; eventID: string }) {
+  return (
+    <div>
+      <h1>Event ID: {eventID}</h1>
+      <p>Event ID: {id}</p>
+    </div>
   );
 }

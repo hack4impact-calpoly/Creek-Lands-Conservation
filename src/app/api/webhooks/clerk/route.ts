@@ -8,24 +8,23 @@ export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
 
   if (!WEBHOOK_SECRET) {
+    console.error("CLERK_WEBHOOK_SECRET is not set");
     throw new Error("Please add CLERK_WEBHOOK_SECRET from Clerk Dashboard to .env or .env.local");
   }
 
-  // Extract headers
   const headerPayload = headers();
   const svix_id = headerPayload.get("svix-id");
   const svix_timestamp = headerPayload.get("svix-timestamp");
   const svix_signature = headerPayload.get("svix-signature");
 
   if (!svix_id || !svix_timestamp || !svix_signature) {
+    console.error("Missing Svix headers:", { svix_id, svix_timestamp, svix_signature });
     return new Response("Error: Missing Svix headers", { status: 400 });
   }
 
-  // Get request body
   const payload = await req.json();
   const body = JSON.stringify(payload);
 
-  // Verify the webhook
   const wh = new Webhook(WEBHOOK_SECRET);
   let evt: WebhookEvent;
   try {
@@ -39,13 +38,14 @@ export async function POST(req: Request) {
     return new Response("Error verifying webhook", { status: 400 });
   }
 
-  // Extract event type
   const eventType = evt.type;
+  console.log(`Received webhook event: ${eventType}`);
 
   if (eventType === "user.created") {
     const { id, email_addresses, first_name, last_name, image_url } = evt.data;
 
     if (!id || !email_addresses) {
+      console.error("Missing user data:", { id, email_addresses });
       return new Response("Error: Missing user data", { status: 400 });
     }
 
@@ -57,8 +57,7 @@ export async function POST(req: Request) {
       imageUrl: image_url || "",
     };
 
-    // Change this to user in production
-    const role = "admin";
+    const role = process.env.NODE_ENV === "production" ? "user" : "admin";
     const client = await clerkClient();
 
     try {
@@ -67,34 +66,34 @@ export async function POST(req: Request) {
       await client.users.updateUserMetadata(id, {
         publicMetadata: { userRole: role },
       });
-      console.log("Clerk metadata updated successfully");
-      // Create the user in MongoDB
-      await createUser(userData);
+      console.log("Clerk metadata updated successfully for role:", role);
+
+      const user = await createUser(userData);
+      if (!user || "error" in user) {
+        throw new Error("Failed to create user in MongoDB");
+      }
       console.log(`Created user ${id} with role '${role}'`);
       return new Response("User successfully created and role assigned", { status: 201 });
     } catch (err) {
-      // More detailed error logging
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
-      const errorDetails = JSON.stringify(err, Object.getOwnPropertyNames(err));
-      console.error("Full error details:", errorDetails);
-      console.error("Error message:", errorMessage);
-
-      return new Response(`Error: Failed to update metadata and create user. Details: ${errorMessage}`, {
-        status: 500,
-      });
+      console.error("Error creating user:", errorMessage);
+      return new Response(`Error: Failed to create user. Details: ${errorMessage}`, { status: 500 });
     }
   }
 
-  // Handle user deletion
   if (eventType === "user.deleted") {
     const { id } = evt.data;
 
     if (!id) {
+      console.error("Missing user ID for deletion");
       return new Response("Error: Missing user ID", { status: 400 });
     }
 
     try {
-      await deleteUser(id);
+      const result = await deleteUser(id);
+      if (result.error) {
+        throw new Error(result.error);
+      }
       console.log(`Deleted user ${id}`);
       return new Response("User successfully deleted", { status: 200 });
     } catch (err) {
@@ -103,5 +102,6 @@ export async function POST(req: Request) {
     }
   }
 
+  console.log(`Unhandled event type: ${eventType}`);
   return new Response("", { status: 200 });
 }

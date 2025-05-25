@@ -1,6 +1,6 @@
 "use client";
 
-import PersonalInfo from "@/components/UserComponent/UserComponent";
+import PersonalInfo from "@/components/UserComponent/PersonalInfo";
 
 export default function UserProfile() {
   return (

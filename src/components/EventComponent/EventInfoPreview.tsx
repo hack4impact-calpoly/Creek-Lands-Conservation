@@ -35,6 +35,7 @@ interface EventInfoProps {
   email?: string;
   capacity?: number;
   currentRegistrations?: number;
+  eventWaiverTemplates: { waiverId: string; required: boolean }[];
   onDelete?: (eventId: string) => void;
   onRegister?: (eventId: string, attendees: string[]) => void;
 }
@@ -51,24 +52,24 @@ export function EventInfoPreview({
   email = "marysia@creeklands.org",
   capacity,
   currentRegistrations,
+  eventWaiverTemplates,
   onDelete,
   onRegister,
 }: EventInfoProps) {
-  // TODO: replace when email API is implemented
-  const mockEmailList = ["alice@example.com", "bob@example.com", "carol.parent@example.com", "dave.parent@example.com"];
-
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isRegistering, setIsRegistering] = useState(false);
   const [userInfo, setUserInfo] = useState<{
     id: string;
-    name: string;
+    firstName: string;
+    lastName: string;
     alreadyRegistered: boolean;
-    family: { id: string; name: string; alreadyRegistered: boolean }[];
+    family: { id: string; firstName: string; lastName: string; alreadyRegistered: boolean }[];
   }>({
     id: "",
-    name: "",
+    firstName: "",
+    lastName: "",
     alreadyRegistered: false,
     family: [],
   });
@@ -106,12 +107,18 @@ export function EventInfoPreview({
           name: `${child.firstName || ""} ${child.lastName || ""}`.trim(),
           alreadyRegistered: child.registeredEvents.includes(id),
         })) || [];
-
       setUserInfo({
         id: userData._id,
-        name: `${userData?.firstName || ""} ${userData?.lastName || ""}`.trim(),
+        firstName: userData.firstName || "",
+        lastName: userData.lastName || "",
         alreadyRegistered: userData.registeredEvents.includes(id),
-        family,
+        family:
+          userData.children?.map((child: any) => ({
+            id: child._id,
+            firstName: child.firstName || "",
+            lastName: child.lastName || "",
+            alreadyRegistered: child.registeredEvents.includes(id),
+          })) || [],
       });
       console.log("Fetched user family:", family);
     } catch (error) {
@@ -166,49 +173,69 @@ export function EventInfoPreview({
       return;
     }
 
-    setIsRegistering(true);
+    const participants = [
+      // Include parent only if selected
+      ...(attendees.includes(userInfo.id)
+        ? [
+            {
+              firstName: userInfo.firstName,
+              lastName: userInfo.lastName,
+              userID: userInfo.id,
+              isChild: false,
+            },
+          ]
+        : []),
 
-    try {
-      console.log("Registering attendees:", attendees, "User ID:", userInfo.id);
-      const response = await fetch(`/api/events/${id}/registrations`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ attendees }),
-      });
+      // Always include selected children
+      ...userInfo.family
+        .filter((m) => attendees.includes(m.id))
+        .map((m) => ({
+          firstName: m.firstName,
+          lastName: m.lastName,
+          userID: m.id,
+          isChild: true,
+        })),
+    ];
 
-      const responseData = await response.json();
-      if (!response.ok) throw new Error(responseData.error || "Failed to register for event.");
+    if (eventWaiverTemplates.length > 0) {
+      // Waivers required, store participants and navigate to waiver page
+      localStorage.setItem("waiverParticipants", JSON.stringify(participants));
+      router.push(`/events/${id}/sign`);
+    } else {
+      // No waivers required, register directly
+      try {
+        const response = await fetch(`/api/events/${id}/registrations`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ attendees }),
+        });
 
-      // Update local state
-      setIsRegistered(true);
-      setUserInfo((prev) => {
-        const userIsAttendee = attendees.includes(prev.id);
-        console.log("User is attendee:", userIsAttendee);
-        return {
+        const responseData = await response.json();
+        if (!response.ok) throw new Error(responseData.error || "Failed to register for event.");
+
+        setIsRegistered(true);
+        setUserInfo((prev) => ({
           ...prev,
-          alreadyRegistered: userIsAttendee ? true : prev.alreadyRegistered,
+          alreadyRegistered: attendees.includes(prev.id) ? true : prev.alreadyRegistered,
           family: prev.family.map((member) => ({
             ...member,
             alreadyRegistered: attendees.includes(member.id) ? true : member.alreadyRegistered,
           })),
-        };
-      });
+        }));
 
-      console.log("Parent Signup");
-      onRegister?.(id, attendees);
-      toast({
-        title: "Registration successful",
-        description: "You have been registered for the event.",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error instanceof Error ? error.message : "Failed to register for the event.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsRegistering(false);
-      setIsRegisterDialogOpen(false);
+        onRegister?.(id, attendees);
+        toast({
+          title: "Registration successful",
+          description: "You have been registered for the event.",
+        });
+        setIsRegisterDialogOpen(false);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to register for the event.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
@@ -216,14 +243,8 @@ export function EventInfoPreview({
     router.push(`/admin/events/edit/${id}`);
   };
 
-  const createMailtoLink = (emails: string[]) => {
-    if (!emails.length) return null;
-
-    const subject = encodeURIComponent("Event Update from CreekLands");
-    const body = encodeURIComponent(
-      `Hi everyone,\n\nThis is an update regarding the upcoming event "${title}".\n\nThank you!`,
-    );
-    return `mailto:?bcc=${emails.join(",")}&subject=${subject}&body=${body}`;
+  const handleViewEvent = () => {
+    router.push(`/admin/events/${id}/participants`);
   };
 
   return (
@@ -326,28 +347,11 @@ export function EventInfoPreview({
                 </SignInButton>
               ))}
 
-            {isAdmin && (
-              <Button
-                variant="outline"
-                onClick={() => {
-                  const mailto = createMailtoLink(mockEmailList);
-                  if (mailto) {
-                    window.location.href = mailto;
-                  } else {
-                    toast({
-                      title: "No recipients",
-                      description: "There are no emails to send to.",
-                      variant: "destructive",
-                    });
-                  }
-                }}
-              >
-                Send Email to All
-              </Button>
-            )}
-
             {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
+                <Button variant="outline" onClick={() => handleViewEvent()}>
+                  View Event
+                </Button>
                 <Button variant="outline" onClick={() => handleEditEvent()}>
                   Edit Event
                 </Button>
