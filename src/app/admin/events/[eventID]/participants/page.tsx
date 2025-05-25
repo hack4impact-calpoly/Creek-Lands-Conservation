@@ -9,6 +9,28 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { APIEvent, UserInfo, RegisteredUserInfo, RegisteredChildInfo } from "@/types/events";
 import { useParams } from "next/navigation";
+import { toast } from "@/hooks/use-toast";
+
+// Helper function to get unique emails from event data
+function getEventEmails(eventData: APIEvent): string[] {
+  const emailsSet = new Set<string>();
+
+  // Add emails of registered users
+  eventData.registeredUsers.forEach((ru: any) => {
+    if (ru.user?.email) {
+      emailsSet.add(ru.user.email);
+    }
+  });
+
+  // Add emails of parents for registered children
+  eventData.registeredChildren.forEach((rc: any) => {
+    if (rc.parent?.email) {
+      emailsSet.add(rc.parent.email);
+    }
+  });
+
+  return Array.from(emailsSet);
+}
 
 // Helper function to flatten the data structure to focus on attendees
 function getEventAttendees(eventData: APIEvent) {
@@ -160,6 +182,7 @@ export default function EventParticipantsPage() {
     }[]
   >([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [emailList, setEmailList] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -182,6 +205,9 @@ export default function EventParticipantsPage() {
 
         const eventAttendees = getEventAttendees(eventData);
         setAttendees(eventAttendees);
+
+        const emails = getEventEmails(eventData);
+        setEmailList(emails);
       } catch (err) {
         console.error("Error fetching event data:", err);
         setError("Failed to load event details. Please try again later.");
@@ -257,6 +283,18 @@ export default function EventParticipantsPage() {
       (attendee.parent && attendee.parent.email.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
+  const createMailtoLink = (emails: string[]) => {
+    if (!emails.length) return null;
+
+    const subject = encodeURIComponent(`${event?.name} Update from CreekLandsConservation`);
+    const body = encodeURIComponent(
+      `Hi everyone,\n\nThis is an update regarding the upcoming event "${event?.name}".\n\nThank you!`,
+    );
+    return `mailto:?bcc=${emails.join(",")}&subject=${subject}&body=${body}`; //Opens the default email client with pre-filled BCC, subject, and body
+    // Uncomment the line below if you want to use Gmail's compose view instead
+    //return `https://mail.google.com/mail/?view=cm&fs=1&bcc=${emails.join(",")}&su=${subject}&body=${body}`;
+  };
+
   if (error) {
     return <div className="container mx-auto py-6">{error}</div>;
   }
@@ -277,7 +315,32 @@ export default function EventParticipantsPage() {
             {event.endDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} at {event.location}
           </p>
         </div>
-        <Button onClick={handleExport}>Export Participant List</Button>
+        <div className="flex gap-2">
+          <Button
+            variant="default"
+            onClick={() => {
+              const mailto = createMailtoLink(emailList);
+              if (mailto) {
+                window.open(mailto, "_blank"); // Use _self to avoid new tab, as mailto typically opens email client
+                toast({
+                  title: "Opening email client",
+                  description: "Your email client should open with the recipient list pre-filled.",
+                });
+              } else {
+                toast({
+                  title: "No recipients",
+                  description: "There are no emails to send to.",
+                  variant: "destructive",
+                });
+              }
+            }}
+          >
+            Send Email to All
+          </Button>
+          <Button variant="default" onClick={handleExport}>
+            Export Participant List
+          </Button>
+        </div>
       </div>
 
       <Card>
