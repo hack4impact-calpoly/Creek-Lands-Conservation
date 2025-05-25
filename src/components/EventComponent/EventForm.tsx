@@ -10,6 +10,17 @@ import EnhancedPDFSelector, {
   type EnhancedPDFSelectorHandle,
   type PDFInfo,
 } from "@/components/EventComponent/PDFUploader";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export type EventFormData = {
   title: string;
@@ -31,6 +42,7 @@ export default function CreateEventForm() {
   const pdfUploadRef = useRef<EnhancedPDFSelectorHandle>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [resetUploader, setResetUploader] = useState(false);
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false); // Control dialog state
   const { toast } = useToast();
 
   const {
@@ -71,7 +83,6 @@ export default function CreateEventForm() {
           variant: "destructive",
           description: "End time must be after start time.",
         });
-        setIsSubmitting(false);
         return;
       }
       if (new Date(deadlineISO) >= new Date(startISO)) {
@@ -80,7 +91,6 @@ export default function CreateEventForm() {
           variant: "destructive",
           description: "Registration deadline must be before start.",
         });
-        setIsSubmitting(false);
         return;
       }
 
@@ -106,20 +116,12 @@ export default function CreateEventForm() {
       });
       if (!response.ok) throw new Error("Event Creation Failed");
       const createdEvent = await response.json();
-      console.log("Event created:", createdEvent);
       const eventId = createdEvent.id;
-      console.log("Event ID in Form:", eventId);
 
-      const imageUrls = fileUploadRef.current
-        ? await fileUploadRef.current.uploadFiles(eventId) // Pass eventId
-        : [];
-      const pdfInfos = pdfUploadRef.current
-        ? await pdfUploadRef.current.uploadFiles(eventId) // Pass eventId
-        : [];
-      console.log("Uploaded image URLs:", imageUrls);
-      console.log("Uploaded PDF Infos:", pdfInfos);
+      const imageUrls = fileUploadRef.current ? await fileUploadRef.current.uploadFiles(eventId) : [];
+      const pdfInfos = pdfUploadRef.current ? await pdfUploadRef.current.uploadFiles(eventId) : [];
 
-      // Step 3: Update the event with uploaded files
+      // Update the event with uploaded files
       const updateResponse = await fetch(`/api/events/${eventId}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -127,8 +129,7 @@ export default function CreateEventForm() {
       });
       if (!updateResponse.ok) {
         const errorData = await updateResponse.json();
-        console.error("PATCH failed:", errorData);
-        throw new Error("Failed to update event with files");
+        throw new Error(errorData.message || "Failed to update event with files");
       }
 
       // On success
@@ -137,16 +138,16 @@ export default function CreateEventForm() {
       pdfUploadRef.current?.clear();
       setResetUploader(true);
       toast({
-        title: isDraft ? "Draft Saved Successfully!" : "Event Created Successfully!",
-        description: isDraft ? "Your event has been saved as a draft." : "Your event has been published!",
+        title: "Success",
+        description: isDraft ? "Event saved as draft." : "Event published successfully!",
         variant: "success",
       });
-    } catch (error) {
-      console.error(error);
+      if (!isDraft) setIsPublishDialogOpen(false); // Close dialog after publishing
+    } catch (error: any) {
       toast({
-        title: isDraft ? "Draft Save Failed!" : "Event Creation Failed!",
+        title: "Error",
+        description: error.message || (isDraft ? "Failed to save draft." : "Failed to create event."),
         variant: "destructive",
-        description: "An error occurred while processing your request.",
       });
     } finally {
       setIsSubmitting(false);
@@ -169,7 +170,7 @@ export default function CreateEventForm() {
           />
         </div>
       </div>
-      <form onSubmit={handleSubmit((data) => onSubmit(data, false))} className="mx-auto max-w-6xl space-y-6 p-2">
+      <form className="mx-auto max-w-6xl space-y-6 p-2">
         <h1 className="text-3xl font-medium">Basic Information</h1>
         <div className="flex space-x-4">
           <div className="flex-1">
@@ -350,20 +351,35 @@ export default function CreateEventForm() {
             type="button"
             onClick={handleSubmit((data) => onSubmit(data, true))}
             disabled={isSubmitting}
-            className="rounded border bg-[#45575E] px-4 py-2 text-white hover:bg-gray-500"
+            className="rounded border bg-[#2b6cb0] px-4 py-2 text-white hover:bg-[#2b6cb0]/80 disabled:bg-gray-400"
           >
-            Save as Draft
+            Save Draft
           </button>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className="rounded border bg-[#558552] px-4 py-2 text-white hover:bg-[#6FAF68]"
-          >
-            Publish Event
-          </button>
+          <AlertDialog open={isPublishDialogOpen} onOpenChange={setIsPublishDialogOpen}>
+            <AlertDialogTrigger asChild>
+              <button
+                type="button"
+                disabled={isSubmitting}
+                className="rounded border bg-[#558552] px-4 py-2 text-white hover:bg-[#6FAF68] disabled:bg-gray-400"
+              >
+                Publish Event
+              </button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Publish Event</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to publish this event? It will be visible to users.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleSubmit((data) => onSubmit(data, false))}>Publish</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
 
-        {/* loading indicator while submitting form */}
         {isSubmitting && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent">
             <div className="flex items-center space-x-4 rounded-lg bg-white p-6 shadow-lg">
