@@ -34,6 +34,89 @@ export type EventFormData = {
   paymentNote: string;
 };
 
+// Skeleton Component for EditEventPage
+function SkeletonEditEventForm() {
+  return (
+    <div className="container mx-auto animate-pulse px-4 py-8">
+      {/* Back Button */}
+      <div className="mb-4">
+        <div className="h-10 w-24 rounded bg-gray-200" />
+      </div>
+
+      {/* Page Title */}
+      <div className="mb-6 text-center">
+        <div className="mx-auto h-12 w-64 rounded bg-gray-200" />
+      </div>
+
+      {/* Status Indicator */}
+      <div className="mb-4 text-center">
+        <div className="mx-auto h-6 w-32 rounded bg-gray-200" />
+      </div>
+
+      {/* Form */}
+      <div className="mx-auto max-w-6xl space-y-6 p-2">
+        {/* Basic Information Section */}
+        <div className="h-8 w-48 rounded bg-gray-200" />
+        <div className="flex space-x-4">
+          <div className="flex-1">
+            <div className="mb-2 h-5 w-32 rounded bg-gray-200" />
+            <div className="h-10 rounded border bg-gray-200" />
+          </div>
+          <div className="flex-1">
+            <div className="mb-2 h-5 w-32 rounded bg-gray-200" />
+            <div className="h-10 rounded border bg-gray-200" />
+          </div>
+        </div>
+
+        {/* Date/Time Grid */}
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          {[...Array(4)].map((_, i) => (
+            <div key={i}>
+              <div className="mb-2 h-5 w-24 rounded bg-gray-200" />
+              <div className="h-10 rounded border bg-gray-200" />
+            </div>
+          ))}
+        </div>
+
+        {/* Further Details Section */}
+        <div className="h-8 w-48 rounded bg-gray-200" />
+        <div>
+          <div className="mb-2 h-5 w-40 rounded bg-gray-200" />
+          <div className="h-32 rounded border bg-gray-200" />
+        </div>
+
+        {/* Waivers and Registration Section */}
+        <div className="h-8 w-48 rounded bg-gray-200" />
+        <div>
+          <div className="mb-2 h-5 w-40 rounded bg-gray-200" />
+          <div className="h-10 rounded border bg-gray-200" />
+        </div>
+        <div>
+          <div className="mb-2 h-5 w-40 rounded bg-gray-200" />
+          <div className="h-10 rounded border bg-gray-200" />
+        </div>
+
+        {/* Payment Section */}
+        <div className="h-8 w-48 rounded bg-gray-200" />
+        <div>
+          <div className="mb-2 h-5 w-32 rounded bg-gray-200" />
+          <div className="h-10 rounded border bg-gray-200" />
+        </div>
+        <div>
+          <div className="mb-2 h-5 w-40 rounded bg-gray-200" />
+          <div className="h-32 rounded border bg-gray-200" />
+        </div>
+
+        {/* Buttons */}
+        <div className="flex justify-end space-x-4">
+          <div className="h-10 w-32 rounded bg-gray-200" />
+          <div className="h-10 w-32 rounded bg-gray-200" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EditEventPage({ params }: { params: { eventID: string } }) {
   const { eventID } = params;
   const router = useRouter();
@@ -157,7 +240,7 @@ export default function EditEventPage({ params }: { params: { eventID: string } 
     submitEvent(data, true); // Set isDraft to true to unpublish
   };
 
-  if (loading) return <div className="py-10 text-center">Loading...</div>;
+  if (loading) return <SkeletonEditEventForm />;
 
   return (
     <div className="container mx-auto px-4 py-8">
