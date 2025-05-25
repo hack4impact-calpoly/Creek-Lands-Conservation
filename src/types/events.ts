@@ -1,3 +1,4 @@
+import { EmergencyContact, MedicalInfo } from "@/database/userSchema";
 import mongoose, { Types } from "mongoose";
 
 // API response type from getEvents
@@ -63,13 +64,45 @@ export interface RawWaiverSigned {
   signed: boolean;
 }
 
+// Define a raw user type for populated user objects (matching the User schema)
+export interface RawUser {
+  _id: string;
+  clerkID: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  gender: string;
+  birthday?: Date | null;
+  phoneNumbers: {
+    cell: string;
+    work?: string;
+  };
+  address: {
+    home: string;
+    city: string;
+    zipCode: string;
+  };
+  children: {
+    _id: mongoose.Types.ObjectId;
+    firstName: string;
+    lastName: string;
+    birthday?: Date | null;
+    gender: string;
+    emergencyContacts: EmergencyContact[];
+    medicalInfo: MedicalInfo;
+  }[];
+  emergencyContacts: EmergencyContact[];
+  medicalInfo: MedicalInfo;
+}
+
+// Update RawRegisteredUser and RawRegisteredChild to allow for populated user objects
 export interface RawRegisteredUser {
-  user: mongoose.Types.ObjectId;
+  user: mongoose.Types.ObjectId | RawUser; // Can be either an ObjectId or a populated user object
   waiversSigned: RawWaiverSigned[];
 }
 
 export interface RawRegisteredChild {
-  parent: mongoose.Types.ObjectId;
+  parent: mongoose.Types.ObjectId | RawUser; // Can be either an ObjectId or a populated user object
   childId: mongoose.Types.ObjectId;
   waiversSigned: RawWaiverSigned[];
 }
@@ -99,7 +132,7 @@ interface RawEventData {
 }
 
 export interface RawEvent {
-  _id: mongoose.Types.ObjectId;
+  _id: mongoose.Types.ObjectId | string;
   title: string;
   description?: string;
   startDate: Date;
@@ -125,15 +158,76 @@ export interface WaiverSignedInfo {
   signed: boolean;
 }
 
+// Define a type for the user object (based on your User schema)
+export interface UserInfo {
+  _id: string;
+  clerkID: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  gender: string;
+  birthday?: string | null;
+  phoneNumbers: {
+    cell: string;
+    work?: string;
+  };
+  address: {
+    home: string;
+    city: string;
+    zipCode: string;
+  };
+  children: {
+    _id: string;
+    firstName: string;
+    lastName: string;
+    birthday?: string | null;
+    gender: string;
+    emergencyContacts: EmergencyContact[];
+    medicalInfo: MedicalInfo;
+  }[];
+  medicalInfo: {
+    photoRelease: boolean;
+    allergies: string;
+    dietaryRestrictions: string;
+    insurance: string;
+    doctorName: string;
+    doctorPhone: string;
+    behaviorNotes: string;
+    otherNotes: string;
+  };
+  emergencyContacts: EmergencyContact[];
+}
+
+// Update RegisteredUserInfo and RegisteredChildInfo to use UserInfo
 export interface RegisteredUserInfo {
-  user: string;
+  user: UserInfo;
   waiversSigned: WaiverSignedInfo[];
 }
 
 export interface RegisteredChildInfo {
-  parent: string;
+  parent: UserInfo;
   childId: string;
   waiversSigned: WaiverSignedInfo[];
+}
+
+// Update FormattedEvent to use the updated types
+export interface FormattedEvent {
+  id: string;
+  title: string;
+  description?: string;
+  startDate: string;
+  endDate: string;
+  location: string;
+  capacity: number;
+  registrationDeadline: string;
+  images: string[];
+  fee: number;
+  stripePaymentId?: string;
+  paymentNote?: string;
+  isDraft: boolean;
+  eventWaiverTemplates: EventWaiverTemplateInfo[];
+  registeredUsers: RegisteredUserInfo[];
+  registeredChildren: RegisteredChildInfo[];
 }
 
 export interface EventWaiverTemplateInfo {

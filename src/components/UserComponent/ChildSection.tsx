@@ -1,3 +1,4 @@
+// src/components/UserComponent/ChildSection.tsx
 "use client";
 import React from "react";
 
@@ -14,7 +15,7 @@ interface ChildSectionProps {
   child: Child;
   isEditing: boolean;
   onEdit: (localId: number, field: keyof Child, value: string) => void;
-  onDelete: (localId: number) => void;
+  onDelete: (localId: number, childId?: string) => void; // Updated to include childId
 }
 
 const genderOptions = ["Male", "Female", "Non-binary", "Prefer not to say"];
@@ -84,10 +85,7 @@ export default function ChildSection({ child, isEditing, onEdit, onDelete }: Chi
       {isEditing && (
         <div className="flex justify-end">
           <button
-            onClick={() => {
-              onDelete(child.localId);
-              window.location.reload();
-            }}
+            onClick={() => onDelete(child.localId, child._id)} // Pass both localId and _id
             className="mt-2 rounded-md bg-red-600 px-3 py-2 text-white hover:bg-red-700"
           >
             Remove Child

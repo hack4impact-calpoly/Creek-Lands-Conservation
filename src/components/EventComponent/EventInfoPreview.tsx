@@ -35,6 +35,7 @@ interface EventInfoProps {
   email?: string;
   capacity?: number;
   currentRegistrations?: number;
+  eventWaiverTemplates: { waiverId: string; required: boolean }[];
   onDelete?: (eventId: string) => void;
   onRegister?: (eventId: string, attendees: string[]) => void;
 }
@@ -51,6 +52,7 @@ export function EventInfoPreview({
   email = "marysia@creeklands.org",
   capacity,
   currentRegistrations,
+  eventWaiverTemplates,
   onDelete,
   onRegister,
 }: EventInfoProps) {
@@ -195,14 +197,54 @@ export function EventInfoPreview({
         })),
     ];
 
-    // Store in localStorage for the signing page to use
-    localStorage.setItem("waiverParticipants", JSON.stringify(participants));
+    if (eventWaiverTemplates.length > 0) {
+      // Waivers required, store participants and navigate to waiver page
+      localStorage.setItem("waiverParticipants", JSON.stringify(participants));
+      router.push(`/events/${id}/sign`);
+    } else {
+      // No waivers required, register directly
+      try {
+        const response = await fetch(`/api/events/${id}/registrations`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ attendees }),
+        });
 
-    router.push(`/events/${id}/sign`);
+        const responseData = await response.json();
+        if (!response.ok) throw new Error(responseData.error || "Failed to register for event.");
+
+        setIsRegistered(true);
+        setUserInfo((prev) => ({
+          ...prev,
+          alreadyRegistered: attendees.includes(prev.id) ? true : prev.alreadyRegistered,
+          family: prev.family.map((member) => ({
+            ...member,
+            alreadyRegistered: attendees.includes(member.id) ? true : member.alreadyRegistered,
+          })),
+        }));
+
+        onRegister?.(id, attendees);
+        toast({
+          title: "Registration successful",
+          description: "You have been registered for the event.",
+        });
+        setIsRegisterDialogOpen(false);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: error instanceof Error ? error.message : "Failed to register for the event.",
+          variant: "destructive",
+        });
+      }
+    }
   };
 
   const handleEditEvent = () => {
     router.push(`/admin/events/edit/${id}`);
+  };
+
+  const handleViewEvent = () => {
+    router.push(`/admin/events/${id}/participants`);
   };
 
   return (
@@ -307,6 +349,9 @@ export function EventInfoPreview({
 
             {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
+                <Button variant="outline" onClick={() => handleViewEvent()}>
+                  View Event
+                </Button>
                 <Button variant="outline" onClick={() => handleEditEvent()}>
                   Edit Event
                 </Button>

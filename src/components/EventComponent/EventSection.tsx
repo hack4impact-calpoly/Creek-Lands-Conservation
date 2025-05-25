@@ -72,6 +72,7 @@ export default function EventSection({
                 registrationDeadline={event.registrationDeadline ? new Date(event.registrationDeadline) : null}
                 capacity={event.capacity}
                 currentRegistrations={event.currentRegistrations}
+                eventWaiverTemplates={event.eventWaiverTemplates}
                 onDelete={onDelete}
                 onRegister={onRegister}
               />

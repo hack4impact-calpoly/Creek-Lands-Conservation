@@ -1,9 +1,14 @@
+// src/components/WaiverSignatureComponent/WaiverSignatureForm.tsx
 "use client";
+
 import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import SignatureCanvas from "./SignatureCanvas";
+import WaiverSignatureFormSkeleton from "./WaiverSignatureFormSkeleton";
+
+// TODO: currently, if there is multiple waivers, the user can sign the first one and that document will be generated in s3 and mongodb, even if they decided to not sign up, we only want to save user documents when users confirms signup
 
 type Participant = {
   firstName: string;
@@ -31,7 +36,6 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
   const [loading, setLoading] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showError, setShowError] = useState(false);
-  const [waiversFetched, setWaiversFetched] = useState(false);
 
   // Fetch waivers for the event
   useEffect(() => {
@@ -44,7 +48,7 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
       } catch (err) {
         console.error("Error fetching waivers:", err);
       } finally {
-        setWaiversFetched(true);
+        setLoading(false);
       }
     };
     fetchWaivers();
@@ -71,27 +75,6 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
     fetchWaiverUrl();
   }, [waivers, currentIndex]);
 
-  useEffect(() => {
-    // if there happens to be no waivers for this event.
-    if (waiversFetched && waivers.length === 0) {
-      (async () => {
-        try {
-          await fetch(`/api/events/${eventId}/registrations`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              attendees: participants.map((p) => p.userID),
-            }),
-          });
-        } catch (err) {
-          console.error("Registration failed (no waivers):", err);
-        } finally {
-          onAllSigned();
-        }
-      })();
-    }
-  }, [waiversFetched, waivers, eventId, participants, onAllSigned]);
-
   // Reset state when switching waivers
   useEffect(() => {
     setSigned(false);
@@ -105,16 +88,13 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
       return;
     }
     if (!signed) {
-      // TODO: this needs some server side error handling
-      // registration endpoint should somehow check for signature.
+      // TODO: Add server-side signature validation
       return;
     }
 
     if (currentIndex < waivers.length - 1) {
       setCurrentIndex((prev) => prev + 1);
     } else {
-      // this is the last page when everything is signed
-      // TODO: I really would like a better place to put this
       try {
         await fetch(`/api/events/${eventId}/registrations`, {
           method: "PUT",
@@ -123,23 +103,19 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
             attendees: participants.map((p) => p.userID),
           }),
         });
+        onAllSigned();
       } catch (err) {
         console.error("Registration failed:", err);
-        // optionally show toast or fallback
+        // Optionally show toast or fallback
       }
-
-      // Going to assume this is some type of redirect to the payment portal.
-      onAllSigned();
     }
   };
 
   const currentWaiver = waivers[currentIndex];
 
-  if (loading || !waiversFetched) {
-    return <p className="mt-12 text-center text-gray-600">Loading waiver...</p>;
-  }
-  if (waivers.length === 0) {
-    return <p className="mt-12 text-center text-gray-600">No waivers required. Completing registration...</p>;
+  // Show skeleton while loading
+  if (loading) {
+    return <WaiverSignatureFormSkeleton />;
   }
 
   return (
@@ -179,15 +155,19 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
           </div>
         </div>
 
-        <div className="flex justify-center">
-          <SignatureCanvas
-            eventId={eventId}
-            waiverId={currentWaiver._id}
-            fileKey={currentWaiver.fileKey}
-            participants={participants}
-            onSigned={() => setSigned(true)}
-          />
-        </div>
+        {!signed && (
+          <div className="flex justify-center">
+            <SignatureCanvas
+              eventId={eventId}
+              waiverId={currentWaiver._id}
+              fileKey={currentWaiver.fileKey}
+              participants={participants}
+              onSigned={() => setSigned(true)}
+            />
+          </div>
+        )}
+
+        {signed && <p className="flex justify-center text-sm italic text-green-600">Signed Successfully!</p>}
 
         <div className="flex justify-center">
           <Button
