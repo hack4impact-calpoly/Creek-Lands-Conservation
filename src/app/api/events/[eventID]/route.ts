@@ -8,7 +8,7 @@ import { authenticateAdmin } from "@/lib/auth";
 import mongoose from "mongoose";
 import { auth, getAuth } from "@clerk/nextjs/server";
 import { EventPayload, EventWaiverTemplateInput, RawEvent } from "@/types/events";
-import { formatEvents } from "@/lib/utils";
+import { formatEvents, formatLimitedEvents } from "@/lib/utils";
 
 // GET: Fetch a single event by ID
 export async function GET(req: NextRequest, { params }: { params: { eventID: string } }) {
@@ -21,7 +21,10 @@ export async function GET(req: NextRequest, { params }: { params: { eventID: str
   }
 
   try {
-    const event = (await Event.findById(eventID).lean()) as RawEvent | null;
+    const event = (await Event.findById(eventID)
+      .populate("registeredUsers.user") // Populate user details for registeredUsers
+      .populate("registeredChildren.parent") // Populate parent details for registeredChildren
+      .lean()) as RawEvent | null;
     if (!event) {
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
@@ -47,8 +50,12 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
   if (!mongoose.Types.ObjectId.isValid(eventID)) {
     return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
   }
+  const session = await mongoose.startSession();
+  const eventObjectId = new mongoose.Types.ObjectId(eventID);
 
   try {
+    session.startTransaction();
+
     // Delete the event
     const deletedEvent = (await Event.findByIdAndDelete(eventID).lean()) as RawEvent | null;
     if (!deletedEvent) {
@@ -56,29 +63,34 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    const eventObjectId = new mongoose.Types.ObjectId(eventID);
+    // Delete waivers associated with this event
+    await Waiver.deleteMany({ eventId: new mongoose.Types.ObjectId(eventID) });
 
-    // Update top-level registeredEvents in User schema
-    const userUpdate = await User.updateMany(
+    // Remove event from users' registeredEvents
+    await User.updateMany(
       { registeredEvents: eventObjectId },
       { $pull: { registeredEvents: eventObjectId } },
+      { session },
     );
-    console.log(`User registeredEvents update: ${JSON.stringify(userUpdate)}`);
 
-    // Update children's registeredEvents in User schema
-    const childUpdate = await User.updateMany(
+    // Remove event from children registeredEvents
+    await User.updateMany(
       { "children.registeredEvents": eventObjectId },
       { $pull: { "children.$[].registeredEvents": eventObjectId } },
+      { session },
     );
-    console.log(`Children registeredEvents update: ${JSON.stringify(childUpdate)}`);
+    await session.commitTransaction();
 
     return NextResponse.json({ message: "Event deleted successfully" }, { status: 200 });
   } catch (error) {
+    await session.abortTransaction();
     console.error("Error during event deletion:", error);
     return NextResponse.json(
       { error: "Error deleting event", details: error instanceof Error ? error.message : error },
       { status: 500 },
     );
+  } finally {
+    session.endSession();
   }
 }
 
@@ -110,7 +122,7 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  return NextResponse.json(formatEvents(updated), { status: 200 });
+  return NextResponse.json(formatLimitedEvents(updated), { status: 200 });
 }
 
 // PATCH: Update event images and waivers
@@ -162,7 +174,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { eventID: s
       return NextResponse.json({ error: "Event not found" }, { status: 404 });
     }
 
-    return NextResponse.json(formatEvents(event));
+    return NextResponse.json(formatLimitedEvents(event));
   } catch (error) {
     console.error("Error updating event:", error);
     return NextResponse.json({ error: "Failed to update event" }, { status: 500 });

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { getEvents } from "@/app/actions/events/actions";
-import type { LimitedEventInfo } from "@/types/events";
+import { EventInfo, LimitedEventInfo } from "@/types/events";
 import EventSection from "@/components/EventComponent/EventSection";
 import SkeletonEventSection from "@/components/EventComponent/EventSectionSkeleton";
 
@@ -60,76 +60,37 @@ export default function Home() {
   const handleRegister = async (eventId: string, attendees: string[]) => {
     if (!userData) return;
 
-    try {
-      // Step 1: Optimistically update userData
-      const updatedUserData = { ...userData };
-      if (attendees.includes(userData._id)) {
-        updatedUserData.registeredEvents = [...(updatedUserData.registeredEvents || []), eventId];
-      }
-      updatedUserData.children = updatedUserData.children.map((child) => {
-        if (attendees.includes(child._id)) {
-          return {
-            ...child,
-            registeredEvents: [...(child.registeredEvents || []), eventId],
-          };
-        }
-        return child;
-      });
-      setUserData(updatedUserData);
-
-      // Step 2: Update event sections
-      const registeredEventIds = [
-        ...(updatedUserData.registeredEvents || []),
-        ...(updatedUserData.children || []).flatMap((child) => child.registeredEvents || []),
-      ];
-      const allEvents = [...eventSections.available, ...eventSections.registered, ...eventSections.past];
-      const categorized = categorizeEvents(allEvents, registeredEventIds);
-      setEventSections(categorized);
-    } catch (error: any) {
-      console.error("Registration failed:", error);
-      setError("Failed to register for the event");
+    // Update userData with registered events
+    const updatedUserData = { ...userData };
+    if (attendees.includes(userData._id)) {
+      updatedUserData.registeredEvents = [...(updatedUserData.registeredEvents || []), eventId];
     }
-  };
-
-  // Add a new handler for cancellation
-  const handleCancelRegistration = async (eventId: string, cancelledAttendees: string[]) => {
-    if (!userData) return;
-
-    try {
-      // Step 1: Optimistically update userData
-      const updatedUserData = { ...userData };
-
-      // Remove event from user's registeredEvents if user was cancelled
-      if (cancelledAttendees.includes(userData._id)) {
-        updatedUserData.registeredEvents = updatedUserData.registeredEvents.filter((id) => id !== eventId);
+    updatedUserData.children = updatedUserData.children.map((child) => {
+      if (attendees.includes(child._id)) {
+        return {
+          ...child,
+          registeredEvents: [...(child.registeredEvents || []), eventId],
+        };
       }
+      return child;
+    });
+    setUserData(updatedUserData);
 
-      // Remove event from children's registeredEvents if any children were cancelled
-      updatedUserData.children = updatedUserData.children.map((child) => {
-        if (cancelledAttendees.includes(child._id)) {
-          return {
-            ...child,
-            registeredEvents: child.registeredEvents.filter((id) => id !== eventId),
-          };
-        }
-        return child;
-      });
+    // Update eventSections with new registration count and categorization
+    const allEvents = [...eventSections.available, ...eventSections.registered, ...eventSections.past];
+    const updatedEvents = allEvents.map((event) => {
+      if (event.id === eventId) {
+        return { ...event, currentRegistrations: event.currentRegistrations + attendees.length };
+      }
+      return event;
+    });
 
-      setUserData(updatedUserData);
-
-      // Step 2: Update event sections
-      const registeredEventIds = [
-        ...(updatedUserData.registeredEvents || []),
-        ...(updatedUserData.children || []).flatMap((child) => child.registeredEvents || []),
-      ];
-
-      const allEvents = [...eventSections.available, ...eventSections.registered, ...eventSections.past];
-      const categorized = categorizeEvents(allEvents, registeredEventIds);
-      setEventSections(categorized);
-    } catch (error: any) {
-      console.error("Cancellation failed:", error);
-      setError("Failed to cancel registration for the event");
-    }
+    const registeredEventIds = [
+      ...(updatedUserData.registeredEvents || []),
+      ...(updatedUserData.children || []).flatMap((child) => child.registeredEvents || []),
+    ];
+    const categorized = categorizeEvents(updatedEvents, registeredEventIds);
+    setEventSections(categorized);
   };
 
   useEffect(() => {
@@ -165,7 +126,6 @@ export default function Home() {
         setError(error.message || "Failed to load events");
         setIsLoading(false);
       }
-      setIsLoading(false);
     };
 
     fetchAndProcessEvents();
@@ -184,24 +144,9 @@ export default function Home() {
 
   return (
     <main className="mx-auto mb-8 flex flex-col">
-      <EventSection
-        title="Registered Events"
-        events={eventSections.registered}
-        onRegister={handleRegister}
-        onCancelRegistration={handleCancelRegistration}
-      />
-      <EventSection
-        title="Available Events"
-        events={eventSections.available}
-        onRegister={handleRegister}
-        onCancelRegistration={handleCancelRegistration}
-      />
-      <EventSection
-        title="Past Events"
-        events={eventSections.past}
-        onRegister={handleRegister}
-        onCancelRegistration={handleCancelRegistration}
-      />
+      <EventSection title="Registered Events" events={eventSections.registered} onRegister={handleRegister} />
+      <EventSection title="Available Events" events={eventSections.available} onRegister={handleRegister} />
+      <EventSection title="Past Events" events={eventSections.past} onRegister={handleRegister} />
     </main>
   );
 }
@@ -221,12 +166,10 @@ const categorizeEvents = (events: LimitedEventInfo[], registeredEventIds: string
     const endDateTime = new Date(event.endDate);
     const isRegistered = registeredEventIds.includes(event.id);
 
-    if (isRegistered) {
-      if (endDateTime < now) {
-        sections.past.push(event);
-      } else {
-        sections.registered.push(event);
-      }
+    if (endDateTime < now) {
+      sections.past.push(event);
+    } else if (isRegistered) {
+      sections.registered.push(event);
     } else {
       sections.available.push(event);
     }

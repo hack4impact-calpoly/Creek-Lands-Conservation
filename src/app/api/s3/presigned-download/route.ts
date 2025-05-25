@@ -7,7 +7,7 @@ import { authenticateAdmin } from "@/lib/auth";
 import User from "@/database/userSchema";
 import Event from "@/database/eventSchema";
 import Waiver from "@/database/waiverSchema";
-import { RawRegisteredUser, RawRegisteredChild } from "@/types/events";
+import { RawRegisteredUser, RawRegisteredChild, RawUser } from "@/types/events";
 
 export async function GET(req: NextRequest) {
   const { userId } = getAuth(req);
@@ -42,8 +42,24 @@ export async function GET(req: NextRequest) {
     if (!event.isDraft) {
     } else {
       const isRegistered =
-        event.registeredUsers.some((u: RawRegisteredUser) => u.user.equals(user._id)) ||
-        event.registeredChildren.some((c: RawRegisteredChild) => c.parent.equals(user._id));
+        event.registeredUsers.some((u: RawRegisteredUser) => {
+          if (typeof u.user === "object" && "_id" in u.user) {
+            const userObj = u.user as RawUser;
+            return userObj._id === user._id.toString();
+          } else if (typeof u.user === "string") {
+            return u.user === user._id.toString();
+          }
+          return false;
+        }) ||
+        event.registeredChildren.some((c: RawRegisteredChild) => {
+          if (typeof c.parent === "object" && "_id" in c.parent) {
+            const parentObj = c.parent as RawUser;
+            return parentObj._id === user._id.toString();
+          } else if (typeof c.parent === "string") {
+            return c.parent === user._id.toString();
+          }
+          return false;
+        });
       if (!isRegistered && !isAdmin) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
@@ -59,9 +75,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
   } else if (fileKey.startsWith("waivers/templates/")) {
-    if (!isAdmin) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
+    // No restriction needed — all logged-in users can view
   } else {
     return NextResponse.json({ error: "Invalid fileKey" }, { status: 403 });
   }

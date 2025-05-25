@@ -5,7 +5,7 @@ import { NextResponse } from "next/server";
 import { authenticateAdmin } from "@/lib/auth";
 import { auth } from "@clerk/nextjs/server";
 import User from "@/database/userSchema";
-import { formatEvents } from "@/lib/utils";
+import { formatLimitedEvents } from "@/lib/utils";
 import { EventPayload } from "@/types/events";
 
 export async function POST(request: Request) {
@@ -49,5 +49,5 @@ export async function POST(request: Request) {
   };
 
   const newEvent = await Event.create(toCreate);
-  return NextResponse.json(formatEvents(newEvent), { status: 201 });
+  return NextResponse.json(formatLimitedEvents(newEvent), { status: 201 });
 }
