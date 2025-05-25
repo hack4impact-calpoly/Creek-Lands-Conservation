@@ -350,7 +350,7 @@ export function EventInfoPreview({
             {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
                 <Button variant="outline" onClick={() => handleViewEvent()}>
-                  View Event
+                  View Participants
                 </Button>
                 <Button variant="outline" onClick={() => handleEditEvent()}>
                   Edit Event
