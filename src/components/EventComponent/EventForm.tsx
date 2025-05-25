@@ -41,8 +41,9 @@ export default function CreateEventForm() {
   const fileUploadRef = useRef<EnhancedImageSelectorHandle>(null);
   const pdfUploadRef = useRef<EnhancedPDFSelectorHandle>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDraftSubmitting, setIsDraftSubmitting] = useState(false); // Separate state for draft
   const [resetUploader, setResetUploader] = useState(false);
-  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false); // Control dialog state
+  const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
   const { toast } = useToast();
 
   const {
@@ -70,7 +71,8 @@ export default function CreateEventForm() {
   });
 
   const onSubmit = async (data: EventFormData, isDraft: boolean) => {
-    setIsSubmitting(true);
+    const setSubmitting = isDraft ? setIsDraftSubmitting : setIsSubmitting;
+    setSubmitting(true);
     try {
       // Validate times
       const startISO = new Date(`${data.startDate}T${data.startTime}:00`).toISOString();
@@ -133,7 +135,22 @@ export default function CreateEventForm() {
       }
 
       // On success
-      reset();
+      reset({
+        title: "",
+        description: "",
+        startDate: "",
+        startTime: "",
+        endDate: "",
+        endTime: "",
+        location: "",
+        maxParticipants: 0,
+        registrationDeadline: "",
+        fee: 0,
+        paymentNote: "",
+        images: [],
+      }); // Explicitly reset all fields
+      setValue("description", ""); // Force clear Tiptap editor
+      setValue("paymentNote", ""); // Force clear Tiptap editor
       fileUploadRef.current?.clear();
       pdfUploadRef.current?.clear();
       setResetUploader(true);
@@ -142,7 +159,7 @@ export default function CreateEventForm() {
         description: isDraft ? "Event saved as draft." : "Event published successfully!",
         variant: "success",
       });
-      if (!isDraft) setIsPublishDialogOpen(false); // Close dialog after publishing
+      if (!isDraft) setIsPublishDialogOpen(false);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -150,7 +167,7 @@ export default function CreateEventForm() {
         variant: "destructive",
       });
     } finally {
-      setIsSubmitting(false);
+      setSubmitting(false);
       setResetUploader(false);
     }
   };
@@ -350,7 +367,7 @@ export default function CreateEventForm() {
           <button
             type="button"
             onClick={handleSubmit((data) => onSubmit(data, true))}
-            disabled={isSubmitting}
+            disabled={isSubmitting || isDraftSubmitting}
             className="rounded border bg-[#2b6cb0] px-4 py-2 text-white hover:bg-[#2b6cb0]/80 disabled:bg-gray-400"
           >
             Save Draft
@@ -359,7 +376,7 @@ export default function CreateEventForm() {
             <AlertDialogTrigger asChild>
               <button
                 type="button"
-                disabled={isSubmitting}
+                disabled={isSubmitting || isDraftSubmitting}
                 className="rounded border bg-[#558552] px-4 py-2 text-white hover:bg-[#6FAF68] disabled:bg-gray-400"
               >
                 Publish Event
