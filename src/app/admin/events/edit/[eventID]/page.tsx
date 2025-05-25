@@ -1,15 +1,24 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { useRouter, useParams } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { useForm, Controller } from "react-hook-form";
 import { MinimalTiptapEditor } from "@/components/minimal-tiptap";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import EnhancedImageSelector, { EnhancedImageSelectorHandle } from "@/components/EventComponent/FileUploader";
-import EnhancedPDFSelector, { EnhancedPDFSelectorHandle } from "@/components/EventComponent/PDFUploader";
 import BackButton from "@/components/ui/back-button";
 import Link from "next/link";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export type EventFormData = {
   title: string;
@@ -23,25 +32,21 @@ export type EventFormData = {
   registrationDeadline: string;
   fee: number;
   paymentNote: string;
-  images: string[];
 };
 
 export default function EditEventPage({ params }: { params: { eventID: string } }) {
   const { eventID } = params;
   const router = useRouter();
   const { toast } = useToast();
-  const fileUploadRef = useRef<EnhancedImageSelectorHandle>(null);
-  const pdfUploadRef = useRef<EnhancedPDFSelectorHandle>(null);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [resetUploader, setResetUploader] = useState(false);
+  const [eventData, setEventData] = useState<{ isDraft: boolean } | null>(null);
 
   const {
     register,
     handleSubmit,
     reset,
     control,
-    setValue,
     formState: { errors },
   } = useForm<EventFormData>();
 
@@ -51,13 +56,17 @@ export default function EditEventPage({ params }: { params: { eventID: string } 
         const res = await fetch(`/api/events/${eventID}`);
         if (!res.ok) throw new Error("Failed to fetch event");
         const data = await res.json();
+        setEventData({ isDraft: data.isDraft });
 
         const toLocalDate = (iso: string) => new Date(iso).toLocaleDateString("en-CA");
         const toLocalTime = (iso: string) =>
           new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
         const toLocalDateTime = (iso: string) => {
           const date = new Date(iso);
-          return `${date.toLocaleDateString("en-CA")}T${date.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}`;
+          return `${date.toLocaleDateString("en-CA")}T${date.toLocaleTimeString("en-GB", {
+            hour: "2-digit",
+            minute: "2-digit",
+          })}`;
         };
 
         reset({
@@ -72,7 +81,6 @@ export default function EditEventPage({ params }: { params: { eventID: string } 
           endTime: toLocalTime(data.endDate),
           registrationDeadline: toLocalDateTime(data.registrationDeadline),
           paymentNote: data.paymentNote || "",
-          images: data.images || [],
         });
       } catch (error) {
         toast({ title: "Error", description: "Unable to load event data.", variant: "destructive" });
@@ -84,7 +92,7 @@ export default function EditEventPage({ params }: { params: { eventID: string } 
     if (eventID) fetchEvent();
   }, [eventID, reset, toast, router]);
 
-  const onSubmit = async (data: EventFormData, isDraft = false) => {
+  const submitEvent = async (data: EventFormData, isDraft: boolean) => {
     setIsSubmitting(true);
     try {
       const startISO = new Date(`${data.startDate}T${data.startTime}:00`).toISOString();
@@ -120,23 +128,33 @@ export default function EditEventPage({ params }: { params: { eventID: string } 
       });
       if (!res.ok) throw new Error("Failed to update event");
 
-      const imageUrls = fileUploadRef.current ? await fileUploadRef.current.uploadFiles(eventID) : [];
-      const pdfInfos = pdfUploadRef.current ? await pdfUploadRef.current.uploadFiles(eventID) : [];
-
-      await fetch(`/api/events/${eventID}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ images: imageUrls, waiverTemplates: pdfInfos }),
+      toast({
+        title: "Success",
+        description: isDraft
+          ? eventData?.isDraft
+            ? "Event saved as draft."
+            : "Event unpublished successfully!"
+          : "Event published successfully!",
+        variant: "success",
       });
-
-      toast({ title: "Success", description: "Event updated successfully!", variant: "success" });
       router.push("/admin/events");
     } catch (error) {
       toast({ title: "Error", description: "Update failed.", variant: "destructive" });
     } finally {
       setIsSubmitting(false);
-      setResetUploader(false);
     }
+  };
+
+  const onSubmit = (data: EventFormData) => {
+    submitEvent(data, eventData?.isDraft ?? false); // Preserve isDraft status
+  };
+
+  const onPublish = (data: EventFormData) => {
+    submitEvent(data, false); // Set isDraft to false to publish
+  };
+
+  const onUnpublish = (data: EventFormData) => {
+    submitEvent(data, true); // Set isDraft to true to unpublish
   };
 
   if (loading) return <div className="py-10 text-center">Loading...</div>;
@@ -147,22 +165,11 @@ export default function EditEventPage({ params }: { params: { eventID: string } 
         <BackButton />
       </Link>
       <h1 className="mb-6 text-center text-5xl font-medium">Edit Event</h1>
-
-      <div className="mx-auto mb-6 flex w-full max-w-6xl flex-wrap gap-4 p-2">
-        <div className="min-w-[250px] flex-1">
-          <EnhancedImageSelector ref={fileUploadRef} resetFiles={resetUploader} />
-        </div>
-        <div className="min-w-[250px] flex-1">
-          <EnhancedPDFSelector
-            type="template"
-            ref={pdfUploadRef}
-            onPDFsSelected={() => {}}
-            resetFiles={resetUploader}
-          />
-        </div>
+      <div className="mb-4 text-center">
+        <span className="text-lg font-medium">Status: {eventData?.isDraft ? "Draft" : "Published"}</span>
       </div>
 
-      <form onSubmit={handleSubmit((data) => onSubmit(data, false))} className="mx-auto max-w-6xl space-y-6 p-2">
+      <form className="mx-auto max-w-6xl space-y-6 p-2">
         <h2 className="text-3xl font-medium">Basic Information</h2>
         <div className="flex space-x-4">
           <div className="flex-1">
@@ -338,12 +345,62 @@ export default function EditEventPage({ params }: { params: { eventID: string } 
 
         <div className="flex justify-end space-x-4">
           <button
-            type="submit"
+            type="button"
+            onClick={handleSubmit(onSubmit)}
             disabled={isSubmitting}
-            className="rounded border bg-[#558552] px-4 py-2 text-white hover:bg-[#6FAF68]"
+            className="rounded border bg-[#558552] px-4 py-2 text-white hover:bg-[#6FAF68] disabled:bg-gray-400"
           >
             Save Changes
           </button>
+          {eventData?.isDraft ? (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  className="rounded border bg-[#2b6cb0] px-4 py-2 text-white hover:bg-[#2b6cb0]/80 disabled:bg-gray-400"
+                >
+                  Publish Event
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Publish Event</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to publish this event? It will be visible to users.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleSubmit(onPublish)}>Publish</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          ) : (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  className="rounded border bg-[#9b2c2c] px-4 py-2 text-white hover:bg-[#9b2c2c]/80 disabled:bg-gray-400"
+                >
+                  Unpublish Event
+                </button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Unpublish Event</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Are you sure you want to unpublish this event? It will no longer be visible to users.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={handleSubmit(onUnpublish)}>Unpublish</AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
 
         {isSubmitting && (
