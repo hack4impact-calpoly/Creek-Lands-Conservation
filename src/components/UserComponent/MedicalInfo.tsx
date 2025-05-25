@@ -21,17 +21,12 @@ interface MedicalInfoSectionProps {
 export default function MedicalInfoSection({ data, isEditing, onUpdate }: MedicalInfoSectionProps) {
   return (
     <section className="mt-10">
-      <h3 className="mb-4 text-xl font-semibold text-gray-800">Important Note</h3>
-      <p className="mb-2 text-sm text-gray-700">
-        In an emergency, sudden illness or unwellness, or serious behavior violation, students who cannot be immediately
-        picked up by a guardian or emergency contact may stay on our bus or other vehicle with a chaperone until they
-        can be picked up...
-      </p>
-
-      <h3 className="mb-2 mt-8 text-xl font-semibold text-gray-800">Photo Release</h3>
+      <h3 className="mb-2 text-xl font-semibold text-gray-800">Photo Release</h3>
       <p className="mb-4 text-sm text-gray-700">
-        I hereby further consent that any photograph in which my child or ward appears... may be used by Creek Lands
-        Conservation...
+        I hereby further consent that any photograph in which my child or ward appears that is taken during his or her
+        participation in a Program or other Creek Lands Conservation activity may be used by Creek Lands Conservation,
+        its funders, and partners without compensation to me for purposes of publicity of advertising in social media,
+        catalogs, flyers, news stories, etc.
       </p>
 
       <div className="space-y-4">
