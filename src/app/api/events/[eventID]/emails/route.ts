@@ -22,10 +22,15 @@ export async function GET(req: NextRequest, { params }: { params: { eventID: str
   const authError = await authenticateAdmin();
   const user = await User.findOne({ clerkID: userId });
   if (!user || !authError) {
-    return NextResponse.json({ error: "Forbidden. You do not have access to this resource." + user }, { status: 403 });
+    // Note: Check if authError exists (indicating an error)
+    return NextResponse.json({ error: "Forbidden. You do not have access to this resource." }, { status: 403 });
   }
 
-  const event = await Event.findById(eventID).populate("registeredUsers.user").populate("registeredChildren.childId");
+  const event = await Event.findById(eventID).populate("registeredUsers.user").populate({
+    path: "registeredChildren.parent",
+    select: "email", // Only fetch the email field from the parent User document
+  });
+
   if (!event) {
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
@@ -40,12 +45,11 @@ export async function GET(req: NextRequest, { params }: { params: { eventID: str
   });
 
   // Add parent emails for registered children
-  for (const rc of event.registeredChildren) {
-    const child = await User.findById(rc.childId).select("email");
-    if (child && child.email) {
-      emailsSet.add(child.email);
+  event.registeredChildren.forEach((rc: { parent: { email: string } }) => {
+    if (rc.parent && rc.parent.email) {
+      emailsSet.add(rc.parent.email);
     }
-  }
+  });
 
   const emails = Array.from(emailsSet);
 
