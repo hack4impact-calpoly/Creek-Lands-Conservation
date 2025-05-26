@@ -26,14 +26,11 @@ export interface UserData {
 
 export async function getUsers(): Promise<UserData[]> {
   try {
-    console.log("Connecting to the database...");
     await connectDB();
-    console.log("Fetching users from the database...");
     const users = await User.find({})
       .select("clerkID firstName lastName email userRole children createdAt imageUrl")
       .sort({ createdAt: -1 })
       .lean();
-    console.log("Fetched users:", users);
     return users.map((user, index) => {
       if (!user._id) {
         console.warn(`User at index ${index} has no _id:`, user);
@@ -62,7 +59,6 @@ export async function getUsers(): Promise<UserData[]> {
       };
     });
   } catch (error) {
-    console.error("Error fetching users:", error);
     throw new Error("Failed to fetch users");
   }
 }
