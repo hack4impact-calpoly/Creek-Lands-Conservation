@@ -89,33 +89,40 @@ export async function getUserStats(): Promise<UserStats> {
 export async function updateUserRole(userId: string, newRole: "user" | "admin" | "donator") {
   try {
     await connectDB();
+    const session = await User.startSession();
+    session.startTransaction();
 
-    // Find the user to get their clerkID
-    const user = await User.findById(userId);
-    if (!user) {
-      throw new Error("User not found");
-    }
-
-    // Update role in your database
-    const updatedUser = await User.findByIdAndUpdate(userId, { userRole: newRole }, { new: true });
-
-    if (!updatedUser) {
-      throw new Error("Failed to update user in database");
-    }
-
-    // Update role in Clerk's metadata
     try {
+      // Find the user to get their clerkID
+      const user = await User.findById(userId).session(session);
+      if (!user) {
+        throw new Error("User not found");
+      }
+
+      // Update role in your database
+      const updatedUser = await User.findByIdAndUpdate(userId, { userRole: newRole }, { new: true }).session(session);
+      if (!updatedUser) {
+        throw new Error("Failed to update user in database");
+      }
+
+      // Update role in Clerk's metadata
       const client = await clerkClient();
       await client.users.updateUserMetadata(user.clerkID, {
         publicMetadata: {
           userRole: newRole,
         },
       });
+
+      // Commit the transaction
+      await session.commitTransaction();
       console.log(`Successfully updated Clerk metadata for user ${user.clerkID}`);
-    } catch (clerkError) {
-      console.error("Error updating Clerk metadata:", clerkError);
-      await User.findByIdAndUpdate(userId, { userRole: user.userRole });
-      throw new Error("Failed to update user role in Clerk");
+    } catch (error) {
+      // Rollback the transaction on error
+      await session.abortTransaction();
+      console.error("Error updating user role:", error);
+      throw error;
+    } finally {
+      session.endSession();
     }
 
     revalidatePath("/admin");
