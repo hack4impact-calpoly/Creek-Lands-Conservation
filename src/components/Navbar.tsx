@@ -19,19 +19,16 @@ const Navbar = () => {
   const eventsHref = isAdmin ? "/admin/events" : "/";
   const usersHref = isAdmin ? "/admin/users" : "/user";
 
-  // Navigation items - add Users link for admins
-  const navItems = [
+  // Utility function to generate navigation items
+  const getNavItems = (includeProfile = false) => [
     { label: "Events", href: eventsHref },
     { label: "Waivers", href: "/waivers" },
     ...(isAdmin ? [{ label: "Users", href: "/admin/users" }] : []),
+    ...(includeProfile ? [{ label: "Profile", href: "/user" }] : []),
   ];
 
-  const mobileNavItems = [
-    { label: "Events", href: eventsHref },
-    { label: "Waivers", href: "/waivers" },
-    ...(isAdmin ? [{ label: "Users", href: "/admin/users" }] : []),
-    { label: "Profile", href: "/user" },
-  ];
+  const navItems = getNavItems();
+  const mobileNavItems = getNavItems(true);
 
   return (
     <nav className="w-full border-b-2 border-gray-400 bg-white shadow-md">
