@@ -4,12 +4,34 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
-import { SignedIn, SignedOut, SignInButton, UserButton } from "@clerk/nextjs";
+import { SignedIn, SignedOut, SignInButton, UserButton, useUser } from "@clerk/nextjs";
 import { User, Menu, ChevronRight, X } from "lucide-react";
 
 const Navbar = () => {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
+  const { user } = useUser();
+
+  // Check if user is admin from Clerk's metadata
+  const isAdmin = user?.publicMetadata?.userRole === "admin";
+
+  // Dynamic routes based on user role
+  const eventsHref = isAdmin ? "/admin/events" : "/";
+  const usersHref = isAdmin ? "/admin/users" : "/user";
+
+  // Navigation items - add Users link for admins
+  const navItems = [
+    { label: "Events", href: eventsHref },
+    { label: "Waivers", href: "/waivers" },
+    ...(isAdmin ? [{ label: "Users", href: "/admin/users" }] : []),
+  ];
+
+  const mobileNavItems = [
+    { label: "Events", href: eventsHref },
+    { label: "Waivers", href: "/waivers" },
+    ...(isAdmin ? [{ label: "Users", href: "/admin/users" }] : []),
+    { label: "Profile", href: "/user" },
+  ];
 
   return (
     <nav className="w-full border-b-2 border-gray-400 bg-white shadow-md">
@@ -31,10 +53,7 @@ const Navbar = () => {
         {/* Centered Navigation Links (Desktop) */}
         <div className="hidden h-full flex-grow justify-center md:flex">
           <div className="flex h-full">
-            {[
-              { label: "Events", href: "/" },
-              { label: "Waivers", href: "/waivers" },
-            ].map(({ label, href }) => (
+            {navItems.map(({ label, href }) => (
               <Link
                 key={href}
                 href={href}
@@ -50,7 +69,7 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Right Section: Profile, Menu & User Avatar */}
+        {/* Right Section: Profile/Users, Menu & User Avatar */}
         <div className="ml-auto flex h-full items-center space-x-4">
           {/* Signed In: Show "My Profile" Link + User Avatar (Desktop) */}
           <SignedIn>
@@ -124,11 +143,7 @@ const Navbar = () => {
 
         {/* Space Before Menu Items */}
         <div className="mt-10 flex flex-col space-y-6 px-6">
-          {[
-            { label: "Events", href: "/" },
-            { label: "Waivers", href: "/waivers" },
-            { label: "Profile", href: "/user" },
-          ].map(({ label, href }) => (
+          {mobileNavItems.map(({ label, href }) => (
             <Link
               key={href}
               href={href}
