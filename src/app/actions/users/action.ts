@@ -118,8 +118,7 @@ export async function updateUserRole(userId: string, newRole: "user" | "admin" |
       console.log(`Successfully updated Clerk metadata for user ${user.clerkID}`);
     } catch (clerkError) {
       console.error("Error updating Clerk metadata:", clerkError);
-      // You might want to revert the database change if Clerk update fails
-      // await User.findByIdAndUpdate(userId, { userRole: user.userRole })
+      await User.findByIdAndUpdate(userId, { userRole: user.userRole });
       throw new Error("Failed to update user role in Clerk");
     }
 
