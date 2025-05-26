@@ -49,30 +49,34 @@ export async function POST(req: Request) {
       return new Response("Error: Missing user data", { status: 400 });
     }
 
+    const role = process.env.NODE_ENV === "production" ? "user" : "admin";
+
     const userData = {
       clerkUserId: id,
       email: email_addresses[0].email_address,
       firstName: first_name || "",
       lastName: last_name || "",
       imageUrl: image_url || "",
+      userRole: role, // Add the role here
     };
 
-    const role = process.env.NODE_ENV === "production" ? "user" : "admin";
     const client = await clerkClient();
 
     try {
       console.log("Starting user creation process for ID:", id);
 
+      // Update Clerk metadata
       await client.users.updateUserMetadata(id, {
         publicMetadata: { userRole: role },
       });
       console.log("Clerk metadata updated successfully for role:", role);
 
+      // Create user in MongoDB with the role
       const user = await createUser(userData);
       if (!user || "error" in user) {
         throw new Error("Failed to create user in MongoDB");
       }
-      console.log(`Created user ${id} with role '${role}'`);
+      console.log(`Created user ${id} with role '${role}' in both Clerk and MongoDB`);
       return new Response("User successfully created and role assigned", { status: 201 });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error";
