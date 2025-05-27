@@ -20,7 +20,6 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { EventRegisterPreview } from "./EventRegisterPreview";
 import DOMPurify from "dompurify";
 import { Badge } from "@/components/ui/badge";
 
@@ -55,24 +54,9 @@ export function EventInfoPreview({
   currentRegistrations,
   eventWaiverTemplates,
   onDelete,
-  onRegister,
 }: EventInfoProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [userInfo, setUserInfo] = useState<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    alreadyRegistered: boolean;
-    family: { id: string; firstName: string; lastName: string; alreadyRegistered: boolean }[];
-  }>({
-    id: "",
-    firstName: "",
-    lastName: "",
-    alreadyRegistered: false,
-    family: [],
-  });
   const { toast } = useToast();
   const { user } = useUser();
   const router = useRouter();
@@ -93,42 +77,6 @@ export function EventInfoPreview({
       : [
           "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg",
         ];
-
-  const fetchUserFamily = async () => {
-    if (!user?.id) return;
-
-    try {
-      const response = await fetch(`/api/users/${user.id}`);
-      if (!response.ok) throw new Error("Failed to fetch user data");
-
-      const userData = await response.json();
-      setUserInfo({
-        id: userData._id,
-        firstName: userData.firstName || "",
-        lastName: userData.lastName || "",
-        alreadyRegistered: userData.registeredEvents.includes(id),
-        family:
-          userData.children?.map((child: any) => ({
-            id: child._id,
-            firstName: child.firstName || "",
-            lastName: child.lastName || "",
-            alreadyRegistered: child.registeredEvents.includes(id),
-          })) || [],
-      });
-    } catch (error) {
-      console.error("Error fetching user family:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load family information",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleOpenRegisterDialog = () => {
-    fetchUserFamily();
-    setIsRegisterDialogOpen(true);
-  };
 
   const handleDeleteEvent = async () => {
     setIsDeleting(true);
@@ -157,82 +105,16 @@ export function EventInfoPreview({
     }
   };
 
-  const handleRegisterEvent = async (attendees: string[]) => {
-    if (!user) {
-      toast({
-        title: "Error",
-        description: "You must be logged in to register.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const participants = [
-      ...(attendees.includes(userInfo.id)
-        ? [
-            {
-              firstName: userInfo.firstName,
-              lastName: userInfo.lastName,
-              userID: userInfo.id,
-              isChild: false,
-            },
-          ]
-        : []),
-      ...userInfo.family
-        .filter((m) => attendees.includes(m.id))
-        .map((m) => ({
-          firstName: m.firstName,
-          lastName: m.lastName,
-          userID: m.id,
-          isChild: true,
-        })),
-    ];
-
-    if (eventWaiverTemplates.length > 0) {
-      localStorage.setItem("waiverParticipants", JSON.stringify(participants));
-      router.push(`/events/${id}/sign`);
-    } else {
-      try {
-        const response = await fetch(`/api/events/${id}/registrations`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ attendees }),
-        });
-
-        const responseData = await response.json();
-        if (!response.ok) throw new Error(responseData.error || "Failed to register for event.");
-
-        setUserInfo((prev) => ({
-          ...prev,
-          alreadyRegistered: attendees.includes(prev.id) ? true : prev.alreadyRegistered,
-          family: prev.family.map((member) => ({
-            ...member,
-            alreadyRegistered: attendees.includes(member.id) ? true : member.alreadyRegistered,
-          })),
-        }));
-
-        onRegister?.(id, attendees);
-        toast({
-          title: "Registration successful",
-          description: "You have been registered for the event.",
-        });
-        setIsRegisterDialogOpen(false);
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to register for the event.",
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
   const handleEditEvent = () => {
     router.push(`/admin/events/edit/${id}`);
   };
 
   const handleViewEvent = () => {
     router.push(`/admin/events/${id}/participants`);
+  };
+
+  const handleRegisterRedirect = () => {
+    router.push(`/events/${id}`);
   };
 
   return (
@@ -263,7 +145,6 @@ export function EventInfoPreview({
           </DialogHeader>
 
           <div className="max-h-[60vh] space-y-6 overflow-y-auto px-6 py-4">
-            {/* Compact Event Details Grid */}
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
                 <Calendar className="h-4 w-4 text-gray-600" />
@@ -341,7 +222,6 @@ export function EventInfoPreview({
               </div>
             </div>
 
-            {/* Description */}
             <div className="rounded-lg border border-gray-200 p-4">
               <div className="flex items-start gap-3">
                 <Text className="mt-1 h-4 w-4 text-gray-600" />
@@ -355,7 +235,6 @@ export function EventInfoPreview({
               </div>
             </div>
 
-            {/* Images */}
             <div className="rounded-lg border border-gray-200 p-4">
               <div className="flex items-start gap-3">
                 <ImageIcon className="mt-1 h-4 w-4 text-gray-600" />
@@ -384,7 +263,7 @@ export function EventInfoPreview({
               (user ? (
                 <Button
                   className="bg-green-700 px-6 py-2 text-white hover:bg-green-800"
-                  onClick={handleOpenRegisterDialog}
+                  onClick={handleRegisterRedirect}
                   disabled={isRegisterDisabled}
                 >
                   {isFull ? "Event Full" : hasRegistrationClosed ? "Registration Closed" : "Register for Event"}
@@ -438,29 +317,6 @@ export function EventInfoPreview({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {!isFull && (
-        <EventRegisterPreview
-          isOpen={isRegisterDialogOpen}
-          capacityLeft={capacity ? capacity - (currentRegistrations ?? 0) : 0}
-          onOpenChange={setIsRegisterDialogOpen}
-          eventInfo={{
-            title: title,
-            startDate: startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD",
-            endDate: endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD",
-            startTime: startDateTime
-              ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-              : "TBD",
-            endTime: endDateTime
-              ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-              : "TBD",
-            location: location,
-            contactEmail: email || "marysia@creeklands.org",
-          }}
-          userInfo={userInfo}
-          onConfirm={handleRegisterEvent}
-        />
-      )}
     </>
   );
 }
