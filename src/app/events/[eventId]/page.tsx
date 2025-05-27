@@ -1,77 +1,93 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useUser, SignInButton } from "@clerk/nextjs";
-import { useToast } from "@/hooks/use-toast";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Button } from "@/components/ui/button";
-import { Calendar, Clock, MapPin, Mail, CalendarClock, Users, Text, AlertCircle, ArrowLeft } from "lucide-react";
+import { useParams, useRouter } from "next/navigation";
+import { Calendar, Clock, MapPin, Mail, Text, Users, CalendarClock, AlertCircle, ArrowLeft } from "lucide-react";
 import Image from "next/image";
-import DOMPurify from "dompurify";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { SignInButton, useUser } from "@clerk/nextjs";
+import { useToast } from "@/hooks/use-toast";
+import DOMPurify from "dompurify";
+import { Checkbox } from "@/components/ui/checkbox";
 import { getEventById } from "@/app/actions/events/actions";
-import { LimitedEventInfo } from "@/types/events";
+import type { LimitedEventInfo } from "@/types/events";
 
-export default function EventPage({ params }: { params: { eventId: string } }) {
-  const { eventId } = params;
+export default function EventDetailsPage() {
+  const params = useParams();
   const router = useRouter();
-  const { isSignedIn, user } = useUser();
   const { toast } = useToast();
+  const { user, isSignedIn } = useUser();
   const [event, setEvent] = useState<LimitedEventInfo | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [userInfo, setUserInfo] = useState<{
     id: string;
     firstName: string;
     lastName: string;
     alreadyRegistered: boolean;
     family: { id: string; firstName: string; lastName: string; alreadyRegistered: boolean }[];
-  } | null>(null);
-  const [selectedAttendees, setSelectedAttendees] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  }>({
+    id: "",
+    firstName: "",
+    lastName: "",
+    alreadyRegistered: false,
+    family: [],
+  });
+  const [selectedAttendeesToRegister, setSelectedAttendeesToRegister] = useState<string[]>([]);
+  const [selectedAttendeesToCancel, setSelectedAttendeesToCancel] = useState<string[]>([]);
 
   useEffect(() => {
     const fetchEvent = async () => {
       try {
-        const eventData = await getEventById(eventId);
+        const id = Array.isArray(params.eventID) ? params.eventID[0] : params.eventID;
+        if (!id || typeof id !== "string") {
+          throw new Error("Invalid or missing event ID");
+        }
+        console.log("Fetching event for ID:", id);
+        const eventData = await getEventById(id);
         console.log("Fetched event data:", eventData);
         if (!eventData) {
           throw new Error("Event not found");
         }
         setEvent(eventData);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+      } catch (error) {
+        console.error("Error fetching event:", error);
+        setError(error instanceof Error ? error.message : "Failed to load event details");
       } finally {
         setIsLoading(false);
       }
     };
 
+    fetchEvent();
+  }, [params.eventID]);
+
+  useEffect(() => {
     const fetchUserFamily = async () => {
-      if (!isSignedIn || !user?.id) return;
+      if (!user?.id || !event || userInfo.id) return;
 
       try {
         const response = await fetch(`/api/users/${user.id}`);
-        if (!response.ok) {
-          const data = await response.json();
-          throw new Error(data.error || "Failed to fetch user data");
-        }
+        if (!response.ok) throw new Error("Failed to fetch user data");
+
         const userData = await response.json();
+        console.log("Fetched user data:", userData);
         setUserInfo({
           id: userData._id,
           firstName: userData.firstName || "",
           lastName: userData.lastName || "",
-          alreadyRegistered: userData.registeredEvents.includes(eventId),
+          alreadyRegistered: userData.registeredEvents.includes(event.id),
           family:
             userData.children?.map((child: any) => ({
               id: child._id,
               firstName: child.firstName || "",
               lastName: child.lastName || "",
-              alreadyRegistered: child.registeredEvents.includes(eventId),
+              alreadyRegistered: child.registeredEvents.includes(event.id),
             })) || [],
         });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Unknown error");
+      } catch (error) {
+        console.error("Error fetching user family:", error);
         toast({
           title: "Error",
           description: "Failed to load family information",
@@ -80,84 +96,172 @@ export default function EventPage({ params }: { params: { eventId: string } }) {
       }
     };
 
-    fetchEvent();
     fetchUserFamily();
-  }, [eventId, isSignedIn, user, toast]);
+  }, [user?.id, event, toast]);
+
+  const eventId = typeof params.eventID === "string" ? params.eventID : "";
+  const hasRegistrationClosed = event?.registrationDeadline ? new Date() > new Date(event.registrationDeadline) : false;
+  const isFull = event?.capacity && (event?.currentRegistrations ?? 0) >= event?.capacity;
+  const spotsLeft = event?.capacity ? event?.capacity - (event?.currentRegistrations ?? 0) : 0;
+  const isAlmostFull = spotsLeft <= 5 && spotsLeft > 0;
+  const registerDisabled = hasRegistrationClosed || isFull;
 
   const handleRegister = async () => {
-    if (!selectedAttendees.length) {
+    if (!selectedAttendeesToRegister.length) {
       toast({
         title: "No Attendees Selected",
-        description: "Please select at least one attendee.",
+        description: "Please select at least one attendee to register.",
         variant: "destructive",
       });
       return;
     }
 
-    const participants = [
-      ...(selectedAttendees.includes(userInfo!.id)
-        ? [
-            {
-              firstName: userInfo!.firstName,
-              lastName: userInfo!.lastName,
-              userID: userInfo!.id,
-              isChild: false,
-            },
-          ]
-        : []),
-      ...userInfo!.family
-        .filter((m) => selectedAttendees.includes(m.id))
-        .map((m) => ({
-          firstName: m.firstName,
-          lastName: m.lastName,
-          userID: m.id,
-          isChild: true,
-        })),
-    ];
+    try {
+      if (!eventId) throw new Error("Invalid event ID");
+      if (!event) throw new Error("Event data not loaded");
 
-    if (event!.eventWaiverTemplates?.length > 0) {
-      localStorage.setItem("waiverParticipants", JSON.stringify(participants));
-      router.push(`/events/${eventId}/sign`);
-    } else {
-      try {
-        const response = await fetch(`/api/events/${eventId}/registrations`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ attendees: selectedAttendees }),
+      console.log("Selected attendees to register:", selectedAttendeesToRegister);
+      console.log("userInfo:", userInfo);
+
+      if (event.eventWaiverTemplates.length > 0) {
+        const participants = selectedAttendeesToRegister.map((id) => {
+          if (id === userInfo.id) {
+            return {
+              userID: id,
+              firstName: userInfo.firstName,
+              lastName: userInfo.lastName,
+              isChild: false,
+            };
+          }
+          const familyMember = userInfo.family.find((m) => m.id === id);
+          if (!familyMember) {
+            throw new Error(`Family member with ID ${id} not found`);
+          }
+          return {
+            userID: id,
+            firstName: familyMember.firstName,
+            lastName: familyMember.lastName,
+            isChild: true,
+          };
         });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Failed to register.");
-        toast({ title: "Success", description: "Registered successfully." });
-        setUserInfo((prev) =>
-          prev
-            ? {
-                ...prev,
-                alreadyRegistered: selectedAttendees.includes(prev.id) ? true : prev.alreadyRegistered,
-                family: prev.family.map((member) => ({
-                  ...member,
-                  alreadyRegistered: selectedAttendees.includes(member.id) ? true : member.alreadyRegistered,
-                })),
-              }
-            : null,
-        );
-        setEvent((prev) =>
-          prev
-            ? {
-                ...prev,
-                currentRegistrations: prev.currentRegistrations + selectedAttendees.length,
-              }
-            : null,
-        );
-        router.push("/");
-      } catch (error) {
-        toast({
-          title: "Error",
-          description: error instanceof Error ? error.message : "Failed to register for the event.",
-          variant: "destructive",
-        });
+
+        console.log("Participants for waiver:", participants);
+        localStorage.setItem("waiverParticipants", JSON.stringify(participants));
+        router.push(`/events/${eventId}/sign`);
+        return;
       }
+
+      const response = await fetch(`/api/events/${eventId}/registrations`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attendees: selectedAttendeesToRegister }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to register for event.");
+
+      toast({
+        title: "Success",
+        description: `Registered ${selectedAttendeesToRegister.length} attendee(s).`,
+      });
+
+      setUserInfo((prev) => ({
+        ...prev,
+        alreadyRegistered: selectedAttendeesToRegister.includes(prev.id) ? true : prev.alreadyRegistered,
+        family: prev.family.map((member) => ({
+          ...member,
+          alreadyRegistered: selectedAttendeesToRegister.includes(member.id) ? true : member.alreadyRegistered,
+        })),
+      }));
+
+      setEvent((prev) =>
+        prev
+          ? {
+              ...prev,
+              currentRegistrations: (prev.currentRegistrations ?? 0) + selectedAttendeesToRegister.length,
+            }
+          : null,
+      );
+
+      setSelectedAttendeesToRegister([]);
+    } catch (error) {
+      console.error("Registration error:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to register for the event.",
+        variant: "destructive",
+      });
     }
   };
+
+  const handleCancelRegistration = async () => {
+    if (!selectedAttendeesToCancel.length) {
+      toast({
+        title: "No Attendees Selected",
+        description: "Please select at least one attendee to cancel.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      if (!eventId) throw new Error("Invalid event ID");
+      const response = await fetch(`/api/events/${eventId}/registrations`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attendees: selectedAttendeesToCancel }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to cancel registration.");
+
+      toast({
+        title: "Success",
+        description: `Registration cancelled for ${selectedAttendeesToCancel.length} attendee(s).`,
+      });
+
+      setUserInfo((prev) => ({
+        ...prev,
+        alreadyRegistered: selectedAttendeesToCancel.includes(prev.id) ? false : prev.alreadyRegistered,
+        family: prev.family.map((member) => ({
+          ...member,
+          alreadyRegistered: selectedAttendeesToCancel.includes(member.id) ? false : member.alreadyRegistered,
+        })),
+      }));
+
+      setEvent((prev) =>
+        prev
+          ? {
+              ...prev,
+              currentRegistrations: Math.max(0, (prev.currentRegistrations ?? 0) - selectedAttendeesToCancel.length),
+            }
+          : null,
+      );
+
+      setSelectedAttendeesToCancel([]);
+    } catch (error) {
+      console.error("Cancel registration error:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to cancel registration.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  // ... (rest of the component remains unchanged, including JSX)
+  if (!eventId) {
+    return (
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h1 className="mb-4 text-2xl font-bold text-red-600">Invalid Event ID</h1>
+        <p className="mb-6 text-gray-600">Please provide a valid event ID.</p>
+        <Button onClick={() => router.push("/events")}>
+          <ArrowLeft className="mr-2 h-4 w-4" />
+          Back to Events
+        </Button>
+      </div>
+    );
+  }
 
   if (isLoading) {
     return (
@@ -188,14 +292,8 @@ export default function EventPage({ params }: { params: { eventId: string } }) {
     );
   }
 
-  const hasRegistrationClosed = event.registrationDeadline ? new Date() > new Date(event.registrationDeadline) : false;
-  const isFull = event.capacity && (event.currentRegistrations ?? 0) >= event.capacity;
-  const spotsLeft = event.capacity ? event.capacity - (event.currentRegistrations ?? 0) : 0;
-  const isAlmostFull = spotsLeft <= 5 && spotsLeft > 0;
-  const canRegister = !isFull && !hasRegistrationClosed;
-
   const eventImages =
-    event.images?.length > 0
+    event.images.length > 0
       ? event.images
       : [
           "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg",
@@ -205,13 +303,11 @@ export default function EventPage({ params }: { params: { eventId: string } }) {
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">
-      {/* Back Button */}
       <Button variant="ghost" onClick={() => router.back()} className="mb-6">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Events
       </Button>
 
-      {/* Event Header */}
       <div className="mb-8">
         <h1 className="mb-4 text-3xl font-bold text-gray-900">{event.title}</h1>
         <div className="flex flex-wrap gap-2">
@@ -232,7 +328,6 @@ export default function EventPage({ params }: { params: { eventId: string } }) {
         </div>
       </div>
 
-      {/* Event Images */}
       <div className="mb-8">
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
           {eventImages.map((src, index) => (
@@ -248,7 +343,6 @@ export default function EventPage({ params }: { params: { eventId: string } }) {
         </div>
       </div>
 
-      {/* Event Details Grid */}
       <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
@@ -296,7 +390,7 @@ export default function EventPage({ params }: { params: { eventId: string } }) {
             <Mail className="h-5 w-5 text-gray-600" />
             <div>
               <p className="text-sm font-medium text-gray-500">Contact</p>
-              <p className="font-semibold text-gray-900">{"marysia@creeklands.org"}</p>
+              <p className="font-semibold text-gray-900">marysia@creeklands.org</p>
             </div>
           </CardContent>
         </Card>
@@ -324,21 +418,22 @@ export default function EventPage({ params }: { params: { eventId: string } }) {
               <p className="text-sm font-medium text-gray-500">Capacity</p>
               <div className="flex items-center gap-2">
                 <p className="font-semibold text-gray-900">
-                  {event.currentRegistrations ?? 0} / {event.capacity}
+                  {event.currentRegistrations ?? 0} / {event.capacity ?? "Unlimited"}
                 </p>
-                <div className="h-2 min-w-[60px] flex-1 rounded-full bg-gray-200">
-                  <div
-                    className="h-2 rounded-full bg-green-600 transition-all duration-300"
-                    style={{ width: `${Math.min(((event.currentRegistrations ?? 0) / event.capacity) * 100, 100)}%` }}
-                  />
-                </div>
+                {event.capacity && (
+                  <div className="h-2 min-w-[60px] flex-1 rounded-full bg-gray-200">
+                    <div
+                      className="h-2 rounded-full bg-green-600 transition-all duration-300"
+                      style={{ width: `${Math.min(((event.currentRegistrations ?? 0) / event.capacity) * 100, 100)}%` }}
+                    />
+                  </div>
+                )}
               </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Description */}
       <Card className="mb-8">
         <CardContent className="p-6">
           <div className="flex items-start gap-3">
@@ -354,92 +449,260 @@ export default function EventPage({ params }: { params: { eventId: string } }) {
         </CardContent>
       </Card>
 
-      {/* Registration Section */}
-      {isSignedIn && userInfo ? (
+      {isSignedIn && userInfo.id ? (
         <div className="mb-8">
-          <h2 className="mb-4 text-2xl font-semibold text-gray-900">Register for the Event</h2>
-          {!canRegister && (
-            <p className="mb-4 text-red-500">{isFull ? "The event is full." : "Registration is closed."}</p>
-          )}
-          <Card>
-            <CardContent className="p-6">
-              <h3 className="mb-3 text-lg font-medium text-gray-800">Who`&apos;`s attending?</h3>
-              <div className="space-y-3">
-                <div className="flex items-center space-x-3">
-                  <Checkbox
-                    id={userInfo.id}
-                    checked={selectedAttendees.includes(userInfo.id) || userInfo.alreadyRegistered}
-                    onCheckedChange={(checked) => {
-                      setSelectedAttendees((prev) =>
-                        checked ? [...prev, userInfo.id] : prev.filter((id) => id !== userInfo.id),
-                      );
-                    }}
-                    disabled={
-                      userInfo.alreadyRegistered ||
-                      (!selectedAttendees.includes(userInfo.id) && selectedAttendees.length >= spotsLeft)
-                    }
-                  />
-                  <label
-                    htmlFor={userInfo.id}
-                    className="text-sm font-medium text-gray-900 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                  >
-                    {userInfo.firstName} {userInfo.lastName}
-                    {(userInfo.alreadyRegistered ||
-                      (!selectedAttendees.includes(userInfo.id) && selectedAttendees.length >= spotsLeft)) && (
-                      <span className="ml-2 text-xs italic text-gray-500">
-                        {userInfo.alreadyRegistered ? "(Already registered)" : "(Capacity full)"}
-                      </span>
-                    )}
-                  </label>
-                </div>
-                {userInfo.family.map((member) => (
-                  <div key={member.id} className="flex items-center space-x-3">
-                    <Checkbox
-                      id={member.id}
-                      checked={selectedAttendees.includes(member.id) || member.alreadyRegistered}
-                      onCheckedChange={(checked) => {
-                        setSelectedAttendees((prev) =>
-                          checked ? [...prev, member.id] : prev.filter((id) => id !== member.id),
-                        );
-                      }}
-                      disabled={
-                        member.alreadyRegistered ||
-                        (!selectedAttendees.includes(member.id) && selectedAttendees.length >= spotsLeft)
-                      }
-                    />
-                    <label
-                      htmlFor={member.id}
-                      className="text-sm font-medium text-gray-900 peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
-                    >
-                      {member.firstName} {member.lastName}
-                      {(member.alreadyRegistered ||
-                        (!selectedAttendees.includes(member.id) && selectedAttendees.length >= spotsLeft)) && (
-                        <span className="ml-2 text-xs italic text-gray-500">
-                          {member.alreadyRegistered ? "(Already registered)" : "(Capacity full)"}
-                        </span>
+          {userInfo.alreadyRegistered || userInfo.family.some((m) => m.alreadyRegistered) ? (
+            <div className="space-y-6">
+              <div>
+                <h2 className="mb-4 text-2xl font-semibold text-gray-900">Your Current Registrations</h2>
+                <Card className="border-green-200 bg-green-50">
+                  <CardContent className="p-6">
+                    <div className="mb-4 flex items-center gap-3">
+                      <div className="h-3 w-3 rounded-full bg-green-500"></div>
+                      <span className="font-medium text-green-800">You are registered for this event</span>
+                    </div>
+                    <div className="space-y-2">
+                      {userInfo.alreadyRegistered && (
+                        <div className="text-sm text-green-700">
+                          ✓ {userInfo.firstName} {userInfo.lastName}
+                        </div>
                       )}
-                    </label>
+                      {userInfo.family
+                        .filter((m) => m.alreadyRegistered)
+                        .map((member) => (
+                          <div key={member.id} className="text-sm text-green-700">
+                            ✓ {member.firstName} {member.lastName}
+                          </div>
+                        ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              <div>
+                <h3 className="mb-4 text-xl font-semibold text-gray-900">Cancel Registration</h3>
+                <Card className="border-red-200">
+                  <CardContent className="p-6">
+                    <p className="mb-4 text-sm text-gray-600">
+                      If you change your mind, you can always re-register later. Select which participants will no
+                      longer be attending:
+                    </p>
+
+                    <div className="mb-6 space-y-3">
+                      {userInfo.alreadyRegistered && (
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id={`cancel-${userInfo.id}`}
+                            checked={selectedAttendeesToCancel.includes(userInfo.id)}
+                            onCheckedChange={(checked) => {
+                              setSelectedAttendeesToCancel((prev) =>
+                                checked ? [...prev, userInfo.id] : prev.filter((id) => id !== userInfo.id),
+                              );
+                            }}
+                          />
+                          <label
+                            htmlFor={`cancel-${userInfo.id}`}
+                            className="cursor-pointer text-sm font-medium text-gray-900"
+                          >
+                            {userInfo.firstName} {userInfo.lastName}
+                          </label>
+                        </div>
+                      )}
+
+                      {userInfo.family
+                        .filter((m) => m.alreadyRegistered)
+                        .map((member) => (
+                          <div key={member.id} className="flex items-center space-x-3">
+                            <Checkbox
+                              id={`cancel-${member.id}`}
+                              checked={selectedAttendeesToCancel.includes(member.id)}
+                              onCheckedChange={(checked) => {
+                                setSelectedAttendeesToCancel((prev) =>
+                                  checked ? [...prev, member.id] : prev.filter((id) => id !== member.id),
+                                );
+                              }}
+                            />
+                            <label
+                              htmlFor={`cancel-${member.id}`}
+                              className="cursor-pointer text-sm font-medium text-gray-900"
+                            >
+                              {member.firstName} {member.lastName}
+                            </label>
+                          </div>
+                        ))}
+                    </div>
+
+                    <div className="flex gap-3">
+                      <Button
+                        variant="outline"
+                        onClick={() => setSelectedAttendeesToCancel([])}
+                        disabled={selectedAttendeesToCancel.length === 0}
+                        className="flex-1"
+                      >
+                        Clear Selection
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={handleCancelRegistration}
+                        disabled={selectedAttendeesToCancel.length === 0}
+                        className="flex-1"
+                      >
+                        Cancel Registration
+                        {selectedAttendeesToCancel.length > 0 && ` (${selectedAttendeesToCancel.length})`}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {spotsLeft > 0 && (!userInfo.alreadyRegistered || userInfo.family.some((m) => !m.alreadyRegistered)) && (
+                <div>
+                  <h3 className="mb-4 text-xl font-semibold text-gray-900">Register Additional Family Members</h3>
+                  <Card>
+                    <CardContent className="p-6">
+                      <div className="mb-6 space-y-3">
+                        {!userInfo.alreadyRegistered && (
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              id={`add-${userInfo.id}`}
+                              checked={selectedAttendeesToRegister.includes(userInfo.id)}
+                              onCheckedChange={(checked) => {
+                                setSelectedAttendeesToRegister((prev) =>
+                                  checked ? [...prev, userInfo.id] : prev.filter((id) => id !== userInfo.id),
+                                );
+                              }}
+                              disabled={
+                                !selectedAttendeesToRegister.includes(userInfo.id) &&
+                                selectedAttendeesToRegister.length >= spotsLeft
+                              }
+                            />
+                            <label
+                              htmlFor={`add-${userInfo.id}`}
+                              className="cursor-pointer text-sm font-medium text-gray-900"
+                            >
+                              {userInfo.firstName} {userInfo.lastName}
+                              {!selectedAttendeesToRegister.includes(userInfo.id) &&
+                                selectedAttendeesToRegister.length >= spotsLeft && (
+                                  <span className="ml-2 text-xs italic text-gray-500">(Capacity full)</span>
+                                )}
+                            </label>
+                          </div>
+                        )}
+
+                        {userInfo.family
+                          .filter((m) => !m.alreadyRegistered)
+                          .map((member) => (
+                            <div key={member.id} className="flex items-center space-x-3">
+                              <Checkbox
+                                id={`add-${member.id}`}
+                                checked={selectedAttendeesToRegister.includes(member.id)}
+                                onCheckedChange={(checked) => {
+                                  setSelectedAttendeesToRegister((prev) =>
+                                    checked ? [...prev, member.id] : prev.filter((id) => id !== member.id),
+                                  );
+                                }}
+                                disabled={
+                                  !selectedAttendeesToRegister.includes(member.id) &&
+                                  selectedAttendeesToRegister.length >= spotsLeft
+                                }
+                              />
+                              <label
+                                htmlFor={`add-${member.id}`}
+                                className="cursor-pointer text-sm font-medium text-gray-900"
+                              >
+                                {member.firstName} {member.lastName}
+                                {!selectedAttendeesToRegister.includes(member.id) &&
+                                  selectedAttendeesToRegister.length >= spotsLeft && (
+                                    <span className="ml-2 text-xs italic text-gray-500">(Capacity full)</span>
+                                  )}
+                              </label>
+                            </div>
+                          ))}
+                      </div>
+
+                      <Button
+                        className="w-full bg-green-700 text-white hover:bg-green-800"
+                        onClick={handleRegister}
+                        disabled={selectedAttendeesToRegister.length === 0}
+                      >
+                        Register Additional Members
+                      </Button>
+                    </CardContent>
+                  </Card>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div>
+              <h2 className="mb-4 text-2xl font-semibold text-gray-900">Register for the Event</h2>
+              {registerDisabled && (
+                <p className="mb-4 text-red-500">{isFull ? "The event is full." : "Registration is closed."}</p>
+              )}
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="mb-3 text-lg font-medium text-gray-800">Who&apos;s attending?</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center space-x-3">
+                      <Checkbox
+                        id={userInfo.id}
+                        checked={selectedAttendeesToRegister.includes(userInfo.id)}
+                        onCheckedChange={(checked) => {
+                          setSelectedAttendeesToRegister((prev) =>
+                            checked ? [...prev, userInfo.id] : prev.filter((id) => id !== userInfo.id),
+                          );
+                        }}
+                        disabled={
+                          !selectedAttendeesToRegister.includes(userInfo.id) &&
+                          selectedAttendeesToRegister.length >= spotsLeft
+                        }
+                      />
+                      <label htmlFor={userInfo.id} className="cursor-pointer text-sm font-medium text-gray-900">
+                        {userInfo.firstName} {userInfo.lastName}
+                        {!selectedAttendeesToRegister.includes(userInfo.id) &&
+                          selectedAttendeesToRegister.length >= spotsLeft && (
+                            <span className="ml-2 text-xs italic text-gray-500">(Capacity full)</span>
+                          )}
+                      </label>
+                    </div>
+                    {userInfo.family.map((member) => (
+                      <div key={member.id} className="flex items-center space-x-3">
+                        <Checkbox
+                          id={member.id}
+                          checked={selectedAttendeesToRegister.includes(member.id)}
+                          onCheckedChange={(checked) => {
+                            setSelectedAttendeesToRegister((prev) =>
+                              checked ? [...prev, member.id] : prev.filter((id) => id !== member.id),
+                            );
+                          }}
+                          disabled={
+                            !selectedAttendeesToRegister.includes(member.id) &&
+                            selectedAttendeesToRegister.length >= spotsLeft
+                          }
+                        />
+                        <label htmlFor={member.id} className="cursor-pointer text-sm font-medium text-gray-900">
+                          {member.firstName} {member.lastName}
+                          {!selectedAttendeesToRegister.includes(member.id) &&
+                            selectedAttendeesToRegister.length >= spotsLeft && (
+                              <span className="ml-2 text-xs italic text-gray-500">(Capacity full)</span>
+                            )}
+                        </label>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              <div className="mt-6 text-center">
-                <Button
-                  size="lg"
-                  className="bg-green-700 px-8 py-3 text-white hover:bg-green-800"
-                  onClick={handleRegister}
-                  disabled={
-                    !canRegister ||
-                    selectedAttendees.length === 0 ||
-                    (userInfo.alreadyRegistered && userInfo.family.every((m) => m.alreadyRegistered))
-                  }
-                >
-                  {userInfo.alreadyRegistered && userInfo.family.every((m) => m.alreadyRegistered)
-                    ? "All Family Members Registered"
-                    : "Register for Event"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="mt-6 text-center">
+                    <Button
+                      size="lg"
+                      className="bg-green-700 px-8 py-3 text-white hover:bg-green-800"
+                      onClick={handleRegister}
+                      disabled={registerDisabled || selectedAttendeesToRegister.length === 0}
+                    >
+                      Register for Event
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          )}
         </div>
       ) : (
         <div className="mb-8 text-center">
