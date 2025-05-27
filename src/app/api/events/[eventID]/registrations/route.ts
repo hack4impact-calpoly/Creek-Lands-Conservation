@@ -1,18 +1,20 @@
-// src/app/api/events/[eventID]/registration/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import connectDB from "@/database/db";
 import Event from "@/database/eventSchema";
 import User from "@/database/userSchema";
+import Waiver from "@/database/waiverSchema";
 import mongoose from "mongoose";
 import { RawRegisteredUser, RawRegisteredChild } from "@/types/events";
+import { deleteFileFromS3 } from "@/lib/s3";
 
 interface RawChild {
   _id: mongoose.Types.ObjectId;
   registeredEvents: mongoose.Types.ObjectId[];
+  waiversSigned?: mongoose.Types.ObjectId[]; // Add waiversSigned for children
 }
 
-// PUT: Register for an event
+// PUT: Register for an event (unchanged)
 export async function PUT(req: NextRequest, { params }: { params: { eventID: string } }) {
   await connectDB();
   const { eventID } = params;
@@ -42,7 +44,6 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
     return NextResponse.json({ error: "Invalid attendees format." }, { status: 400 });
   }
 
-  // Only allow user and their children
   const mongoUserId = user._id.toString();
   const validAttendees = [mongoUserId, ...(user.children as RawChild[]).map((c) => c._id.toString())];
   if (!attendees.every((id) => validAttendees.includes(id))) {
@@ -87,14 +88,11 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
     return NextResponse.json({ error: "Selected attendees are already registered." }, { status: 400 });
   }
 
-  // Capacity check
   const totalRegistered = event.registeredUsers.length + event.registeredChildren.length;
-
   if (event.capacity > 0 && totalRegistered > event.capacity) {
     return NextResponse.json({ error: "Event is at full capacity" }, { status: 400 });
   }
 
-  // Save in transaction
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
@@ -105,8 +103,10 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
       { session },
     );
     await session.commitTransaction();
-  } catch {
+  } catch (err) {
     await session.abortTransaction();
+    console.error("Error in registration transaction:", err);
+    return NextResponse.json({ error: "Failed to register due to server error" }, { status: 500 });
   } finally {
     session.endSession();
   }
@@ -150,7 +150,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
     return NextResponse.json({ error: "Invalid attendees format." }, { status: 400 });
   }
 
-  // Only allow user and their children
   const mongoUserId = user._id.toString();
   const validAttendees = [mongoUserId, ...(user.children as RawChild[]).map((c) => c._id.toString())];
   if (!attendees.every((id) => validAttendees.includes(id))) {
@@ -204,10 +203,69 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
       { session },
     );
     await session.commitTransaction();
-  } catch {
+  } catch (err) {
     await session.abortTransaction();
+    console.error("Error in unregistration transaction:", err);
+    return NextResponse.json({ error: "Failed to unregister due to server error" }, { status: 500 });
   } finally {
     session.endSession();
+  }
+
+  // Delete waiver files from S3 and remove Waiver documents
+  try {
+    // Query waivers directly for the event and attendees
+    const waiverQuery = {
+      eventId: eventID,
+      type: "completed",
+      $or: [
+        { belongsToUser: user._id, isForChild: false }, // User's waivers
+        { belongsToUser: user._id, childSubdocId: { $in: removedChildren } }, // Children's waivers
+      ],
+    };
+    const waivers = await Waiver.find(waiverQuery).select("fileKey belongsToUser childSubdocId");
+
+    console.log(
+      `Found ${waivers.length} waivers for event ${eventID}:`,
+      waivers.map((w) => ({
+        id: w._id.toString(),
+        fileKey: w.fileKey,
+        belongsToUser: w.belongsToUser.toString(),
+        childSubdocId: w.childSubdocId?.toString(),
+      })),
+    );
+
+    if (waivers.length === 0) {
+      console.log(`No waivers found to delete for event ${eventID}`);
+    }
+
+    // Delete S3 files
+    for (const waiver of waivers) {
+      try {
+        await deleteFileFromS3(waiver.fileKey);
+        console.log(`Deleted S3 file: ${waiver.fileKey}`);
+      } catch (s3Err) {
+        console.error(`Failed to delete S3 file ${waiver.fileKey}:`, s3Err);
+      }
+    }
+
+    // Update User waiversSigned
+    for (const waiver of waivers) {
+      if (waiver.childSubdocId) {
+        const child = user.children.id(waiver.childSubdocId);
+        if (child && Array.isArray(child.waiversSigned)) {
+          child.waiversSigned = child.waiversSigned.filter((wId: mongoose.Types.ObjectId) => !wId.equals(waiver._id));
+        }
+      } else {
+        user.waiversSigned = user.waiversSigned.filter((wId: mongoose.Types.ObjectId) => !wId.equals(waiver._id));
+      }
+    }
+    await user.save();
+
+    // Delete Waiver documents
+    const deleteResult = await Waiver.deleteMany(waiverQuery);
+    console.log(`Deleted ${deleteResult.deletedCount} Waiver documents for event ${eventID}`);
+  } catch (err) {
+    console.error("Error deleting waivers from S3 or MongoDB:", err);
   }
 
   return NextResponse.json({ message: "Successfully unregistered" }, { status: 200 });
