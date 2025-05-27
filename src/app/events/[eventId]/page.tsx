@@ -179,7 +179,7 @@ export default function EventPage({ params }: { params: { eventId: string } }) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
         <h1 className="mb-4 text-2xl font-bold text-red-600">Event Not Found</h1>
-        <p className="mb-6 text-gray-600">{error || "The event you`&apos;`re looking for doesn`&apos;`t exist."}</p>
+        <p className="mb-6 text-gray-600">{error}</p>
         <Button onClick={() => router.back()}>
           <ArrowLeft className="mr-2 h-4 w-4" />
           Go Back
