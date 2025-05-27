@@ -13,7 +13,7 @@ type Participant = {
   isChild: boolean;
 };
 
-export default function WaiverSignPage({ params }: { params: { eventId: string } }) {
+export default function WaiverSignPage({ params }: { params: { eventID: string } }) {
   const router = useRouter();
   const [participants, setParticipants] = useState<Participant[] | null>(null);
 
@@ -44,7 +44,7 @@ export default function WaiverSignPage({ params }: { params: { eventId: string }
   };
 
   return participants ? (
-    <WaiverSignatureForm eventId={params.eventId} participants={participants} onAllSigned={handleAllSigned} />
+    <WaiverSignatureForm eventId={params.eventID} participants={participants} onAllSigned={handleAllSigned} />
   ) : (
     <WaiverSignatureFormSkeleton />
   );
