@@ -20,6 +20,37 @@ type SignatureCanvasProps = {
   onSigned: () => void;
 };
 
+// Custom hook for mobile detection
+const useMobileDetection = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    let timeoutId: NodeJS.Timeout | null = null; // Declare timeoutId outside
+
+    const debouncedCheck = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId); // Clear previous timeout if it exists
+      }
+      timeoutId = setTimeout(checkMobile, 150);
+    };
+
+    window.addEventListener("resize", debouncedCheck);
+    return () => {
+      window.removeEventListener("resize", debouncedCheck);
+      if (timeoutId) {
+        clearTimeout(timeoutId); // Clean up on unmount
+      }
+    };
+  }, []);
+
+  return isMobile;
+};
+
 function SignatureCanvas({ eventId, waiverId, fileKey, participants, onSigned }: SignatureCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const signaturePadRef = useRef<SignaturePad | null>(null);
@@ -27,9 +58,14 @@ function SignatureCanvas({ eventId, waiverId, fileKey, participants, onSigned }:
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const router = useRouter();
+  const isMobile = useMobileDetection();
 
   useEffect(() => {
     if (canvasRef.current) {
+      // Set canvas width based on container width
+      const containerWidth = isMobile ? window.innerWidth * 0.8 : 400; // 80vw for mobile, 400px for desktop
+      canvasRef.current.width = containerWidth;
+
       const signaturePad = new SignaturePad(canvasRef.current, {
         backgroundColor: "white",
         penColor: "black",
@@ -48,7 +84,7 @@ function SignatureCanvas({ eventId, waiverId, fileKey, participants, onSigned }:
         signaturePadRef.current = null;
       };
     }
-  }, []);
+  }, [isMobile]);
 
   const clearSignature = () => {
     if (signaturePadRef.current) {
@@ -99,8 +135,8 @@ function SignatureCanvas({ eventId, waiverId, fileKey, participants, onSigned }:
   };
 
   return (
-    <div className="w-[400px]">
-      <canvas ref={canvasRef} width={400} height={100} style={{ border: "1px solid black" }} />
+    <div className={isMobile ? "w-[80vw] max-w-[100vw]" : "w-[400px]"}>
+      <canvas ref={canvasRef} height={100} style={{ border: "1px solid black", width: "100%" }} />
       <div className="mt-2 flex justify-between">
         <Button
           variant="destructive"
