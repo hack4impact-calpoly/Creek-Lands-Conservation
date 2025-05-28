@@ -1,15 +1,17 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, UserCircle, ChevronDown, ChevronRight, Check, X, User } from "lucide-react";
+import { Search, UserCircle, ChevronDown, ChevronRight, Check, X, User, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { APIEvent, UserInfo, RegisteredUserInfo, RegisteredChildInfo } from "@/types/events";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
+import BackButton from "@/components/ui/back-button";
+import Link from "next/link";
 
 // Helper function to get unique emails from event data
 function getEventEmails(eventData: APIEvent): string[] {
@@ -184,6 +186,7 @@ export default function EventParticipantsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [emailList, setEmailList] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const router = useRouter();
 
   useEffect(() => {
     const fetchEventData = async () => {
@@ -304,16 +307,21 @@ export default function EventParticipantsPage() {
   }
 
   return (
-    <div className="container mx-auto space-y-6 py-6">
+    <div className="container mx-auto space-y-6 px-4 py-8">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">{event.name} - Participants</h1>
-          <p className="text-muted-foreground">
-            {event.startDate.toLocaleDateString()} at{" "}
-            {event.startDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} to{" "}
-            {event.endDate.toLocaleDateString()} at{" "}
-            {event.endDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} at {event.location}
-          </p>
+        <div className="flex items-center gap-4">
+          <Link href="/admin/events" className="mb-4 inline-block">
+            <BackButton />
+          </Link>
+          <div>
+            <h1 className="text-3xl font-bold">{event.name} - Participants</h1>
+            <p className="text-muted-foreground">
+              {event.startDate.toLocaleDateString()} at{" "}
+              {event.startDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} to{" "}
+              {event.endDate.toLocaleDateString()} at{" "}
+              {event.endDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} at {event.location}
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button

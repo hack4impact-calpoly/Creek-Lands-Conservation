@@ -7,8 +7,8 @@ import { getUsers, getUserStats } from "@/app/actions/users/action";
 
 export default async function AdminPage() {
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
+    <div className="container mx-auto space-y-8 px-4 py-8">
+      <div className="mb-8 flex flex-col">
         <h1 className="mb-2 text-3xl font-bold">Admin Dashboard</h1>
         <p className="text-muted-foreground">Manage users, view statistics, and control access permissions.</p>
       </div>
