@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import SignaturePad from "signature_pad";
 import { useRouter } from "next/navigation";
+import useMobileDetection from "@/hooks/useMobileDetection";
 
 type Participant = {
   firstName: string;
@@ -18,37 +19,6 @@ type SignatureCanvasProps = {
   fileKey: string;
   participants: Participant[];
   onSigned: () => void;
-};
-
-// Custom hook for mobile detection
-const useMobileDetection = () => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    let timeoutId: NodeJS.Timeout | null = null; // Declare timeoutId outside
-
-    const debouncedCheck = () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId); // Clear previous timeout if it exists
-      }
-      timeoutId = setTimeout(checkMobile, 150);
-    };
-
-    window.addEventListener("resize", debouncedCheck);
-    return () => {
-      window.removeEventListener("resize", debouncedCheck);
-      if (timeoutId) {
-        clearTimeout(timeoutId); // Clean up on unmount
-      }
-    };
-  }, []);
-
-  return isMobile;
 };
 
 function SignatureCanvas({ eventId, waiverId, fileKey, participants, onSigned }: SignatureCanvasProps) {

@@ -11,6 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { FileText, User, Users, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import useMobileDetection from "@/hooks/useMobileDetection";
 
 // Interface for the full waiver document returned by the server action
 interface FullSignedWaiver {
@@ -48,37 +49,6 @@ interface GroupedWaivers {
     };
   };
 }
-
-// Custom hook for mobile detection
-const useMobileDetection = () => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-
-    checkMobile();
-    let timeoutId: NodeJS.Timeout | null = null;
-
-    const debouncedCheck = () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-      timeoutId = setTimeout(checkMobile, 150);
-    };
-
-    window.addEventListener("resize", debouncedCheck);
-    return () => {
-      window.removeEventListener("resize", debouncedCheck);
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, []);
-
-  return isMobile;
-};
 
 export default function WaiversPage() {
   const [groupedWaivers, setGroupedWaivers] = useState<GroupedWaivers | null>(null);

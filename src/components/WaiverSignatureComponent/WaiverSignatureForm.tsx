@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight, ExternalLink, FileText } from "lucide-react";
 import SignatureCanvas from "./SignatureCanvas";
 import WaiverSignatureFormSkeleton from "./WaiverSignatureFormSkeleton";
+import useMobileDetection from "@/hooks/useMobileDetection";
 
 // TODO: currently, if there is multiple waivers, the user can sign the first one and that document will be generated in s3 and mongodb, even if they decided to not sign up, we only want to save user documents when users confirms signup
 
@@ -26,41 +27,6 @@ type WaiverSignatureFormProps = {
   eventId: string;
   participants: Participant[];
   onAllSigned: () => void;
-};
-
-// Custom hook for mobile detection
-const useMobileDetection = () => {
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    const checkMobile = () => {
-      const width = window.innerWidth;
-      const userAgent = navigator.userAgent;
-      const isMobileWidth = width < 768;
-      const isMobileDevice = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-
-      setIsMobile(isMobileWidth || isMobileDevice);
-    };
-
-    // Check on mount
-    checkMobile();
-
-    // Add resize listener with debounce
-    let timeoutId: NodeJS.Timeout;
-    const debouncedCheck = () => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(checkMobile, 150);
-    };
-
-    window.addEventListener("resize", debouncedCheck);
-
-    return () => {
-      window.removeEventListener("resize", debouncedCheck);
-      clearTimeout(timeoutId);
-    };
-  }, []);
-
-  return isMobile;
 };
 
 export default function WaiverSignatureForm({ eventId, participants, onAllSigned }: WaiverSignatureFormProps) {
