@@ -1,40 +1,45 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, UserCircle, ChevronDown, ChevronRight, Check, X, User, ArrowLeft } from "lucide-react";
+import { Search, UserCircle, ChevronDown, ChevronRight, Check, X, User, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { APIEvent, UserInfo, RegisteredUserInfo, RegisteredChildInfo } from "@/types/events";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import BackButton from "@/components/ui/back-button";
 import Link from "next/link";
 
-// Helper function to get unique emails from event data
+// Helper functions (unchanged)
 function getEventEmails(eventData: APIEvent): string[] {
   const emailsSet = new Set<string>();
-
-  // Add emails of registered users
   eventData.registeredUsers.forEach((ru: any) => {
     if (ru.user?.email) {
       emailsSet.add(ru.user.email);
     }
   });
-
-  // Add emails of parents for registered children
   eventData.registeredChildren.forEach((rc: any) => {
     if (rc.parent?.email) {
       emailsSet.add(rc.parent.email);
     }
   });
-
   return Array.from(emailsSet);
 }
 
-// Helper function to flatten the data structure to focus on attendees
 function getEventAttendees(eventData: APIEvent) {
   const attendees: {
     id: string;
@@ -135,6 +140,68 @@ function getEventAttendees(eventData: APIEvent) {
   return attendees;
 }
 
+function formatAttendeesForCSV(attendees: any[]) {
+  return attendees.map((attendee) => ({
+    "Attendee Name": `${attendee.firstName} ${attendee.lastName}`,
+    "Parent/Guardian": attendee.parent ? `${attendee.parent.firstName} ${attendee.parent.lastName}` : "N/A (Self)",
+    "Contact Email": attendee.parent ? attendee.parent.email : attendee.email || "Not provided",
+    "Contact Phone": attendee.parent
+      ? attendee.parent.phoneNumbers?.cell || "Not provided"
+      : attendee.phoneNumbers?.cell || "Not provided",
+    "Photo Release": attendee.medicalInfo.photoRelease ? "Yes" : "No",
+    Birthday: attendee.birthday ? attendee.birthday.toLocaleDateString() : "Not provided",
+    Gender: attendee.gender || "Not provided",
+    Age: attendee.birthday ? calculateAge(attendee.birthday) : "Not provided",
+    "Street Address": attendee.parent
+      ? attendee.parent.address?.home || "Not provided"
+      : attendee.address?.home || "Not provided",
+    City: attendee.parent ? attendee.parent.address?.city || "Not provided" : attendee.address?.city || "Not provided",
+    "Zip Code": attendee.parent
+      ? attendee.parent.address?.zipCode || "Not provided"
+      : attendee.address?.zipCode || "Not provided",
+    Allergies: attendee.medicalInfo.allergies || "None",
+    "Dietary Restrictions": attendee.medicalInfo.dietaryRestrictions || "None",
+    "Behavior Notes": attendee.medicalInfo.behaviorNotes || "None",
+    "Other Notes": attendee.medicalInfo.otherNotes || "None",
+    Insurance: attendee.medicalInfo.insurance || "None",
+    "Doctor Name": attendee.medicalInfo.doctorName || "None",
+    "Doctor Phone": attendee.medicalInfo.doctorPhone || "None",
+  }));
+}
+
+function generateCSV(data: any[]) {
+  if (data.length === 0) return "";
+  const headers = Object.keys(data[0]).join(",");
+  const rows = data.map((row) =>
+    Object.values(row)
+      .map((value) => `"${String(value).replace(/"/g, '""')}"`)
+      .join(","),
+  );
+  return [headers, ...rows].join("\n");
+}
+
+function handleExport(attendees: any[], eventName: string) {
+  const formattedData = formatAttendeesForCSV(attendees);
+  const csvContent = generateCSV(formattedData);
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const link = document.createElement("a");
+  const url = URL.createObjectURL(blob);
+  link.setAttribute("href", url);
+  link.setAttribute("download", `${eventName || "event"}-participants.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function createMailtoLink(emails: string[], eventName: string) {
+  if (!emails.length) return null;
+  const subject = encodeURIComponent(`${eventName} Update from CreekLandsConservation`);
+  const body = encodeURIComponent(
+    `Hi everyone,\n\nThis is an update regarding the upcoming event "${eventName}".\n\nThank you!`,
+  );
+  return `mailto:?bcc=${emails.join(",")}&subject=${subject}&body=${body}`;
+}
+
 export default function EventParticipantsPage() {
   const { eventID } = useParams();
   const [event, setEvent] = useState<{
@@ -186,6 +253,7 @@ export default function EventParticipantsPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [emailList, setEmailList] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [removingAttendee, setRemovingAttendee] = useState<string | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -220,83 +288,52 @@ export default function EventParticipantsPage() {
     fetchEventData();
   }, [eventID]);
 
-  // Function to format attendees data for CSV
-  const formatAttendeesForCSV = (attendees: any[]) => {
-    return attendees.map((attendee) => ({
-      "Attendee Name": `${attendee.firstName} ${attendee.lastName}`,
-      "Parent/Guardian": attendee.parent ? `${attendee.parent.firstName} ${attendee.parent.lastName}` : "N/A (Self)",
-      "Contact Email": attendee.parent ? attendee.parent.email : attendee.email || "Not provided",
-      "Contact Phone": attendee.parent
-        ? attendee.parent.phoneNumbers?.cell || "Not provided"
-        : attendee.phoneNumbers?.cell || "Not provided",
-      "Photo Release": attendee.medicalInfo.photoRelease ? "Yes" : "No",
-      Birthday: attendee.birthday ? attendee.birthday.toLocaleDateString() : "Not provided",
-      Gender: attendee.gender || "Not provided",
-      Age: attendee.birthday ? calculateAge(attendee.birthday) : "Not provided",
-      "Street Address": attendee.parent
-        ? attendee.parent.address?.home || "Not provided"
-        : attendee.address?.home || "Not provided",
-      City: attendee.parent
-        ? attendee.parent.address?.city || "Not provided"
-        : attendee.address?.city || "Not provided",
-      "Zip Code": attendee.parent
-        ? attendee.parent.address?.zipCode || "Not provided"
-        : attendee.address?.zipCode || "Not provided",
-      Allergies: attendee.medicalInfo.allergies || "None",
-      "Dietary Restrictions": attendee.medicalInfo.dietaryRestrictions || "None",
-      "Behavior Notes": attendee.medicalInfo.behaviorNotes || "None",
-      "Other Notes": attendee.medicalInfo.otherNotes || "None",
-      Insurance: attendee.medicalInfo.insurance || "None",
-      "Doctor Name": attendee.medicalInfo.doctorName || "None",
-      "Doctor Phone": attendee.medicalInfo.doctorPhone || "None",
-    }));
+  const handleRemoveAttendee = async (attendeeId: string) => {
+    setRemovingAttendee(attendeeId);
+    try {
+      const response = await fetch(`/api/events/${eventID}/registrations`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ attendees: [attendeeId] }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Failed to remove participant");
+      }
+
+      setAttendees((prev) => prev.filter((a) => a.id !== attendeeId));
+      setEmailList((prev) => {
+        const attendee = attendees.find((a) => a.id === attendeeId);
+        const email = attendee?.parent ? attendee.parent.email : attendee?.email;
+        return email ? prev.filter((e) => e !== email) : prev;
+      });
+
+      toast({
+        title: "Participant Removed",
+        description: "The participant has been successfully removed from the event.",
+        variant: "success",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove participant.",
+        variant: "destructive",
+      });
+    } finally {
+      setRemovingAttendee(null);
+    }
   };
 
-  // Function to generate CSV content
-  const generateCSV = (data: any[]) => {
-    if (data.length === 0) return "";
-    const headers = Object.keys(data[0]).join(",");
-    const rows = data.map((row) =>
-      Object.values(row)
-        .map((value) => `"${String(value).replace(/"/g, '""')}"`) // Escape quotes and wrap in quotes
-        .join(","),
-    );
-    return [headers, ...rows].join("\n");
-  };
-
-  // Function to handle export
-  const handleExport = () => {
-    const formattedData = formatAttendeesForCSV(attendees);
-    const csvContent = generateCSV(formattedData);
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", `${event?.name || "event"}-participants.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
+  // Define filteredAttendees
   const filteredAttendees = attendees.filter(
     (attendee) =>
       `${attendee.firstName} ${attendee.lastName}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (attendee.parent &&
         `${attendee.parent.firstName} ${attendee.parent.lastName}`.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      (attendee.parent && attendee.parent.email.toLowerCase().includes(searchTerm.toLowerCase())),
+      (attendee.parent && attendee.parent.email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (attendee.email && attendee.email.toLowerCase().includes(searchTerm.toLowerCase())),
   );
-
-  const createMailtoLink = (emails: string[]) => {
-    if (!emails.length) return null;
-
-    const subject = encodeURIComponent(`${event?.name} Update from CreekLandsConservation`);
-    const body = encodeURIComponent(
-      `Hi everyone,\n\nThis is an update regarding the upcoming event "${event?.name}".\n\nThank you!`,
-    );
-    return `mailto:?bcc=${emails.join(",")}&subject=${subject}&body=${body}`; //Opens the default email client with pre-filled BCC, subject, and body
-    // Uncomment the line below if you want to use Gmail's compose view instead
-    //return `https://mail.google.com/mail/?view=cm&fs=1&bcc=${emails.join(",")}&su=${subject}&body=${body}`;
-  };
 
   if (error) {
     return <div className="container mx-auto py-6">{error}</div>;
@@ -327,9 +364,9 @@ export default function EventParticipantsPage() {
           <Button
             variant="default"
             onClick={() => {
-              const mailto = createMailtoLink(emailList);
+              const mailto = createMailtoLink(emailList, event.name);
               if (mailto) {
-                window.open(mailto, "_blank"); // Use _self to avoid new tab, as mailto typically opens email client
+                window.open(mailto, "_self");
                 toast({
                   title: "Opening email client",
                   description: "Your email client should open with the recipient list pre-filled.",
@@ -345,7 +382,7 @@ export default function EventParticipantsPage() {
           >
             Send Email to All
           </Button>
-          <Button variant="default" onClick={handleExport}>
+          <Button variant="default" onClick={() => handleExport(attendees, event.name)}>
             Export Participant List
           </Button>
         </div>
@@ -384,11 +421,17 @@ export default function EventParticipantsPage() {
                 <TableHead>Contact Email</TableHead>
                 <TableHead>Contact Phone</TableHead>
                 <TableHead>Photo Release</TableHead>
+                <TableHead className="w-[100px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredAttendees.map((attendee) => (
-                <AttendeeRow key={attendee.id} attendee={attendee} />
+                <AttendeeRow
+                  key={attendee.id}
+                  attendee={attendee}
+                  onRemove={() => handleRemoveAttendee(attendee.id)}
+                  isRemoving={removingAttendee === attendee.id}
+                />
               ))}
             </TableBody>
           </Table>
@@ -402,10 +445,11 @@ export default function EventParticipantsPage() {
   );
 }
 
-// Rest of the component (AttendeeRow, InfoCard, InfoItem, calculateAge, ParticipantPageSkeleton) remains unchanged
-// Include them as they are from the original code
+// AttendeeRow, InfoCard, InfoItem, calculateAge, ParticipantPageSkeleton (unchanged)
 function AttendeeRow({
   attendee,
+  onRemove,
+  isRemoving,
 }: {
   attendee: {
     id: string;
@@ -443,6 +487,8 @@ function AttendeeRow({
     phoneNumbers?: { cell: string; work?: string };
     address?: { home: string; city: string; zipCode: string };
   };
+  onRemove: () => void;
+  isRemoving: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -484,11 +530,38 @@ function AttendeeRow({
             </div>
           )}
         </TableCell>
+        <TableCell>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" size="sm" disabled={isRemoving} className="flex items-center gap-1">
+                {isRemoving ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-t-2 border-white" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+                Remove
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Remove Participant</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Are you sure you want to remove {attendee.firstName} {attendee.lastName} from the event? This will
+                  also remove their registration and associated waivers.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={onRemove}>Remove</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </TableCell>
       </TableRow>
 
       {isOpen && (
         <TableRow>
-          <TableCell colSpan={6} className="p-0">
+          <TableCell colSpan={7} className="p-0">
             <div className="m-2 rounded-md bg-muted/50 p-4">
               <Tabs defaultValue="personal">
                 <TabsList className="mb-4">
@@ -664,7 +737,10 @@ function ParticipantPageSkeleton() {
           <div className="h-8 w-64 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
           <div className="mt-2 h-4 w-48 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
         </div>
-        <div className="h-10 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        <div className="flex gap-2">
+          <div className="h-10 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+          <div className="h-10 w-40 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+        </div>
       </div>
 
       <Card>
@@ -706,6 +782,9 @@ function ParticipantPageSkeleton() {
                 <TableHead>
                   <div className="h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
                 </TableHead>
+                <TableHead>
+                  <div className="h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -734,6 +813,9 @@ function ParticipantPageSkeleton() {
                       <div className="h-5 w-5 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
                       <div className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
                     </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="h-8 w-20 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
                   </TableCell>
                 </TableRow>
               ))}
