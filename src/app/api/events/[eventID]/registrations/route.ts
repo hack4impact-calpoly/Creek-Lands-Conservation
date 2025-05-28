@@ -6,6 +6,7 @@ import Event from "@/database/eventSchema";
 import User from "@/database/userSchema";
 import mongoose from "mongoose";
 import { RawRegisteredUser, RawRegisteredChild } from "@/types/events";
+import { isUserProfileComplete, isChildProfileComplete } from "@/lib/validate";
 
 interface RawChild {
   _id: mongoose.Types.ObjectId;
@@ -57,6 +58,22 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
   const now = new Date();
   if (event.registrationDeadline && now > new Date(event.registrationDeadline)) {
     return NextResponse.json({ error: "Registration deadline has passed" }, { status: 400 });
+  }
+
+  // Validate profile completeness
+
+  if (attendees.includes(mongoUserId) && !isUserProfileComplete(user)) {
+    return NextResponse.json({ error: "Your profile is incomplete." }, { status: 409 });
+  }
+
+  for (const attendeeId of attendees) {
+    const isChild = attendeeId !== user._id.toString();
+    if (isChild) {
+      const child = (user.children as RawChild[]).find((c) => c._id.toString() === attendeeId);
+      if (child && !isChildProfileComplete(child)) {
+        return NextResponse.json({ error: "Your child's profile is incomplete." }, { status: 409 });
+      }
+    }
   }
 
   const newRegisteredUsers: mongoose.Types.ObjectId[] = [];
