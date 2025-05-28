@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Search, UserCircle, ChevronDown, ChevronRight, Check, X, User, ArrowLeft, Trash2 } from "lucide-react";
+import { Search, UserCircle, ChevronDown, ChevronRight, Check, X, User, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
