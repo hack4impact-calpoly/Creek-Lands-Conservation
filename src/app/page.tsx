@@ -163,7 +163,12 @@ export default function Home() {
       <div className="mx-auto max-w-7xl px-6 py-8">
         <div className="space-y-12">
           <EventSection title="My Registered Events" events={eventSections.registered} onRegister={handleRegister} />
-          <EventSection title="Available Events" events={eventSections.available} onRegister={handleRegister} />
+          <EventSection
+            title="Available Events"
+            events={eventSections.available}
+            onRegister={handleRegister}
+            neverRegistered={true}
+          />
           <EventSection title="Past Events" events={eventSections.past} onRegister={handleRegister} />
         </div>
       </div>

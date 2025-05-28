@@ -19,6 +19,7 @@ export interface EventCardProps {
   eventWaiverTemplates: { waiverId: string; required: boolean }[];
   onDelete?: (eventId: string) => void;
   onRegister?: (eventId: string, attendees: string[]) => void;
+  neverRegistered?: boolean;
 }
 
 export default function EventCard(props: EventCardProps) {
@@ -36,6 +37,7 @@ export default function EventCard(props: EventCardProps) {
     eventWaiverTemplates,
     onDelete,
     onRegister,
+    neverRegistered,
   } = props;
 
   const backgroundImage =
@@ -143,6 +145,7 @@ export default function EventCard(props: EventCardProps) {
             eventWaiverTemplates,
             onDelete,
             onRegister,
+            neverRegistered,
           }}
         />
       </CardContent>

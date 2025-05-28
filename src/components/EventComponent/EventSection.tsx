@@ -14,12 +14,14 @@ export default function EventSection({
   onDelete,
   onRegister,
   children,
+  neverRegistered,
 }: {
   title: string;
   events: LimitedEventInfo[];
   onDelete?: (eventId: string) => void;
   onRegister?: (eventId: string, attendees: string[]) => void;
   children?: React.ReactNode;
+  neverRegistered?: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
   const is2xl = useMediaQuery("(min-width: 1536px)");
@@ -87,6 +89,7 @@ export default function EventSection({
                 eventWaiverTemplates={event.eventWaiverTemplates}
                 onDelete={onDelete}
                 onRegister={onRegister}
+                neverRegistered={neverRegistered}
               />
             ))}
           </div>

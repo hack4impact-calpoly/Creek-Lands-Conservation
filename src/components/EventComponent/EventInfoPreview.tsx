@@ -38,6 +38,7 @@ interface EventInfoProps {
   eventWaiverTemplates: { waiverId: string; required: boolean }[];
   onDelete?: (eventId: string) => void;
   onRegister?: (eventId: string, attendees: string[]) => void;
+  neverRegistered?: boolean;
 }
 
 export function EventInfoPreview({
@@ -54,6 +55,8 @@ export function EventInfoPreview({
   currentRegistrations,
   eventWaiverTemplates,
   onDelete,
+  onRegister,
+  neverRegistered,
 }: EventInfoProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -266,7 +269,13 @@ export function EventInfoPreview({
                   onClick={handleRegisterRedirect}
                   disabled={isRegisterDisabled}
                 >
-                  {isFull ? "Event Full" : hasRegistrationClosed ? "Registration Closed" : "Register for Event"}
+                  {isFull
+                    ? "Event Full"
+                    : hasRegistrationClosed
+                      ? "Registration Closed"
+                      : neverRegistered
+                        ? "Register for Event"
+                        : "Manage Registration"}
                 </Button>
               ) : (
                 <SignInButton>
