@@ -7,6 +7,7 @@ import Waiver from "@/database/waiverSchema";
 import mongoose from "mongoose";
 import { RawRegisteredUser, RawRegisteredChild } from "@/types/events";
 import { deleteFileFromS3 } from "@/lib/s3";
+import { authenticateAdmin } from "@/lib/auth";
 
 interface RawChild {
   _id: mongoose.Types.ObjectId;
@@ -135,8 +136,9 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
     return NextResponse.json({ error: "Unauthorized. Please log in." }, { status: 401 });
   }
 
+  const isAdmin = await authenticateAdmin();
   const user = await User.findOne({ clerkID: userId });
-  if (!user) {
+  if (!user && !isAdmin) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
@@ -150,10 +152,13 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
     return NextResponse.json({ error: "Invalid attendees format." }, { status: 400 });
   }
 
-  const mongoUserId = user._id.toString();
-  const validAttendees = [mongoUserId, ...(user.children as RawChild[]).map((c) => c._id.toString())];
-  if (!attendees.every((id) => validAttendees.includes(id))) {
-    return NextResponse.json({ error: "You can only unregister yourself or your children." }, { status: 403 });
+  // For non-admins, restrict to self or children
+  if (!isAdmin) {
+    const mongoUserId = user._id.toString();
+    const validAttendees = [mongoUserId, ...(user.children as RawChild[]).map((c) => c._id.toString())];
+    if (!attendees.every((id) => validAttendees.includes(id))) {
+      return NextResponse.json({ error: "You can only unregister yourself or your children." }, { status: 403 });
+    }
   }
 
   const event = await Event.findById(eventID);
@@ -161,47 +166,62 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
     return NextResponse.json({ error: "Event not found" }, { status: 404 });
   }
 
-  const removedUsers: mongoose.Types.ObjectId[] = [];
-  const removedChildren: mongoose.Types.ObjectId[] = [];
-
+  // Categorize attendees into users and children
+  const removedUserIds: string[] = [];
+  const removedChildrenPairs: { parentId: string; childId: string }[] = [];
   for (const id of attendees) {
-    if (id === mongoUserId) {
-      if (event.registeredUsers.some((ru: RawRegisteredUser) => ru.user.toString() === mongoUserId)) {
-        event.registeredUsers = event.registeredUsers.filter(
-          (ru: RawRegisteredUser) => ru.user.toString() !== mongoUserId,
-        );
-        user.registeredEvents = user.registeredEvents.filter(
-          (eId: mongoose.Types.ObjectId) => eId.toString() !== eventID,
-        );
-        removedUsers.push(user._id);
-      }
+    const userReg = event.registeredUsers.find((ru: RawRegisteredUser) => ru.user.toString() === id);
+    if (userReg) {
+      removedUserIds.push(id);
     } else {
-      const child = (user.children as RawChild[]).find((c) => c._id.toString() === id);
-      if (child && event.registeredChildren.some((rc: RawRegisteredChild) => rc.childId.toString() === id)) {
-        event.registeredChildren = event.registeredChildren.filter(
-          (rc: RawRegisteredChild) => rc.childId.toString() !== id,
-        );
-        child.registeredEvents = child.registeredEvents.filter(
-          (eId: mongoose.Types.ObjectId) => eId.toString() !== eventID,
-        );
-        removedChildren.push(child._id);
+      const childReg = event.registeredChildren.find((rc: RawRegisteredChild) => rc.childId.toString() === id);
+      if (childReg) {
+        removedChildrenPairs.push({ parentId: childReg.parent.toString(), childId: id });
       }
     }
   }
 
-  if (removedUsers.length + removedChildren.length === 0) {
-    return NextResponse.json({ error: "Selected attendees were not registered." }, { status: 400 });
+  if (removedUserIds.length === 0 && removedChildrenPairs.length === 0) {
+    return NextResponse.json({ error: "No valid attendees to remove." }, { status: 400 });
   }
 
+  // Remove attendees from event
+  event.registeredUsers = event.registeredUsers.filter(
+    (ru: RawRegisteredUser) => !removedUserIds.includes(ru.user.toString()),
+  );
+  event.registeredChildren = event.registeredChildren.filter(
+    (rc: RawRegisteredChild) => !removedChildrenPairs.some((pair) => pair.childId === rc.childId.toString()),
+  );
+
+  // Start transaction to update event and user documents
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
     await event.save({ session });
-    await User.findByIdAndUpdate(
-      user._id,
-      { $set: { registeredEvents: user.registeredEvents, children: user.children } },
-      { session },
-    );
+
+    // Update removed users
+    for (const userId of removedUserIds) {
+      await User.findByIdAndUpdate(userId, { $pull: { registeredEvents: eventID } }, { session });
+    }
+
+    // Update parents of removed children
+    const parentIds = [...new Set(removedChildrenPairs.map((pair) => pair.parentId))];
+    for (const parentId of parentIds) {
+      const childrenToUpdate = removedChildrenPairs
+        .filter((pair) => pair.parentId === parentId)
+        .map((pair) => pair.childId);
+      await User.findByIdAndUpdate(
+        parentId,
+        {
+          $pull: { "children.$[child].registeredEvents": eventID },
+        },
+        {
+          arrayFilters: [{ "child._id": { $in: childrenToUpdate } }],
+          session,
+        },
+      );
+    }
+
     await session.commitTransaction();
   } catch (err) {
     await session.abortTransaction();
@@ -211,62 +231,64 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
     session.endSession();
   }
 
-  // Delete waiver files from S3 and remove Waiver documents
-  try {
-    // Query waivers directly for the event and attendees
-    const waiverQuery = {
-      eventId: eventID,
-      type: "completed",
-      $or: [
-        { belongsToUser: user._id, isForChild: false }, // User's waivers
-        { belongsToUser: user._id, childSubdocId: { $in: removedChildren } }, // Children's waivers
-      ],
-    };
-    const waivers = await Waiver.find(waiverQuery).select("fileKey belongsToUser childSubdocId");
+  // Handle waivers
+  const waiverQuery = {
+    eventId: eventID,
+    type: "completed",
+    $or: [
+      { belongsToUser: { $in: removedUserIds }, isForChild: false },
+      ...removedChildrenPairs.map((pair) => ({ belongsToUser: pair.parentId, childSubdocId: pair.childId })),
+    ],
+  };
+  const waivers = await Waiver.find(waiverQuery);
 
-    console.log(
-      `Found ${waivers.length} waivers for event ${eventID}:`,
-      waivers.map((w) => ({
-        id: w._id.toString(),
-        fileKey: w.fileKey,
-        belongsToUser: w.belongsToUser.toString(),
-        childSubdocId: w.childSubdocId?.toString(),
-      })),
-    );
-
-    if (waivers.length === 0) {
-      console.log(`No waivers found to delete for event ${eventID}`);
+  // Delete S3 files
+  for (const waiver of waivers) {
+    try {
+      await deleteFileFromS3(waiver.fileKey);
+      console.log(`Deleted S3 file: ${waiver.fileKey}`);
+    } catch (s3Err) {
+      console.error(`Failed to delete S3 file ${waiver.fileKey}:`, s3Err);
     }
-
-    // Delete S3 files
-    for (const waiver of waivers) {
-      try {
-        await deleteFileFromS3(waiver.fileKey);
-        console.log(`Deleted S3 file: ${waiver.fileKey}`);
-      } catch (s3Err) {
-        console.error(`Failed to delete S3 file ${waiver.fileKey}:`, s3Err);
-      }
-    }
-
-    // Update User waiversSigned
-    for (const waiver of waivers) {
-      if (waiver.childSubdocId) {
-        const child = user.children.id(waiver.childSubdocId);
-        if (child && Array.isArray(child.waiversSigned)) {
-          child.waiversSigned = child.waiversSigned.filter((wId: mongoose.Types.ObjectId) => !wId.equals(waiver._id));
-        }
-      } else {
-        user.waiversSigned = user.waiversSigned.filter((wId: mongoose.Types.ObjectId) => !wId.equals(waiver._id));
-      }
-    }
-    await user.save();
-
-    // Delete Waiver documents
-    const deleteResult = await Waiver.deleteMany(waiverQuery);
-    console.log(`Deleted ${deleteResult.deletedCount} Waiver documents for event ${eventID}`);
-  } catch (err) {
-    console.error("Error deleting waivers from S3 or MongoDB:", err);
   }
+
+  // Collect waiver IDs to update users and children
+  const userWaiverMap = new Map<string, mongoose.Types.ObjectId[]>();
+  const childWaiverMap = new Map<string, { parentId: string; childId: string; waiverIds: mongoose.Types.ObjectId[] }>();
+  for (const waiver of waivers) {
+    if (!waiver.isForChild) {
+      const userId = waiver.belongsToUser.toString();
+      if (!userWaiverMap.has(userId)) userWaiverMap.set(userId, []);
+      userWaiverMap.get(userId)!.push(waiver._id);
+    } else {
+      const parentId = waiver.belongsToUser.toString();
+      const childId = waiver.childSubdocId!.toString();
+      const key = `${parentId}-${childId}`;
+      if (!childWaiverMap.has(key)) {
+        childWaiverMap.set(key, { parentId, childId, waiverIds: [] });
+      }
+      childWaiverMap.get(key)!.waiverIds.push(waiver._id);
+    }
+  }
+
+  // Update waiversSigned in user documents
+  for (const [userId, waiverIds] of userWaiverMap) {
+    await User.findByIdAndUpdate(userId, { $pull: { waiversSigned: { $in: waiverIds } } });
+  }
+  for (const { parentId, childId, waiverIds } of childWaiverMap.values()) {
+    await User.findByIdAndUpdate(
+      parentId,
+      {
+        $pull: { "children.$[child].waiversSigned": { $in: waiverIds } },
+      },
+      {
+        arrayFilters: [{ "child._id": childId }],
+      },
+    );
+  }
+
+  // Delete waiver documents
+  await Waiver.deleteMany({ _id: { $in: waivers.map((w) => w._id) } });
 
   return NextResponse.json({ message: "Successfully unregistered" }, { status: 200 });
 }

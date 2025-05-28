@@ -291,7 +291,7 @@ export default function EventParticipantsPage() {
   const handleRemoveAttendee = async (attendeeId: string) => {
     setRemovingAttendee(attendeeId);
     try {
-      const response = await fetch(`/api/events/${eventID}/registration`, {
+      const response = await fetch(`/api/events/${eventID}/registrations`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ attendees: [attendeeId] }),
