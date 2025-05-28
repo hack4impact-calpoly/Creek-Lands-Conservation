@@ -288,18 +288,29 @@ export default function WaiversPage() {
 
       <Tabs defaultValue="all" className="mb-6">
         <TabsList className="mb-4 flex w-fit max-w-[100vw] flex-col flex-wrap gap-2 sm:flex-row sm:gap-0">
-          <TabsTrigger value="all" className="flex w-full items-center gap-2 sm:w-auto">
-            <FileText className="h-4 w-4" />
-            <span>All Waivers</span>
-          </TabsTrigger>
-          <TabsTrigger value="user" className="flex w-full items-center gap-2 sm:w-auto">
-            <User className="h-4 w-4" />
-            <span>Your Waivers</span>
-          </TabsTrigger>
-          <TabsTrigger value="children" className="flex w-full items-center gap-2 sm:w-auto">
-            <Users className="h-4 w-4" />
-            <span>Children&apos;s Waivers</span>
-          </TabsTrigger>
+          {isMobile ? (
+            <>
+              <TabsTrigger value="all" className="flex w-full items-center gap-2 sm:w-auto">
+                <User className="h-4 w-4" />
+                <span>All Waivers</span>
+              </TabsTrigger>
+            </>
+          ) : (
+            <>
+              <TabsTrigger value="all" className="flex w-full items-center gap-2 sm:w-auto">
+                <FileText className="h-4 w-4" />
+                <span>All Waivers</span>
+              </TabsTrigger>
+              <TabsTrigger value="user" className="flex w-full items-center gap-2 sm:w-auto">
+                <User className="h-4 w-4" />
+                <span>Your Waivers</span>
+              </TabsTrigger>
+              <TabsTrigger value="children" className="flex w-full items-center gap-2 sm:w-auto">
+                <Users className="h-4 w-4" />
+                <span>Children&apos;s Waivers</span>
+              </TabsTrigger>
+            </>
+          )}
         </TabsList>
 
         <TabsContent value="all" className="space-y-6">
