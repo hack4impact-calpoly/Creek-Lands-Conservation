@@ -9,7 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileText, User, Users } from "lucide-react";
+import { FileText, User, Users, ExternalLink } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 // Interface for the full waiver document returned by the server action
 interface FullSignedWaiver {
@@ -48,6 +49,37 @@ interface GroupedWaivers {
   };
 }
 
+// Custom hook for mobile detection
+const useMobileDetection = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+
+    checkMobile();
+    let timeoutId: NodeJS.Timeout | null = null;
+
+    const debouncedCheck = () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      timeoutId = setTimeout(checkMobile, 150);
+    };
+
+    window.addEventListener("resize", debouncedCheck);
+    return () => {
+      window.removeEventListener("resize", debouncedCheck);
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, []);
+
+  return isMobile;
+};
+
 export default function WaiversPage() {
   const [groupedWaivers, setGroupedWaivers] = useState<GroupedWaivers | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -57,6 +89,7 @@ export default function WaiversPage() {
   const [currentWaiverTitle, setCurrentWaiverTitle] = useState<string>("");
   const { isLoaded, user } = useUser();
   const [activeTab, setActiveTab] = useState<string>("all");
+  const isMobile = useMobileDetection();
 
   useEffect(() => {
     const fetchSignedWaiversData = async () => {
@@ -186,7 +219,7 @@ export default function WaiversPage() {
   // Loading state
   if (isLoading || !isLoaded || !user || groupedWaivers === null) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto max-w-[100vw] overflow-x-hidden p-6">
         <h1 className="mb-6 text-3xl font-bold">Past Signed Waivers</h1>
         <Card className="mb-6 p-6">
           <h2 className="mb-4 text-xl font-semibold">Your Waivers</h2>
@@ -211,7 +244,7 @@ export default function WaiversPage() {
 
   if (error) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="container mx-auto max-w-[100vw] overflow-x-hidden p-6">
         <Card className="p-6 text-center">
           <h1 className="mb-4 text-2xl font-bold text-red-600">Error Loading Waivers</h1>
           <p className="text-red-500">{error}</p>
@@ -226,7 +259,7 @@ export default function WaiversPage() {
   const childrenCount = getChildrenCount();
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="container mx-auto max-w-[100vw] overflow-x-hidden p-6">
       <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold">Past Signed Waivers</h1>
 
@@ -253,17 +286,17 @@ export default function WaiversPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="all" className="mb-6" onValueChange={setActiveTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="all" className="flex items-center gap-2">
+      <Tabs defaultValue="all" className="mb-6">
+        <TabsList className="mb-4 flex w-fit max-w-[100vw] flex-col flex-wrap gap-2 sm:flex-row sm:gap-0">
+          <TabsTrigger value="all" className="flex w-full items-center gap-2 sm:w-auto">
             <FileText className="h-4 w-4" />
             <span>All Waivers</span>
           </TabsTrigger>
-          <TabsTrigger value="user" className="flex items-center gap-2">
+          <TabsTrigger value="user" className="flex w-full items-center gap-2 sm:w-auto">
             <User className="h-4 w-4" />
             <span>Your Waivers</span>
           </TabsTrigger>
-          <TabsTrigger value="children" className="flex items-center gap-2">
+          <TabsTrigger value="children" className="flex w-full items-center gap-2 sm:w-auto">
             <Users className="h-4 w-4" />
             <span>Children&apos;s Waivers</span>
           </TabsTrigger>
@@ -420,7 +453,7 @@ export default function WaiversPage() {
 
       {/* Waiver Preview Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-4xl">
+        <DialogContent className={isMobile ? "max-w-[90vw] rounded-md" : "max-w-4xl rounded-md"}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
@@ -429,7 +462,26 @@ export default function WaiversPage() {
             <DialogDescription>Signed waiver document</DialogDescription>
           </DialogHeader>
           <div className="mt-4 rounded-md border">
-            {currentWaiverUrl ? (
+            {isMobile ? (
+              currentWaiverUrl ? (
+                <div className="flex flex-col items-center justify-center space-y-4 rounded-md p-4">
+                  <p className="text-center text-sm text-gray-600">
+                    For the best viewing experience on mobile, please open the waiver document in a new tab.
+                  </p>
+                  <Button
+                    onClick={() => window.open(currentWaiverUrl, "_blank", "noopener,noreferrer")}
+                    className="flex items-center gap-2 bg-blue-600 text-white hover:bg-blue-700"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Open Waiver in New Tab
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex h-[30vh] items-center justify-center">
+                  <p>Loading document...</p>
+                </div>
+              )
+            ) : currentWaiverUrl ? (
               <iframe
                 src={currentWaiverUrl}
                 title="Waiver Preview"

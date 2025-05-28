@@ -4,7 +4,7 @@
 import { useState, useEffect } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, ExternalLink, FileText } from "lucide-react";
 import SignatureCanvas from "./SignatureCanvas";
 import WaiverSignatureFormSkeleton from "./WaiverSignatureFormSkeleton";
 
@@ -28,6 +28,41 @@ type WaiverSignatureFormProps = {
   onAllSigned: () => void;
 };
 
+// Custom hook for mobile detection
+const useMobileDetection = () => {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      const width = window.innerWidth;
+      const userAgent = navigator.userAgent;
+      const isMobileWidth = width < 768;
+      const isMobileDevice = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+
+      setIsMobile(isMobileWidth || isMobileDevice);
+    };
+
+    // Check on mount
+    checkMobile();
+
+    // Add resize listener with debounce
+    let timeoutId: NodeJS.Timeout;
+    const debouncedCheck = () => {
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(checkMobile, 150);
+    };
+
+    window.addEventListener("resize", debouncedCheck);
+
+    return () => {
+      window.removeEventListener("resize", debouncedCheck);
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  return isMobile;
+};
+
 export default function WaiverSignatureForm({ eventId, participants, onAllSigned }: WaiverSignatureFormProps) {
   const [waivers, setWaivers] = useState<Waiver[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -36,6 +71,9 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
   const [loading, setLoading] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showError, setShowError] = useState(false);
+  const [hasViewedWaiver, setHasViewedWaiver] = useState(false);
+
+  const isMobile = useMobileDetection();
 
   // Fetch waivers for the event
   useEffect(() => {
@@ -80,7 +118,15 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
     setSigned(false);
     setAgreedToTerms(false);
     setShowError(false);
+    setHasViewedWaiver(false);
   }, [currentIndex]);
+
+  const handleViewWaiver = () => {
+    if (waiverUrl) {
+      window.open(waiverUrl, "_blank", "noopener,noreferrer");
+      setHasViewedWaiver(true);
+    }
+  };
 
   const onSubmit = async () => {
     if (!agreedToTerms) {
@@ -119,12 +165,56 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
   }
 
   return (
-    <div className="mx-auto mb-10 flex max-w-[960px] flex-col items-center px-6">
-      <h1 className="mb-6 mr-auto mt-4 text-2xl font-semibold">Waiver and Liability Agreement</h1>
+    <div className="mx-auto mb-10 flex max-w-[960px] flex-col items-center px-4 sm:px-6">
+      <h1 className="mb-6 mr-auto mt-4 text-xl font-semibold sm:text-2xl">Waiver and Liability Agreement</h1>
 
-      <iframe src={waiverUrl} className="min-h-[600px] w-full rounded border" title="Waiver Preview" loading="lazy" />
+      {/* Desktop iframe view */}
+      {!isMobile && (
+        <iframe
+          src={waiverUrl}
+          className="min-h-[600px] w-full rounded border"
+          title="Waiver Preview"
+          loading="lazy"
+          style={{
+            overflow: "auto",
+            WebkitOverflowScrolling: "touch",
+          }}
+        />
+      )}
 
-      <div className="my-8 w-full space-y-6">
+      {/* Mobile fallback view */}
+      {isMobile && (
+        <div className="flex min-h-[350px] w-full flex-col items-center justify-center space-y-3 rounded border bg-gradient-to-br from-gray-50 to-gray-100 p-4">
+          <div className="mb-1 flex h-14 w-14 items-center justify-center rounded-full bg-blue-100">
+            <FileText className="h-7 w-7 text-blue-600" />
+          </div>
+
+          <div className="space-y-2 text-center">
+            <h3 className="text-base font-semibold text-gray-800">View Waiver Document</h3>
+            <p className="px-2 text-sm text-gray-600">
+              For the best viewing experience on mobile devices, please open the waiver document in a new tab.
+            </p>
+            {hasViewedWaiver && <p className="text-xs font-medium text-green-600">✓ Document opened successfully</p>}
+          </div>
+
+          <Button
+            type="button"
+            onClick={handleViewWaiver}
+            variant="outline"
+            className="flex items-center gap-2 border-2 bg-white px-4 py-2 text-sm hover:bg-gray-50"
+            disabled={!waiverUrl}
+          >
+            <ExternalLink className="h-4 w-4" />
+            Open Waiver Document
+          </Button>
+
+          <p className="px-4 text-center text-xs text-gray-500">
+            Please review the complete document before proceeding with the signature.
+          </p>
+        </div>
+      )}
+
+      <div className="my-6 w-full space-y-4 sm:my-8 sm:space-y-6">
         <div>
           <div className="flex items-start gap-2">
             <Checkbox
@@ -135,20 +225,32 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
                 setShowError(false);
               }}
             />
-            <label htmlFor="agreedToTerms" className="text-sm font-bold leading-5">
+            <label htmlFor="agreedToTerms" className="flex-1 text-sm font-bold leading-5">
               By checking this box, I agree to the terms of service stated above.
             </label>
           </div>
           {showError && (
-            <p className="text-xs text-red-500 sm:text-sm">You must agree to the terms before continuing.</p>
+            <p className="mt-2 text-xs text-red-500 sm:text-sm">You must agree to the terms before continuing.</p>
           )}
         </div>
 
+        {/* Mobile reminder to view waiver */}
+        {isMobile && !hasViewedWaiver && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3">
+            <p className="text-sm text-amber-800">
+              <strong>Please note:</strong> Make sure to open and review the waiver document above before signing.
+            </p>
+          </div>
+        )}
+
         <div className="mb-2">
-          <p className="text-sm font-bold leading-5">You are signing for the following participants:</p>
-          <div className="mt-2 flex flex-wrap gap-12 text-sm">
+          <p className="mb-2 text-sm font-bold leading-5">You are signing for the following participants:</p>
+          <div className="flex flex-wrap gap-3 text-sm sm:gap-12">
             {participants.map((p) => (
-              <span key={p.userID}>
+              <span
+                key={p.userID}
+                className="rounded bg-gray-100 px-2 py-1 text-xs sm:bg-transparent sm:px-0 sm:py-0 sm:text-sm"
+              >
                 {p.firstName} {p.lastName}
               </span>
             ))}
@@ -173,10 +275,13 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
           <Button
             type="button"
             onClick={onSubmit}
-            className="bg-[#488644] text-white hover:bg-[#3a6d37]"
+            className="bg-[#488644] px-6 py-2 text-sm text-white hover:bg-[#3a6d37] sm:px-4 sm:py-2"
             disabled={!signed || !waiverUrl}
           >
-            {currentIndex === waivers.length - 1 ? "Complete Registration" : "Next Waiver"} <ChevronRight />
+            <span className="mr-2">
+              {currentIndex === waivers.length - 1 ? "Complete Registration" : "Next Waiver"}
+            </span>
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
       </div>
