@@ -219,7 +219,7 @@ export default function WaiversPage() {
   // Loading state
   if (isLoading || !isLoaded || !user || groupedWaivers === null) {
     return (
-      <div className="container mx-auto max-w-[100vw] overflow-x-hidden p-6">
+      <div className="container mx-auto px-4 py-8">
         <h1 className="mb-6 text-3xl font-bold">Past Signed Waivers</h1>
         <Card className="mb-6 p-6">
           <h2 className="mb-4 text-xl font-semibold">Your Waivers</h2>
@@ -259,7 +259,7 @@ export default function WaiversPage() {
   const childrenCount = getChildrenCount();
 
   return (
-    <div className="container mx-auto max-w-[100vw] overflow-x-hidden p-6">
+    <div className="container mx-auto px-4 py-8">
       <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-3xl font-bold">Past Signed Waivers</h1>
 
