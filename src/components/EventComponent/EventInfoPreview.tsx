@@ -126,7 +126,7 @@ export function EventInfoPreview({
         <DialogTrigger asChild>
           <Button className="w-full bg-green-700 py-2 text-sm text-white hover:bg-green-800">View Details</Button>
         </DialogTrigger>
-        <DialogContent className="max-h-[90vh] w-full max-w-[95%] overflow-hidden bg-white md:max-w-[800px] lg:max-w-[900px]">
+        <DialogContent className="max-h-[90vh] w-full max-w-[95%] overflow-hidden rounded-md bg-white md:max-w-[800px] lg:max-w-[900px]">
           <DialogHeader className="border-b border-gray-200 pb-4">
             <DialogTitle className="text-center text-2xl font-bold text-gray-900">{title}</DialogTitle>
             <div className="mt-3 flex justify-center gap-2">
