@@ -137,7 +137,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
   }
 
   const isAdmin = await authenticateAdmin();
-  const user = await User.findOne({ clerkID: userId });
+  const user = await User.findOne({ clerkId: userId });
   if (!user && !isAdmin) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
@@ -193,18 +193,20 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
     (rc: RawRegisteredChild) => !removedChildrenPairs.some((pair) => pair.childId === rc.childId.toString()),
   );
 
-  // Start transaction to update event and user documents
+  // Start transaction to update event, user documents, and waivers
   const session = await mongoose.startSession();
   session.startTransaction();
+  let waivers: any[] = []; // Store waivers for use outside transaction
   try {
+    // Save updated event
     await event.save({ session });
 
-    // Update removed users
+    // Update removed users' registeredEvents
     for (const userId of removedUserIds) {
       await User.findByIdAndUpdate(userId, { $pull: { registeredEvents: eventID } }, { session });
     }
 
-    // Update parents of removed children
+    // Update parents of removed children's registeredEvents
     const parentIds = [...new Set(removedChildrenPairs.map((pair) => pair.parentId))];
     for (const parentId of parentIds) {
       const childrenToUpdate = removedChildrenPairs
@@ -222,6 +224,60 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
       );
     }
 
+    // Handle waivers within the transaction
+    const waiverQuery = {
+      eventId: eventID,
+      type: "completed",
+      $or: [
+        { belongsToUser: { $in: removedUserIds }, isForChild: false },
+        ...removedChildrenPairs.map((pair) => ({ belongsToUser: pair.parentId, childSubdocId: pair.childId })),
+      ],
+    };
+    waivers = await Waiver.find(waiverQuery).session(session);
+
+    // Collect waiver IDs to update users and children
+    const userWaiverMap = new Map<string, mongoose.Types.ObjectId[]>();
+    const childWaiverMap = new Map<
+      string,
+      { parentId: string; childId: string; waiverIds: mongoose.Types.ObjectId[] }
+    >();
+    for (const waiver of waivers) {
+      if (!waiver.isForChild) {
+        const userId = waiver.belongsToUser.toString();
+        if (!userWaiverMap.has(userId)) userWaiverMap.set(userId, []);
+        userWaiverMap.get(userId)!.push(waiver._id);
+      } else {
+        const parentId = waiver.belongsToUser.toString();
+        const childId = waiver.childSubdocId!.toString();
+        const key = `${parentId}-${childId}`;
+        if (!childWaiverMap.has(key)) {
+          childWaiverMap.set(key, { parentId, childId, waiverIds: [] });
+        }
+        childWaiverMap.get(key)!.waiverIds.push(waiver._id);
+      }
+    }
+
+    // Update waiversSigned in user documents within the transaction
+    for (const [userId, waiverIds] of userWaiverMap) {
+      await User.findByIdAndUpdate(userId, { $pull: { waiversSigned: { $in: waiverIds } } }, { session });
+    }
+    for (const { parentId, childId, waiverIds } of childWaiverMap.values()) {
+      await User.findByIdAndUpdate(
+        parentId,
+        {
+          $pull: { "children.$[child].waiversSigned": { $in: waiverIds } },
+        },
+        {
+          arrayFilters: [{ "child._id": childId }],
+          session,
+        },
+      );
+    }
+
+    // Delete waiver documents within the transaction
+    await Waiver.deleteMany({ _id: { $in: waivers.map((w) => w._id) } }, { session });
+
+    // Commit the transaction
     await session.commitTransaction();
   } catch (err) {
     await session.abortTransaction();
@@ -231,18 +287,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
     session.endSession();
   }
 
-  // Handle waivers
-  const waiverQuery = {
-    eventId: eventID,
-    type: "completed",
-    $or: [
-      { belongsToUser: { $in: removedUserIds }, isForChild: false },
-      ...removedChildrenPairs.map((pair) => ({ belongsToUser: pair.parentId, childSubdocId: pair.childId })),
-    ],
-  };
-  const waivers = await Waiver.find(waiverQuery);
-
-  // Delete S3 files
+  // Delete S3 files after transaction commits using the same waivers
   for (const waiver of waivers) {
     try {
       await deleteFileFromS3(waiver.fileKey);
@@ -251,44 +296,6 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
       console.error(`Failed to delete S3 file ${waiver.fileKey}:`, s3Err);
     }
   }
-
-  // Collect waiver IDs to update users and children
-  const userWaiverMap = new Map<string, mongoose.Types.ObjectId[]>();
-  const childWaiverMap = new Map<string, { parentId: string; childId: string; waiverIds: mongoose.Types.ObjectId[] }>();
-  for (const waiver of waivers) {
-    if (!waiver.isForChild) {
-      const userId = waiver.belongsToUser.toString();
-      if (!userWaiverMap.has(userId)) userWaiverMap.set(userId, []);
-      userWaiverMap.get(userId)!.push(waiver._id);
-    } else {
-      const parentId = waiver.belongsToUser.toString();
-      const childId = waiver.childSubdocId!.toString();
-      const key = `${parentId}-${childId}`;
-      if (!childWaiverMap.has(key)) {
-        childWaiverMap.set(key, { parentId, childId, waiverIds: [] });
-      }
-      childWaiverMap.get(key)!.waiverIds.push(waiver._id);
-    }
-  }
-
-  // Update waiversSigned in user documents
-  for (const [userId, waiverIds] of userWaiverMap) {
-    await User.findByIdAndUpdate(userId, { $pull: { waiversSigned: { $in: waiverIds } } });
-  }
-  for (const { parentId, childId, waiverIds } of childWaiverMap.values()) {
-    await User.findByIdAndUpdate(
-      parentId,
-      {
-        $pull: { "children.$[child].waiversSigned": { $in: waiverIds } },
-      },
-      {
-        arrayFilters: [{ "child._id": childId }],
-      },
-    );
-  }
-
-  // Delete waiver documents
-  await Waiver.deleteMany({ _id: { $in: waivers.map((w) => w._id) } });
 
   return NextResponse.json({ message: "Successfully unregistered" }, { status: 200 });
 }
