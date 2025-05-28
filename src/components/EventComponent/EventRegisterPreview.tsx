@@ -160,7 +160,7 @@ export function EventRegisterPreview({
             onClick={handleClick}
             disabled={allRegistered}
           >
-            {allRegistered ? "All Family Members Registered" : "Register for Event"}
+            {allRegistered ? "All Family Members Registered" : "Manage Registration"}
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -277,7 +277,7 @@ export default function PersonalInfo() {
 
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
-      <h2 className="mb-6 text-3xl font-semibold text-gray-800">Account Information</h2>
+      <h2 className="mb-6 text-3xl font-bold text-gray-800">Account Information</h2>
 
       <div className="mb-6">
         <label htmlFor="profile-select" className="mb-1 block text-sm font-medium text-gray-700">
