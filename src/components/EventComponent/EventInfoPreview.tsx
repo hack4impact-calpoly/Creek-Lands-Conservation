@@ -2,7 +2,18 @@
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Calendar, Clock, MapPin, Mail, Text, Image as ImageIcon, Users, CalendarClock } from "lucide-react";
+import {
+  Calendar,
+  Clock,
+  MapPin,
+  Mail,
+  Text,
+  Image as ImageIcon,
+  Users,
+  CalendarClock,
+  Edit,
+  Trash2,
+} from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import {
@@ -83,6 +94,9 @@ export function EventInfoPreview({
   const isFull = capacity !== undefined && currentRegistrations !== undefined && currentRegistrations >= capacity;
   const [isRegistered, setIsRegistered] = useState(false);
   const isRegisterDisabled = hasRegistrationClosed || isFull;
+
+  // Check if event has participants
+  const hasParticipants = currentRegistrations !== undefined && currentRegistrations > 0;
 
   const eventImages =
     images.length > 0
@@ -201,64 +215,12 @@ export function EventInfoPreview({
     router.push(`/events/${id}/sign`);
   };
 
-  // const handleRegisterEvent = async (attendees: string[]) => {
-  //   if (!user) {
-  //     toast({
-  //       title: "Error",
-  //       description: "You must be logged in to register.",
-  //       variant: "destructive",
-  //     });
-  //     return;
-  //   }
-
-  //   setIsRegistering(true);
-
-  //   try {
-  //     console.log("Registering attendees:", attendees, "User ID:", userInfo.id);
-  //     const response = await fetch(`/api/events/${id}/registrations`, {
-  //       method: "PUT",
-  //       headers: { "Content-Type": "application/json" },
-  //       body: JSON.stringify({ attendees }),
-  //     });
-
-  //     const responseData = await response.json();
-  //     if (!response.ok) throw new Error(responseData.error || "Failed to register for event.");
-
-  //     // Update local state
-  //     setIsRegistered(true);
-  //     setUserInfo((prev) => {
-  //       const userIsAttendee = attendees.includes(prev.id);
-  //       console.log("User is attendee:", userIsAttendee);
-  //       return {
-  //         ...prev,
-  //         alreadyRegistered: userIsAttendee ? true : prev.alreadyRegistered,
-  //         family: prev.family.map((member) => ({
-  //           ...member,
-  //           alreadyRegistered: attendees.includes(member.id) ? true : member.alreadyRegistered,
-  //         })),
-  //       };
-  //     });
-
-  //     console.log("Parent Signup");
-  //     onRegister?.(id, attendees);
-  //     toast({
-  //       title: "Registration successful",
-  //       description: "You have been registered for the event.",
-  //     });
-  //   } catch (error) {
-  //     toast({
-  //       title: "Error",
-  //       description: error instanceof Error ? error.message : "Failed to register for the event.",
-  //       variant: "destructive",
-  //     });
-  //   } finally {
-  //     setIsRegistering(false);
-  //     setIsRegisterDialogOpen(false);
-  //   }
-  // };
-
   const handleEditEvent = () => {
     router.push(`/admin/events/edit/${id}`);
+  };
+
+  const handleViewParticipants = () => {
+    router.push(`/admin/events/${id}/participants`);
   };
 
   return (
@@ -363,10 +325,26 @@ export function EventInfoPreview({
 
             {isAdmin && onDelete && (
               <div className="flex justify-end gap-4">
-                <Button variant="outline" onClick={() => handleEditEvent()}>
+                {/* Only show View Participants if event has participants */}
+                {hasParticipants && (
+                  <Button variant="outline" onClick={handleViewParticipants} className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    View Participants
+                  </Button>
+                )}
+
+                <Button variant="outline" onClick={handleEditEvent} className="flex items-center gap-2">
+                  <Edit className="h-4 w-4" />
                   Edit Event
                 </Button>
-                <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} disabled={isDeleting}>
+
+                <Button
+                  variant="destructive"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  disabled={isDeleting}
+                  className="flex items-center gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
                   {isDeleting ? "Deleting..." : "Delete Event"}
                 </Button>
               </div>
