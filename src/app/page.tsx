@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useUser } from "@clerk/nextjs";
 import { getEvents } from "@/app/actions/events/actions";
-import { EventInfo, LimitedEventInfo } from "@/types/events";
+import type { LimitedEventInfo } from "@/types/events";
 import EventSection from "@/components/EventComponent/EventSection";
 import SkeletonEventSection from "@/components/EventComponent/EventSectionSkeleton";
 
@@ -11,12 +11,12 @@ interface IChildData {
   _id: string;
   firstName: string;
   lastName: string;
-  birthday?: string; // ISO string from Date
+  birthday?: string;
   gender: "Male" | "Female" | "Non-binary" | "Prefer Not to Say" | "";
   imageUrl?: string;
   imageKey?: string;
-  registeredEvents: string[]; // ObjectIds as strings
-  waiversSigned: string[]; // ObjectIds as strings
+  registeredEvents: string[];
+  waiversSigned: string[];
 }
 
 interface IUserData {
@@ -27,7 +27,7 @@ interface IUserData {
   lastName: string;
   email: string;
   gender: "Male" | "Female" | "Non-binary" | "Prefer Not to Say" | "";
-  birthday?: string | null; // ISO string or null
+  birthday?: string | null;
   address?: {
     home?: string;
     city?: string;
@@ -40,12 +40,11 @@ interface IUserData {
   imageUrl?: string;
   imageKey?: string;
   children: IChildData[];
-  registeredEvents: string[]; // ObjectIds as strings
-  waiversSigned: string[]; // ObjectIds as strings
+  registeredEvents: string[];
+  waiversSigned: string[];
 }
 
 export default function Home() {
-  // TODO consider more possibilities (children registered, deadline missed, etc) and how to sort those cases
   const [eventSections, setEventSections] = useState<{
     available: LimitedEventInfo[];
     registered: LimitedEventInfo[];
@@ -59,7 +58,6 @@ export default function Home() {
   const handleRegister = async (eventId: string, attendees: string[]) => {
     if (!userData) return;
 
-    // Update userData with registered events
     const updatedUserData = { ...userData };
     if (attendees.includes(userData._id)) {
       updatedUserData.registeredEvents = [...(updatedUserData.registeredEvents || []), eventId];
@@ -75,7 +73,6 @@ export default function Home() {
     });
     setUserData(updatedUserData);
 
-    // Update eventSections with new registration count and categorization
     const allEvents = [...eventSections.available, ...eventSections.registered, ...eventSections.past];
     const updatedEvents = allEvents.map((event) => {
       if (event.id === eventId) {
@@ -132,27 +129,53 @@ export default function Home() {
 
   if (isLoading)
     return (
-      <main className="mx-auto mb-8 flex flex-col">
-        <SkeletonEventSection title="Registered Events" />
-        <SkeletonEventSection title="Available Events" />
-        <SkeletonEventSection title="Past Events" />
+      <main className="min-h-screen bg-gray-50">
+        <div className="mx-auto max-w-7xl px-6 py-8">
+          <SkeletonEventSection title="Registered Events" />
+          <SkeletonEventSection title="Available Events" />
+          <SkeletonEventSection title="Past Events" />
+        </div>
       </main>
     );
 
-  if (error) return <p>{error}</p>;
+  if (error)
+    return (
+      <main className="flex min-h-screen items-center justify-center bg-gray-50">
+        <div className="mx-auto max-w-md px-6 text-center">
+          <div className="mx-auto mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+            <svg className="h-8 w-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+              />
+            </svg>
+          </div>
+          <h1 className="mb-3 text-2xl font-semibold text-gray-900">Unable to Load Events</h1>
+          <p className="text-gray-600">{error}</p>
+        </div>
+      </main>
+    );
 
   return (
-    <main className="mx-auto mb-8 flex flex-col">
-      <EventSection title="Registered Events" events={eventSections.registered} onRegister={handleRegister} />
-      <EventSection title="Available Events" events={eventSections.available} onRegister={handleRegister} />
-      <EventSection title="Past Events" events={eventSections.past} onRegister={handleRegister} />
+    <main className="min-h-screen bg-gray-50">
+      <div className="mx-auto max-w-7xl px-6 py-8">
+        <div className="space-y-12">
+          <EventSection title="My Registered Events" events={eventSections.registered} onRegister={handleRegister} />
+          <EventSection
+            title="Available Events"
+            events={eventSections.available}
+            onRegister={handleRegister}
+            neverRegistered={true}
+          />
+          <EventSection title="Past Events" events={eventSections.past} onRegister={handleRegister} />
+        </div>
+      </div>
     </main>
   );
 }
 
-// Helper function
-// Helper at bottom of page.tsx
-// Categorize events using LimitedEventInfo and user's registered event IDs
 const categorizeEvents = (events: LimitedEventInfo[], registeredEventIds: string[]) => {
   const now = new Date();
   const sections = {
