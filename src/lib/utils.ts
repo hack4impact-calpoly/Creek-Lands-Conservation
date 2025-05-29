@@ -42,7 +42,6 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
     images: doc.images,
     fee: doc.fee,
     stripePaymentId: doc.stripePaymentId ?? "",
-    paymentNote: doc.paymentNote ?? "",
     isDraft: doc.isDraft,
     eventWaiverTemplates: doc.eventWaiverTemplates.map((w: RawEventWaiverTemplate) => ({
       waiverId: w.waiverId.toString(),
@@ -83,6 +82,11 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
               doctorName: "",
               doctorPhone: "",
               behaviorNotes: "",
+            },
+            address: child.address || {
+              home: "",
+              city: "",
+              zipCode: "",
             },
           })),
           medicalInfo: user.medicalInfo || {
@@ -138,6 +142,11 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
               doctorPhone: "",
               behaviorNotes: "",
             },
+            address: child.address || {
+              home: "",
+              city: "",
+              zipCode: "",
+            },
           })),
           medicalInfo: parent.medicalInfo || {
             photoRelease: false,
@@ -173,7 +182,6 @@ export function formatLimitedEvents(doc: RawEvent): LimitedEventInfo {
     images: doc.images,
     fee: doc.fee,
     stripePaymentId: doc.stripePaymentId ?? null,
-    paymentNote: doc.paymentNote ?? "",
     eventWaiverTemplates: doc.eventWaiverTemplates.map((w: RawEventWaiverTemplate) => ({
       waiverId: w.waiverId.toString(),
       required: w.required,
