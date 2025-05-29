@@ -11,6 +11,7 @@ import { s3 } from "@/lib/s3";
 import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import fs from "fs";
 import path from "path";
+import { isUserProfileComplete, isChildProfileComplete } from "@/lib/validate";
 
 interface PdfReaderItem {
   page?: number;
@@ -61,6 +62,22 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
       { error: "Missing signatureBase64, waiverID, templateKey, or participants list." },
       { status: 400 },
     );
+  }
+
+  // Validate the user's own profile
+  const isUserParticipating = participants.some((p) => p.userID === user._id.toString() && !p.isChild);
+  if (isUserParticipating && !isUserProfileComplete(user)) {
+    return NextResponse.json({ error: "Your profile is incomplete." }, { status: 409 });
+  }
+
+  // Validate children’s profiles
+  for (const participant of participants) {
+    if (participant.isChild) {
+      const child = user.children.id(participant.userID);
+      if (!child || !isChildProfileComplete(child)) {
+        return NextResponse.json({ error: `Profile incomplete for child: ${participant.firstName}` }, { status: 409 });
+      }
+    }
   }
 
   try {

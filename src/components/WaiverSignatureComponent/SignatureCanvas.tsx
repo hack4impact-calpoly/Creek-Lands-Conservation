@@ -80,6 +80,17 @@ function SignatureCanvas({ eventId, waiverId, fileKey, participants, onSigned }:
 
         const result = await res.json();
 
+        if (res.status === 409) {
+          try {
+            console.error("Profile incomplete:", result.error);
+          } catch {
+            console.error("Profile incomplete: invalid JSON response.");
+          }
+          localStorage.setItem("showProfileIncompleteToast", "true");
+
+          router.push("/user");
+        }
+
         if (res.ok) {
           setSuccessMsg("Waiver signed successfully!");
           //console.log("Signed PDF URL:", result.signedPdfUrl);
@@ -88,6 +99,7 @@ function SignatureCanvas({ eventId, waiverId, fileKey, participants, onSigned }:
         } else {
           console.error(result.error);
           setSuccessMsg(`Error: ${result.error}`);
+          throw new Error(result.error || "Failed to register for event.");
         }
       } catch (err) {
         console.error("Error saving signature:", err);

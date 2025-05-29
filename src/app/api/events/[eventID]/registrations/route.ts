@@ -61,7 +61,6 @@ export async function PUT(req: NextRequest, { params }: { params: { eventID: str
   }
 
   // Validate profile completeness
-
   if (attendees.includes(mongoUserId) && !isUserProfileComplete(user)) {
     return NextResponse.json({ error: "Your profile is incomplete." }, { status: 409 });
   }

@@ -211,6 +211,14 @@ export function EventInfoPreview({
         });
 
         const responseData = await response.json();
+
+        if (response.status === 409) {
+          console.error("Profile incomplete:", responseData.error);
+          localStorage.setItem("showProfileIncompleteToast", "true");
+
+          router.push("/user");
+        }
+
         if (!response.ok) throw new Error(responseData.error || "Failed to register for event.");
 
         setIsRegistered(true);

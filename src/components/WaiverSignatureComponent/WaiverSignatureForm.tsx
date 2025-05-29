@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronRight } from "lucide-react";
 import SignatureCanvas from "./SignatureCanvas";
 import WaiverSignatureFormSkeleton from "./WaiverSignatureFormSkeleton";
+import { useRouter } from "next/navigation";
 
 // TODO: currently, if there is multiple waivers, the user can sign the first one and that document will be generated in s3 and mongodb, even if they decided to not sign up, we only want to save user documents when users confirms signup
 
@@ -36,6 +37,7 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
   const [loading, setLoading] = useState(true);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [showError, setShowError] = useState(false);
+  const router = useRouter();
 
   // Fetch waivers for the event
   useEffect(() => {
@@ -96,13 +98,23 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
       setCurrentIndex((prev) => prev + 1);
     } else {
       try {
-        await fetch(`/api/events/${eventId}/registrations`, {
+        const res = await fetch(`/api/events/${eventId}/registrations`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             attendees: participants.map((p) => p.userID),
           }),
         });
+
+        if (res.status === 409) {
+          const data = await res.json();
+          console.error("Profile incomplete:", data.error);
+          localStorage.setItem("showProfileIncompleteToast", "true");
+
+          router.push("/user");
+          return;
+        }
+
         onAllSigned();
       } catch (err) {
         console.error("Registration failed:", err);
