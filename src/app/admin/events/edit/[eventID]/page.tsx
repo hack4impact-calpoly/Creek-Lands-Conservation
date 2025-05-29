@@ -31,7 +31,6 @@ export type EventFormData = {
   maxParticipants: number;
   registrationDeadline: string;
   fee: number;
-  paymentNote: string;
 };
 
 // Skeleton Component for EditEventPage
@@ -163,7 +162,6 @@ export default function EditEventPage({ params }: { params: { eventID: string } 
           endDate: toLocalDate(data.endDate),
           endTime: toLocalTime(data.endDate),
           registrationDeadline: toLocalDateTime(data.registrationDeadline),
-          paymentNote: data.paymentNote || "",
         });
       } catch (error) {
         toast({ title: "Error", description: "Unable to load event data.", variant: "destructive" });
@@ -200,7 +198,6 @@ export default function EditEventPage({ params }: { params: { eventID: string } 
         capacity: Number(data.maxParticipants),
         registrationDeadline: deadlineISO,
         fee: Number(data.fee),
-        paymentNote: data.paymentNote,
         isDraft,
       };
 
@@ -403,27 +400,6 @@ export default function EditEventPage({ params }: { params: { eventID: string } 
             className="w-full rounded border p-2"
           />
           {errors.fee && <p className="text-sm text-red-500">{errors.fee.message}</p>}
-        </div>
-
-        <div>
-          <label htmlFor="paymentNote" className="block font-medium">
-            Notes about Payment?
-          </label>
-          <Controller
-            name="paymentNote"
-            control={control}
-            render={({ field }) => (
-              <TooltipProvider>
-                <MinimalTiptapEditor
-                  className="w-full"
-                  editorContentClassName="p-5"
-                  output="html"
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              </TooltipProvider>
-            )}
-          />
         </div>
 
         <div className="flex justify-end space-x-4">
