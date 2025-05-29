@@ -53,7 +53,6 @@ export async function getEvents(req?: NextRequest): Promise<LimitedEventInfo[]> 
       images: Array.isArray(doc.images) ? doc.images.map(String) : [],
       fee: Number(doc.fee || 0),
       stripePaymentId: doc.stripePaymentId ?? null,
-      paymentNote: doc.paymentNote ?? "",
       isDraft: Boolean(doc.isDraft),
       eventWaiverTemplates,
       currentRegistrations:
@@ -116,7 +115,6 @@ export async function getEventById(eventId: string): Promise<LimitedEventInfo | 
     images: Array.isArray(doc.images) ? doc.images.map(String) : [],
     fee: Number(doc.fee || 0),
     stripePaymentId: doc.stripePaymentId ?? null,
-    paymentNote: doc.paymentNote ?? "",
     isDraft: Boolean(doc.isDraft),
     eventWaiverTemplates,
     currentRegistrations:

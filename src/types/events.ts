@@ -14,7 +14,6 @@ export interface APIEvent {
   images: string[];
   fee: number;
   stripePaymentId?: string | null;
-  paymentNote?: string;
   isDraft: boolean;
   registeredUsers: RegisteredUserInfo[];
   registeredChildren: RegisteredChildInfo[];
@@ -35,7 +34,6 @@ export interface LimitedEventInfo {
   images: string[];
   fee: number;
   stripePaymentId?: string | null;
-  paymentNote?: string;
   eventWaiverTemplates: {
     waiverId: string;
     required: boolean;
@@ -124,7 +122,6 @@ interface RawEventData {
   images: string[];
   fee: number;
   stripePaymentId?: string | null;
-  paymentNote?: string;
   isDraft: boolean;
   registeredUsers: { user: string; waiversSigned: { waiverId: string; signed: boolean }[] }[];
   registeredChildren: { parent: string; childId: string; waiversSigned: { waiverId: string; signed: boolean }[] }[];
@@ -143,7 +140,6 @@ export interface RawEvent {
   images: string[];
   fee: number;
   stripePaymentId?: string;
-  paymentNote?: string;
   isDraft: boolean;
   registeredUsers: RawRegisteredUser[];
   registeredChildren: RawRegisteredChild[];
@@ -223,7 +219,6 @@ export interface FormattedEvent {
   images: string[];
   fee: number;
   stripePaymentId?: string;
-  paymentNote?: string;
   isDraft: boolean;
   eventWaiverTemplates: EventWaiverTemplateInfo[];
   registeredUsers: RegisteredUserInfo[];
@@ -255,7 +250,6 @@ export interface EventPayload {
   fee?: number;
   stripePaymentId?: string;
   isDraft?: boolean;
-  paymentNote?: string;
 }
 
 export interface FormattedEvent {
@@ -270,7 +264,6 @@ export interface FormattedEvent {
   images: string[];
   fee: number;
   stripePaymentId?: string;
-  paymentNote?: string;
   isDraft: boolean;
   eventWaiverTemplates: EventWaiverTemplateInfo[];
   registeredUsers: RegisteredUserInfo[];
@@ -292,7 +285,6 @@ export interface EventInfo {
   images: string[];
   fee: number;
   stripePaymentId?: string | null;
-  paymentNote?: string;
   isDraft: boolean;
   registeredUsers: RegisteredUserInfo[];
   registeredChildren: RegisteredChildInfo[];

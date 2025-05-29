@@ -33,7 +33,6 @@ export type EventFormData = {
   maxParticipants: number;
   registrationDeadline: string;
   fee: number;
-  paymentNote: string;
   images: string[];
 };
 
@@ -65,7 +64,6 @@ export default function CreateEventForm() {
       maxParticipants: 0,
       registrationDeadline: "",
       fee: 0,
-      paymentNote: "",
       images: [],
     },
   });
@@ -106,7 +104,6 @@ export default function CreateEventForm() {
         capacity: Number(data.maxParticipants),
         registrationDeadline: deadlineISO,
         fee: Number(data.fee),
-        paymentNote: data.paymentNote,
         isDraft,
       };
 
@@ -146,11 +143,9 @@ export default function CreateEventForm() {
         maxParticipants: 0,
         registrationDeadline: "",
         fee: 0,
-        paymentNote: "",
         images: [],
       }); // Explicitly reset all fields
       setValue("description", ""); // Force clear Tiptap editor
-      setValue("paymentNote", ""); // Force clear Tiptap editor
       fileUploadRef.current?.clear();
       pdfUploadRef.current?.clear();
       setResetUploader(true);
@@ -340,27 +335,6 @@ export default function CreateEventForm() {
             className="w-full rounded border p-2"
           />
           {errors.fee && <p className="text-sm text-red-500">{errors.fee.message}</p>}
-        </div>
-
-        <div>
-          <label htmlFor="paymentNote" className="block font-medium">
-            Notes About Payment?
-          </label>
-          <Controller
-            name="paymentNote"
-            control={control}
-            render={({ field }) => (
-              <TooltipProvider>
-                <MinimalTiptapEditor
-                  className="w-full"
-                  editorContentClassName="p-5"
-                  output="html"
-                  value={field.value}
-                  onChange={field.onChange}
-                />
-              </TooltipProvider>
-            )}
-          />
         </div>
 
         <div className="flex justify-end space-x-4">
