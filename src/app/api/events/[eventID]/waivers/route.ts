@@ -73,14 +73,6 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
     );
     const pdfBytes = await streamToBuffer(s3Object.Body);
 
-    // Find the position of the first "date" (case-insensitive)
-    const datePosition = await findDatePosition(pdfBytes);
-    if (!datePosition) {
-      console.warn("No 'date' (case-insensitive) found in the document.");
-    } else {
-      //console.log("Found 'date' at:", datePosition);
-    }
-
     const positions = await extractTextAndFindSign(pdfBytes);
 
     if (!Array.isArray(positions)) {
@@ -104,33 +96,6 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
       const page = pdfDoc.getPages()[signPosition.page - 1];
       const pdfWidth = page.getWidth();
       const pdfHeight = page.getHeight();
-
-      // Inject today's date if position is found
-      // Inject today's date if position is found
-      if (datePosition) {
-        const datePage = pdfDoc.getPages()[datePosition.page - 1];
-
-        // Use coordinates directly as they are in points
-        //const dateTextX = datePosition.x;
-        //const dateTextY = datePosition.y - 1; // Slight offset above the line for visibility
-
-        const scaledDateX = (datePosition.x / 100) * 2.7 * pdfWidth;
-        const scaledDateY = pdfHeight - (datePosition.y / 100) * 2.05 * pdfHeight;
-
-        /*console.log(
-          `Injecting date '${formattedDate}' at page ${datePosition.page}, x=${scaledDateX}, y=${scaledDateY}`,
-        );*/
-
-        const font = await pdfDoc.embedStandardFont(StandardFonts.Helvetica);
-        const fontSize = 12;
-        datePage.drawText(formattedDate, {
-          x: scaledDateX,
-          y: scaledDateY,
-          font,
-          size: fontSize,
-          color: rgb(0, 0, 0),
-        });
-      }
 
       // Add signature
       const pngImage = await pdfDoc.embedPng(signatureBase64);
@@ -323,67 +288,6 @@ if (!fs.existsSync(logsDir)) {
 // Generate log file path with timestamp
 const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
 const logFilePath = path.join(logsDir, `pdf-text-log-${timestamp}.txt`);*/
-
-async function findDatePosition(
-  pdfBytes: Buffer,
-): Promise<{ x: number; y: number; page: number; width: number } | null> {
-  return new Promise((resolve, reject) => {
-    let currentPage = 0;
-    let found = false; // Track if the position was found
-
-    new PdfReader().parseBuffer(pdfBytes, (err: string | Error | null, item: any) => {
-      if (err) {
-        const errorMessage = `[DEBUG_ERROR] Error processing PDF: ${err}\n`;
-        console.error(errorMessage);
-        //fs.appendFileSync(logFilePath, errorMessage, "utf8");
-        return reject(err);
-      }
-
-      if (item?.page) {
-        currentPage = item.page;
-        //const logMessage = `[DEBUG] Processing Page ${currentPage}\n`;
-        //console.log(logMessage);
-        //fs.appendFileSync(logFilePath, logMessage, "utf8");
-      }
-
-      if (item && item.text && typeof item.x === "number" && typeof item.y === "number") {
-        const text = item.text.trim();
-        //const logMessage = `[DEBUG_RAW] Text="${text}", x=${item.x}, y=${item.y}, width=${item.w || "undefined"}\n`;
-        //console.log(logMessage);
-        //fs.appendFileSync(logFilePath, logMessage, "utf8");
-
-        // Check for the specific underline for the date field
-        if (
-          text === "__________________" &&
-          Math.abs(item.x - 20) < 0.1 && // Match x=20
-          Math.abs(item.y - 26.854) < 0.1 && // Match y=26.854
-          Math.abs(item.w - 143.438) < 0.1 // Match width=143.438
-        ) {
-          found = true; // Set flag to true
-          const result = {
-            x: item.x,
-            y: item.y,
-            page: currentPage,
-            width: item.w,
-          };
-          //const foundMessage = `[DEBUG] Found date underline at: ${JSON.stringify(result)}\n`;
-          //console.log(foundMessage);
-          //fs.appendFileSync(logFilePath, foundMessage, "utf8");
-          resolve(result);
-          return;
-        }
-      }
-
-      if (!item && !found) {
-        // Only log and resolve null if not found
-        //const logMessage = "[DEBUG] No matching date underline found in the document.\n";
-        //console.log(logMessage);
-        //fs.appendFileSync(logFilePath, logMessage, "utf8");
-        resolve(null);
-      }
-    });
-  });
-}
 
 async function logAllPdfText(pdfBytes: Buffer): Promise<void> {
   return new Promise((resolve, reject) => {
