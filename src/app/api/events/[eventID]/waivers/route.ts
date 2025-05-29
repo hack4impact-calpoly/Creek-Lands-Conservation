@@ -178,6 +178,19 @@ export async function POST(req: NextRequest, { params }: { params: { eventID: st
         color: rgb(0, 0, 0),
       });
 
+      // Inject today's date to the right of the signature
+      const dateOffset = 140; // Pixels to move the date to the right of the signature
+      const dateTextX = scaledX + width + dateOffset; // Place date to the right of signature
+      const dateTextY = scaledY; // Align vertically with the signature
+
+      page.drawText(formattedDate, {
+        x: dateTextX,
+        y: dateTextY,
+        font,
+        size: fontSize,
+        color: rgb(0, 0, 0),
+      });
+
       const modifiedPdf = await pdfDoc.save();
       const buffer = Buffer.from(modifiedPdf);
 
