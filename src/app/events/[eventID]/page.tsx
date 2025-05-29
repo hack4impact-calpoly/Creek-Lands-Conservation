@@ -22,6 +22,7 @@ export default function EventDetailsPage() {
   const [event, setEvent] = useState<LimitedEventInfo | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [fullUserData, setFullUserData] = useState<any>(null);
   const [userInfo, setUserInfo] = useState<{
     id: string;
     firstName: string;
@@ -73,6 +74,7 @@ export default function EventDetailsPage() {
 
         const userData = await response.json();
         console.log("Fetched user data:", userData);
+        setFullUserData(userData);
         setUserInfo({
           id: userData._id,
           firstName: userData.firstName || "",
@@ -99,10 +101,126 @@ export default function EventDetailsPage() {
     fetchUserFamily();
   }, [user?.id, event, toast]);
 
+  const validateAttendee = (fullUserData: any, attendeeId: string) => {
+    console.log(`Validating attendee with ID: ${attendeeId}`);
+
+    let attendeeData;
+    let isChild = false;
+
+    // Determine if the attendee is the user or a child
+    if (attendeeId === fullUserData._id) {
+      attendeeData = fullUserData;
+      console.log("Checking primary user:", {
+        id: attendeeData._id,
+        firstName: attendeeData.firstName,
+        lastName: attendeeData.lastName,
+      });
+    } else {
+      attendeeData = fullUserData.children.find((c: any) => c._id === attendeeId);
+      isChild = true;
+      if (!attendeeData) {
+        console.log(`Child with ID ${attendeeId} not found in fullUserData.children`);
+        return false;
+      }
+      console.log("Checking child:", {
+        id: attendeeData._id,
+        firstName: attendeeData.firstName,
+        lastName: attendeeData.lastName,
+      });
+    }
+
+    // Validate basic required fields
+    const requiredFields = ["firstName", "lastName", "birthday", "gender"];
+    for (const field of requiredFields) {
+      console.log(`Checking ${field}:`, attendeeData[field]);
+      if (!attendeeData[field]) {
+        console.log(`Validation failed: ${field} is missing or empty`);
+        return false;
+      }
+    }
+
+    // Validate address - for children, use parent's address if child doesn't have one
+    let addressToCheck;
+    if (isChild) {
+      // For children, check if they have their own address, otherwise use parent's
+      if (
+        attendeeData.address &&
+        attendeeData.address.home &&
+        attendeeData.address.city &&
+        attendeeData.address.zipCode
+      ) {
+        addressToCheck = attendeeData.address;
+        console.log("Using child's own address:", addressToCheck);
+      } else {
+        addressToCheck = fullUserData.address;
+        console.log("Child uses parent's address:", addressToCheck);
+      }
+    } else {
+      addressToCheck = attendeeData.address;
+      console.log("Using adult's own address:", addressToCheck);
+    }
+
+    console.log("Address details:", {
+      home: addressToCheck?.home,
+      city: addressToCheck?.city,
+      zipCode: addressToCheck?.zipCode,
+    });
+
+    if (!addressToCheck || !addressToCheck.home || !addressToCheck.city || !addressToCheck.zipCode) {
+      console.log("Validation failed: Address or its subfields are missing/empty");
+      return false;
+    }
+
+    // Validate emergency contacts - for children, use parent's if child doesn't have any
+    let contactsToCheck;
+    if (isChild) {
+      // For children, check if they have their own emergency contacts, otherwise use parent's
+      if (attendeeData.emergencyContacts && attendeeData.emergencyContacts.length > 0) {
+        contactsToCheck = attendeeData.emergencyContacts;
+        console.log("Using child's own emergency contacts:", contactsToCheck);
+      } else {
+        contactsToCheck = fullUserData.emergencyContacts;
+        console.log("Child uses parent's emergency contacts:", contactsToCheck);
+      }
+    } else {
+      contactsToCheck = attendeeData.emergencyContacts;
+      console.log("Using adult's own emergency contacts:", contactsToCheck);
+    }
+
+    console.log("Emergency contacts count:", contactsToCheck?.length || 0);
+    if (!contactsToCheck || contactsToCheck.length === 0) {
+      console.log("Validation failed: No emergency contacts provided");
+      return false;
+    }
+
+    const hasValidContact = contactsToCheck.some((contact: any) => contact.name && contact.phone);
+    console.log("Has valid contact (name and phone):", hasValidContact);
+    if (!hasValidContact) {
+      console.log("Validation failed: No valid emergency contact with name and phone");
+      return false;
+    }
+
+    // Validate medical info - this should be on the individual (child or adult)
+    console.log("Medical info:", attendeeData.medicalInfo);
+    if (!attendeeData.medicalInfo) {
+      console.log("Validation failed: Medical info is missing");
+      return false;
+    }
+
+    // Check that allergies and dietaryRestrictions are defined (they can be empty strings)
+    if (attendeeData.medicalInfo.allergies === "" || attendeeData.medicalInfo.dietaryRestrictions === "") {
+      console.log("Validation failed: Medical info allergies or dietary restrictions are undefined");
+      return false;
+    }
+
+    console.log(`Validation passed for attendee ID: ${attendeeId}`);
+    return true;
+  };
+
   const eventId = typeof params.eventID === "string" ? params.eventID : "";
   const hasRegistrationClosed = event?.registrationDeadline ? new Date() > new Date(event.registrationDeadline) : false;
   const isFull = event?.capacity && (event?.currentRegistrations ?? 0) >= event?.capacity;
-  const spotsLeft = event?.capacity ? event?.capacity - (event?.currentRegistrations ?? 0) : 0;
+  const spotsLeft = event?.capacity ? event.capacity - (event?.currentRegistrations ?? 0) : 0;
   const isAlmostFull = spotsLeft <= 5 && spotsLeft > 0;
   const registerDisabled = hasRegistrationClosed || isFull;
 
@@ -119,10 +237,26 @@ export default function EventDetailsPage() {
     try {
       if (!eventId) throw new Error("Invalid event ID");
       if (!event) throw new Error("Event data not loaded");
+      if (!fullUserData) throw new Error("User data not loaded");
 
-      console.log("Selected attendees to register:", selectedAttendeesToRegister);
-      console.log("userInfo:", userInfo);
+      console.log("Validating attendees:", selectedAttendeesToRegister);
 
+      // Validate all selected attendees
+      const invalidAttendees = selectedAttendeesToRegister.filter((id) => !validateAttendee(fullUserData, id));
+
+      console.log("Invalid attendees:", invalidAttendees);
+
+      if (invalidAttendees.length > 0) {
+        toast({
+          title: "Incomplete Profile",
+          description: "Please complete all required information for the selected attendees in your profile.",
+          variant: "destructive",
+        });
+        router.push("/user");
+        return;
+      }
+
+      // Proceed if all validations pass
       if (event.eventWaiverTemplates.length > 0) {
         const participants = selectedAttendeesToRegister.map((id) => {
           if (id === userInfo.id) {
@@ -249,7 +383,6 @@ export default function EventDetailsPage() {
     }
   };
 
-  // ... (rest of the component remains unchanged, including JSX)
   if (!eventId) {
     return (
       <div className="container mx-auto px-4 py-8 text-center">
