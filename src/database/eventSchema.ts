@@ -35,7 +35,6 @@ export interface IEvent extends Document {
   }[];
   fee: number;
   stripePaymentId?: string | null;
-  paymentNote?: string;
   isDraft: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -58,7 +57,6 @@ export interface IEventCreate {
   stripePaymentId?: string;
   isDraft?: boolean;
   waiverTemplates?: { fileUrl: string; fileKey: string; fileName: string }[];
-  paymentNote?: string;
 }
 
 export interface IEventUpdate {
@@ -76,7 +74,6 @@ export interface IEventUpdate {
   }[];
   fee?: number;
   stripePaymentId?: string | null;
-  paymentNote?: string;
   waiverTemplates?: { fileUrl: string; fileKey: string; fileName: string }[];
   isDraft?: boolean;
 }
@@ -180,10 +177,6 @@ const eventSchema = new Schema<IEvent>(
       type: String,
       default: null,
       sparse: true,
-    },
-    paymentNote: {
-      type: String,
-      trim: true,
     },
     isDraft: {
       type: Boolean,

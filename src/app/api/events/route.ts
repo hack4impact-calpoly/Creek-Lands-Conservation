@@ -41,7 +41,6 @@ export async function POST(request: Request) {
     images: body.images ?? [],
     fee: body.fee ?? 0,
     stripePaymentId: body.stripePaymentId ?? null,
-    paymentNote: body.paymentNote ?? "",
     isDraft: body.isDraft ?? false,
     registeredUsers: [],
     registeredChildren: [],
