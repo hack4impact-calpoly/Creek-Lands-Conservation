@@ -193,7 +193,6 @@ export interface UserInfo {
     doctorName: string;
     doctorPhone: string;
     behaviorNotes: string;
-    otherNotes: string;
   };
   emergencyContacts: EmergencyContact[];
 }

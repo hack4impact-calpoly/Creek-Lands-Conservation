@@ -16,7 +16,6 @@ export interface MedicalInfo {
   doctorPhone: string;
   behaviorNotes: string;
   dietaryRestrictions: string;
-  otherNotes: string;
 }
 
 export interface IChild {
@@ -85,7 +84,6 @@ const medicalInfoSchema = new Schema<MedicalInfo>(
     doctorPhone: { type: String, default: "" },
     behaviorNotes: { type: String, default: "" },
     dietaryRestrictions: { type: String, default: "" },
-    otherNotes: { type: String, default: "" },
   },
   { _id: false },
 );

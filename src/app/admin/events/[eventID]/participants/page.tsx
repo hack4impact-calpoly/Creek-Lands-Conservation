@@ -55,7 +55,6 @@ function getEventAttendees(eventData: APIEvent) {
       doctorName: string;
       doctorPhone: string;
       behaviorNotes: string;
-      otherNotes: string;
     };
     emergencyContacts: {
       name: string;
@@ -95,7 +94,6 @@ function getEventAttendees(eventData: APIEvent) {
           doctorName: childData.medicalInfo?.doctorName ?? "",
           doctorPhone: childData.medicalInfo?.doctorPhone ?? "",
           behaviorNotes: childData.medicalInfo?.behaviorNotes ?? "",
-          otherNotes: childData.medicalInfo?.otherNotes ?? "",
         },
         emergencyContacts: childData.emergencyContacts || [],
         isChild: true,
@@ -126,7 +124,6 @@ function getEventAttendees(eventData: APIEvent) {
         doctorName: user.user.medicalInfo?.doctorName ?? "",
         doctorPhone: user.user.medicalInfo?.doctorPhone ?? "",
         behaviorNotes: user.user.medicalInfo?.behaviorNotes ?? "",
-        otherNotes: user.user.medicalInfo?.otherNotes ?? "",
       },
       emergencyContacts: user.user.emergencyContacts || [],
       isChild: false,
@@ -162,7 +159,6 @@ function formatAttendeesForCSV(attendees: any[]) {
     Allergies: attendee.medicalInfo.allergies || "None",
     "Dietary Restrictions": attendee.medicalInfo.dietaryRestrictions || "None",
     "Behavior Notes": attendee.medicalInfo.behaviorNotes || "None",
-    "Other Notes": attendee.medicalInfo.otherNotes || "None",
     Insurance: attendee.medicalInfo.insurance || "None",
     "Doctor Name": attendee.medicalInfo.doctorName || "None",
     "Doctor Phone": attendee.medicalInfo.doctorPhone || "None",
@@ -227,7 +223,6 @@ export default function EventParticipantsPage() {
         doctorName: string;
         doctorPhone: string;
         behaviorNotes: string;
-        otherNotes: string;
       };
       emergencyContacts: {
         name: string;
@@ -465,7 +460,6 @@ function AttendeeRow({
       doctorName: string;
       doctorPhone: string;
       behaviorNotes: string;
-      otherNotes: string;
     };
     emergencyContacts: {
       name: string;
@@ -673,7 +667,6 @@ function AttendeeRow({
                           value={attendee.medicalInfo.dietaryRestrictions || "None"}
                         />
                         <InfoItem label="Behavior Notes" value={attendee.medicalInfo.behaviorNotes || "None"} />
-                        <InfoItem label="Other Notes" value={attendee.medicalInfo.otherNotes || "None"} />
                       </InfoCard>
                     </div>
                     <div className="space-y-4">
