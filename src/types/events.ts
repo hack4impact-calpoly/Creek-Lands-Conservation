@@ -88,6 +88,11 @@ export interface RawUser {
     gender: string;
     emergencyContacts: EmergencyContact[];
     medicalInfo: MedicalInfo;
+    address: {
+      home: string;
+      city: string;
+      zipCode: string;
+    };
   }[];
   emergencyContacts: EmergencyContact[];
   medicalInfo: MedicalInfo;
@@ -173,6 +178,7 @@ export interface UserInfo {
     zipCode: string;
   };
   children: {
+    address: { home: string; city: string; zipCode: string };
     _id: string;
     firstName: string;
     lastName: string;
@@ -189,7 +195,6 @@ export interface UserInfo {
     doctorName: string;
     doctorPhone: string;
     behaviorNotes: string;
-    otherNotes: string;
   };
   emergencyContacts: EmergencyContact[];
 }
