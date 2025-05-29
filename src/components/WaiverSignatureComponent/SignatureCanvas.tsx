@@ -4,6 +4,7 @@ import { useRef, useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import SignaturePad from "signature_pad";
 import { useRouter } from "next/navigation";
+import useMobileDetection from "@/hooks/useMobileDetection";
 
 type Participant = {
   firstName: string;
@@ -27,9 +28,14 @@ function SignatureCanvas({ eventId, waiverId, fileKey, participants, onSigned }:
   const [isSaving, setIsSaving] = useState(false);
   const [successMsg, setSuccessMsg] = useState("");
   const router = useRouter();
+  const isMobile = useMobileDetection();
 
   useEffect(() => {
     if (canvasRef.current) {
+      // Set canvas width based on container width
+      const containerWidth = isMobile ? window.innerWidth * 0.8 : 400; // 80vw for mobile, 400px for desktop
+      canvasRef.current.width = containerWidth;
+
       const signaturePad = new SignaturePad(canvasRef.current, {
         backgroundColor: "white",
         penColor: "black",
@@ -48,7 +54,7 @@ function SignatureCanvas({ eventId, waiverId, fileKey, participants, onSigned }:
         signaturePadRef.current = null;
       };
     }
-  }, []);
+  }, [isMobile]);
 
   const clearSignature = () => {
     if (signaturePadRef.current) {
@@ -111,8 +117,8 @@ function SignatureCanvas({ eventId, waiverId, fileKey, participants, onSigned }:
   };
 
   return (
-    <div className="w-[400px]">
-      <canvas ref={canvasRef} width={400} height={100} style={{ border: "1px solid black" }} />
+    <div className={isMobile ? "w-[80vw] max-w-[100vw]" : "w-[400px]"}>
+      <canvas ref={canvasRef} height={100} style={{ border: "1px solid black", width: "100%" }} />
       <div className="mt-2 flex justify-between">
         <Button
           variant="destructive"

@@ -32,25 +32,10 @@ export async function getSignedWaiversForRegisteredEvents(userId: string): Promi
     throw new Error("User not found");
   }
 
-  console.log("Debug: Fetched user:", {
-    userId,
-    registeredEvents: user.registeredEvents,
-    children: user.children.map((child) => ({
-      _id: child._id,
-      registeredEvents: child.registeredEvents,
-    })),
-  });
-
   // Collect all event IDs (user's and children's)
   const userEventIds = user.registeredEvents || [];
   const childrenEventIds = user.children.flatMap((child) => child.registeredEvents || []);
   const allEventIds = Array.from(new Set([...userEventIds, ...childrenEventIds])); // Remove duplicates
-
-  console.log("Debug: Collected event IDs:", {
-    userEventIds,
-    childrenEventIds,
-    allEventIds,
-  });
 
   if (allEventIds.length === 0) {
     console.log("Debug: No registered events found, returning empty array.");
@@ -62,8 +47,6 @@ export async function getSignedWaiversForRegisteredEvents(userId: string): Promi
     .select("title startDate endDate")
     .lean()) as unknown as Array<{ _id: string; title: string; startDate: Date; endDate: Date }>;
 
-  console.log("Debug: Fetched events:", events);
-
   // Create a map of eventId to event details for quick lookup
   const eventMap = new Map<string, { title: string; startDate: Date; endDate: Date }>();
   events.forEach((event) => {
@@ -73,8 +56,6 @@ export async function getSignedWaiversForRegisteredEvents(userId: string): Promi
       endDate: event.endDate,
     });
   });
-
-  console.log("Debug: Event map entries:", Array.from(eventMap.entries()));
 
   // Step 3: Fetch all completed waivers for the user
   const waivers = (await Waiver.find({
@@ -90,16 +71,9 @@ export async function getSignedWaiversForRegisteredEvents(userId: string): Promi
     eventId: string;
   }>;
 
-  console.log("Debug: Fetched waivers:", waivers);
-
   // Step 4: Map waivers to the FullSignedWaiver format
   const signedWaivers: FullSignedWaiver[] = waivers.map((waiver) => {
     const event = eventMap.get(waiver.eventId.toString().trim());
-    console.log("Debug: Looking up event for waiver:", {
-      waiverId: waiver._id,
-      eventId: waiver.eventId,
-      foundEvent: event,
-    });
 
     let childName: string | undefined;
     if (waiver.isForChild && waiver.childSubdocId) {
@@ -109,12 +83,12 @@ export async function getSignedWaiversForRegisteredEvents(userId: string): Promi
 
     return {
       waiver: {
-        _id: waiver._id,
+        _id: waiver._id.toString(), // Convert ObjectId to string
         fileKey: waiver.fileKey,
         uploadedAt: waiver.uploadedAt,
         isForChild: waiver.isForChild,
-        childSubdocId: waiver.childSubdocId,
-        eventId: waiver.eventId,
+        childSubdocId: waiver.childSubdocId ? waiver.childSubdocId.toString() : undefined, // Convert ObjectId to string
+        eventId: waiver.eventId.toString(), // Convert ObjectId to string
       },
       event: {
         title: event?.title || "Generic Waiver",
@@ -125,6 +99,5 @@ export async function getSignedWaiversForRegisteredEvents(userId: string): Promi
     };
   });
 
-  console.log("Debug: Final signed waivers:", signedWaivers);
   return signedWaivers;
 }

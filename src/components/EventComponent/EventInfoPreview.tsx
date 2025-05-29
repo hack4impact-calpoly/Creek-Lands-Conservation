@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Calendar, Clock, MapPin, Mail, Text, Image as ImageIcon, Users, CalendarClock } from "lucide-react";
+import { Calendar, Clock, MapPin, Mail, Text, ImageIcon, Users, CalendarClock, AlertCircle } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import {
@@ -20,8 +20,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useUser } from "@clerk/nextjs";
 import { usePathname } from "next/navigation";
 import { useRouter } from "next/navigation";
-import { EventRegisterPreview } from "./EventRegisterPreview";
 import DOMPurify from "dompurify";
+import { Badge } from "@/components/ui/badge";
 
 interface EventInfoProps {
   id: string;
@@ -38,6 +38,7 @@ interface EventInfoProps {
   eventWaiverTemplates: { waiverId: string; required: boolean }[];
   onDelete?: (eventId: string) => void;
   onRegister?: (eventId: string, attendees: string[]) => void;
+  neverRegistered?: boolean;
 }
 
 export function EventInfoPreview({
@@ -55,24 +56,10 @@ export function EventInfoPreview({
   eventWaiverTemplates,
   onDelete,
   onRegister,
+  neverRegistered,
 }: EventInfoProps) {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isRegisterDialogOpen, setIsRegisterDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isRegistering, setIsRegistering] = useState(false);
-  const [userInfo, setUserInfo] = useState<{
-    id: string;
-    firstName: string;
-    lastName: string;
-    alreadyRegistered: boolean;
-    family: { id: string; firstName: string; lastName: string; alreadyRegistered: boolean }[];
-  }>({
-    id: "",
-    firstName: "",
-    lastName: "",
-    alreadyRegistered: false,
-    family: [],
-  });
   const { toast } = useToast();
   const { user } = useUser();
   const router = useRouter();
@@ -83,7 +70,8 @@ export function EventInfoPreview({
 
   const hasRegistrationClosed = registrationDeadline ? new Date() > registrationDeadline : false;
   const isFull = capacity !== undefined && currentRegistrations !== undefined && currentRegistrations >= capacity;
-  const [isRegistered, setIsRegistered] = useState(false);
+  const spotsLeft = capacity && currentRegistrations ? capacity - currentRegistrations : 0;
+  const isAlmostFull = spotsLeft <= 5 && spotsLeft > 0;
   const isRegisterDisabled = hasRegistrationClosed || isFull;
 
   const eventImages =
@@ -92,49 +80,6 @@ export function EventInfoPreview({
       : [
           "https://creeklands.org/wp-content/uploads/2023/10/creek-lands-conservation-conservation-science-education-central-coast-yes-v1.jpg",
         ];
-
-  const fetchUserFamily = async () => {
-    if (!user?.id) return;
-
-    try {
-      const response = await fetch(`/api/users/${user.id}`);
-      if (!response.ok) throw new Error("Failed to fetch user data");
-
-      const userData = await response.json();
-      const family =
-        userData.children?.map((child: any) => ({
-          id: child._id,
-          name: `${child.firstName || ""} ${child.lastName || ""}`.trim(),
-          alreadyRegistered: child.registeredEvents.includes(id),
-        })) || [];
-      setUserInfo({
-        id: userData._id,
-        firstName: userData.firstName || "",
-        lastName: userData.lastName || "",
-        alreadyRegistered: userData.registeredEvents.includes(id),
-        family:
-          userData.children?.map((child: any) => ({
-            id: child._id,
-            firstName: child.firstName || "",
-            lastName: child.lastName || "",
-            alreadyRegistered: child.registeredEvents.includes(id),
-          })) || [],
-      });
-      console.log("Fetched user family:", family);
-    } catch (error) {
-      console.error("Error fetching user family:", error);
-      toast({
-        title: "Error",
-        description: "Failed to load family information",
-        variant: "destructive",
-      });
-    }
-  };
-
-  const handleOpenRegisterDialog = () => {
-    fetchUserFamily();
-    setIsRegisterDialogOpen(true);
-  };
 
   const handleDeleteEvent = async () => {
     setIsDeleting(true);
@@ -255,115 +200,187 @@ export function EventInfoPreview({
     router.push(`/admin/events/${id}/participants`);
   };
 
+  const handleRegisterRedirect = () => {
+    router.push(`/events/${id}`);
+  };
+
   return (
     <>
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="outline" className="border-gray-400 bg-[#488644] text-white">
-            View Event Details
-          </Button>
+          <Button className="w-full bg-green-700 py-2 text-sm text-white hover:bg-green-800">View Details</Button>
         </DialogTrigger>
-        <DialogContent className="h-auto max-h-[80vh] w-full max-w-[90%] overflow-y-auto rounded-lg md:max-w-[800px] lg:max-w-[1000px]">
-          <DialogHeader>
-            <DialogTitle className="text-center text-4xl">{title}</DialogTitle>
+        <DialogContent className="max-h-[90vh] w-full max-w-[95%] overflow-hidden rounded-md bg-white md:max-w-[800px] lg:max-w-[900px]">
+          <DialogHeader className="border-b border-gray-200 pb-4">
+            <DialogTitle className="text-center text-2xl font-bold text-gray-900">{title}</DialogTitle>
+            <div className="mt-3 flex justify-center gap-2">
+              {isFull && (
+                <Badge className="border border-red-200 bg-red-100 text-xs text-red-800">
+                  <AlertCircle className="mr-1 h-3 w-3" />
+                  Event Full
+                </Badge>
+              )}
+              {isAlmostFull && !isFull && (
+                <Badge className="border border-orange-200 bg-orange-100 text-xs text-orange-800">
+                  Only {spotsLeft} spots remaining
+                </Badge>
+              )}
+              {hasRegistrationClosed && (
+                <Badge className="border border-gray-200 bg-gray-100 text-xs text-gray-800">Registration Closed</Badge>
+              )}
+            </div>
           </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto px-4 md:px-6">
-            <div className="grid grid-cols-1 gap-6 py-4 sm:grid-cols-2">
-              <div className="grid grid-cols-[auto_1fr] items-center gap-4">
-                <Calendar className="h-5 w-5" />
-                <h1>
-                  {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
-                  {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"}
-                </h1>
-              </div>
-              <div className="grid grid-cols-[auto_1fr] items-center gap-4">
-                <Clock className="h-5 w-5" />
-                <h1>
-                  {startDateTime
-                    ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                    : "TBD"}{" "}
-                  -{" "}
-                  {endDateTime
-                    ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                    : "TBD"}
-                </h1>
-              </div>
-              <div className="grid grid-cols-[auto_1fr] items-center gap-4">
-                <MapPin className="h-5 w-5" />
-                <h1>{location}</h1>
-              </div>
-              <div className="grid grid-cols-[auto_1fr] items-center gap-4">
-                <Mail className="h-5 w-5" />
-                <h1>{email}</h1>
-              </div>
-              <div className="grid grid-cols-[auto_1fr] items-center gap-4">
-                <CalendarClock className="h-5 w-5" />
-                <h1>
-                  Deadline:{" "}
-                  {registrationDeadline
-                    ? registrationDeadline.toLocaleDateString() +
-                      " " +
-                      "-" +
-                      " " +
-                      registrationDeadline.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                    : "TBD"}
-                </h1>
-              </div>
-              <div className="grid grid-cols-[auto_1fr] items-center gap-4">
-                <Users className="h-5 w-5" />
-                <h1>
-                  {currentRegistrations} / {capacity} spots filled
-                </h1>
-              </div>
-            </div>
 
-            <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
-              <Text className="h-5 w-5" />
-              <div className="prose" dangerouslySetInnerHTML={{ __html: sanitizedDescription }} />
-            </div>
+          <div className="max-h-[60vh] space-y-6 overflow-y-auto px-6 py-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
+                <Calendar className="h-4 w-4 text-gray-600" />
+                <div>
+                  <p className="text-xs font-medium text-gray-500">Date</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
+                    {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"}
+                  </p>
+                </div>
+              </div>
 
-            <div className="grid items-start gap-4 py-4 sm:grid-cols-[auto_1fr]">
-              <ImageIcon className="h-5 w-5" />
-              <div className="scrollbar-hidden flex gap-4 overflow-x-auto py-4">
-                {eventImages.map((src, index) => (
-                  <div key={index} className="flex-shrink-0">
-                    <Image
-                      src={src}
-                      alt={`Event Image ${index + 1}`}
-                      width={256}
-                      height={180}
-                      className="h-auto w-64 rounded-lg object-cover"
-                    />
+              <div className="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
+                <Clock className="h-4 w-4 text-gray-600" />
+                <div>
+                  <p className="text-xs font-medium text-gray-500">Time</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {startDateTime
+                      ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : "TBD"}{" "}
+                    -{" "}
+                    {endDateTime
+                      ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : "TBD"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
+                <MapPin className="h-4 w-4 text-gray-600" />
+                <div>
+                  <p className="text-xs font-medium text-gray-500">Location</p>
+                  <p className="text-sm font-semibold text-gray-900">{location}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
+                <Mail className="h-4 w-4 text-gray-600" />
+                <div>
+                  <p className="text-xs font-medium text-gray-500">Contact</p>
+                  <p className="text-sm font-semibold text-gray-900">{email}</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
+                <CalendarClock className="h-4 w-4 text-gray-600" />
+                <div>
+                  <p className="text-xs font-medium text-gray-500">Registration Deadline</p>
+                  <p className="text-sm font-semibold text-gray-900">
+                    {registrationDeadline
+                      ? registrationDeadline.toLocaleDateString() +
+                        " at " +
+                        registrationDeadline.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : "TBD"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
+                <Users className="h-4 w-4 text-gray-600" />
+                <div>
+                  <p className="text-xs font-medium text-gray-500">Capacity</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-gray-900">
+                      {currentRegistrations} / {capacity}
+                    </p>
+                    <div className="h-2 min-w-[40px] flex-1 rounded-full bg-gray-200">
+                      <div
+                        className="h-2 rounded-full bg-green-600 transition-all duration-300"
+                        style={{ width: `${Math.min((currentRegistrations! / capacity!) * 100, 100)}%` }}
+                      />
+                    </div>
                   </div>
-                ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 p-4">
+              <div className="flex items-start gap-3">
+                <Text className="mt-1 h-4 w-4 text-gray-600" />
+                <div className="flex-1">
+                  <h3 className="mb-2 text-sm font-semibold text-gray-900">Event Description</h3>
+                  <div
+                    className="prose prose-sm max-w-none text-sm text-gray-700"
+                    dangerouslySetInnerHTML={{ __html: sanitizedDescription }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-lg border border-gray-200 p-4">
+              <div className="flex items-start gap-3">
+                <ImageIcon className="mt-1 h-4 w-4 text-gray-600" />
+                <div className="flex-1">
+                  <h3 className="mb-3 text-sm font-semibold text-gray-900">Event Photos</h3>
+                  <div className="flex gap-3 overflow-x-auto pb-2">
+                    {eventImages.map((src, index) => (
+                      <div key={index} className="flex-shrink-0">
+                        <Image
+                          src={src || "/placeholder.svg"}
+                          alt={`Event Image ${index + 1}`}
+                          width={200}
+                          height={120}
+                          className="h-24 w-32 rounded-lg border border-gray-200 object-cover"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <DialogFooter className="flex justify-between">
+
+          <DialogFooter className="flex justify-between border-t border-gray-200 pt-4">
             {showRegisterButton &&
               (user ? (
                 <Button
-                  className="bg-[#488644] text-white hover:bg-[#3a6d37]"
-                  onClick={handleOpenRegisterDialog}
+                  className="bg-green-700 px-6 py-2 text-white hover:bg-green-800"
+                  onClick={handleRegisterRedirect}
                   disabled={isRegisterDisabled}
                 >
-                  {isFull ? "Event Full" : hasRegistrationClosed ? "Registration Closed" : "Register"}
+                  {isFull
+                    ? "Event Full"
+                    : hasRegistrationClosed
+                      ? "Registration Closed"
+                      : neverRegistered
+                        ? "Register for Event"
+                        : "Manage Registration"}
                 </Button>
               ) : (
                 <SignInButton>
-                  <Button className="bg-[#488644] text-white hover:bg-[#3a6d37]">Sign In to Register</Button>
+                  <Button className="bg-green-700 px-6 py-2 text-white hover:bg-green-800">Sign In to Register</Button>
                 </SignInButton>
               ))}
 
             {isAdmin && onDelete && (
-              <div className="flex justify-end gap-4">
-                <Button variant="outline" onClick={() => handleViewEvent()}>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={handleViewEvent} size="sm">
                   View Participants
                 </Button>
-                <Button variant="outline" onClick={() => handleEditEvent()}>
+                <Button variant="outline" onClick={handleEditEvent} size="sm">
                   Edit Event
                 </Button>
-                <Button variant="destructive" onClick={() => setIsDeleteDialogOpen(true)} disabled={isDeleting}>
+                <Button
+                  variant="destructive"
+                  onClick={() => setIsDeleteDialogOpen(true)}
+                  disabled={isDeleting}
+                  size="sm"
+                >
                   {isDeleting ? "Deleting..." : "Delete Event"}
                 </Button>
               </div>
@@ -393,29 +410,6 @@ export function EventInfoPreview({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-
-      {!isFull && (
-        <EventRegisterPreview
-          isOpen={isRegisterDialogOpen}
-          capacityLeft={capacity ? capacity - (currentRegistrations ?? 0) : 0}
-          onOpenChange={setIsRegisterDialogOpen}
-          eventInfo={{
-            title: title,
-            startDate: startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD",
-            endDate: endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD",
-            startTime: startDateTime
-              ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-              : "TBD",
-            endTime: endDateTime
-              ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-              : "TBD",
-            location: location,
-            contactEmail: email || "marysia@creeklands.org",
-          }}
-          userInfo={userInfo}
-          onConfirm={handleRegisterEvent}
-        />
-      )}
     </>
   );
 }
