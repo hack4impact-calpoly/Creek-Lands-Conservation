@@ -207,8 +207,14 @@ export default function EventDetailsPage() {
       return false;
     }
 
-    // Check that allergies and dietaryRestrictions are defined (they can be empty strings)
-    if (attendeeData.medicalInfo.allergies === "" || attendeeData.medicalInfo.dietaryRestrictions === "") {
+    // Check that important fields in medical info are not empty
+    if (
+      attendeeData.medicalInfo.allergies === "" ||
+      attendeeData.medicalInfo.dietaryRestrictions === "" ||
+      attendeeData.medicalInfo.insurance === "" ||
+      attendeeData.medicalInfo.doctorName === "" ||
+      attendeeData.medicalInfo.doctorPhone === ""
+    ) {
       console.log("Validation failed: Medical info allergies or dietary restrictions are undefined");
       return false;
     }
