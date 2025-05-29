@@ -1,3 +1,17 @@
+"use client";
+import WaiverSignatureForm from "@/components/WaiverSignatureComponent/WaiverSignatureForm";
+
+function testfunc() {}
+
 export default function Page() {
-  return <div>This is an example page using App Router!</div>;
+  return (
+    <WaiverSignatureForm
+      eventId="6813445539132eb8cd0958ab"
+      participants={[
+        { firstName: "James", lastName: "Hudson", userID: "6816d463c43dbce290295172", isChild: true },
+        { firstName: "Ava", lastName: "Hudson", userID: "6816d463c43dbce290295173", isChild: true },
+      ]}
+      onAllSigned={() => console.log("redirecting...")}
+    ></WaiverSignatureForm>
+  );
 }
