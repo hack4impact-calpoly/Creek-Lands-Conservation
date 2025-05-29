@@ -14,7 +14,7 @@ export default function UserProfile() {
     if (shouldShowToast) {
       toast({
         title: "Profile Incomplete",
-        description: "Please complete your profile(s) to sign a waiver or register.",
+        description: "Please complete all required profile fields before registering for events or signing waivers.",
         variant: "destructive",
       });
       localStorage.removeItem("showProfileIncompleteToast");
