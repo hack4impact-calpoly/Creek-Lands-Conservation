@@ -55,7 +55,6 @@ function getEventAttendees(eventData: APIEvent) {
       doctorName: string;
       doctorPhone: string;
       behaviorNotes: string;
-      otherNotes: string;
     };
     emergencyContacts: {
       name: string;
@@ -95,7 +94,6 @@ function getEventAttendees(eventData: APIEvent) {
           doctorName: childData.medicalInfo?.doctorName ?? "",
           doctorPhone: childData.medicalInfo?.doctorPhone ?? "",
           behaviorNotes: childData.medicalInfo?.behaviorNotes ?? "",
-          otherNotes: childData.medicalInfo?.otherNotes ?? "",
         },
         emergencyContacts: childData.emergencyContacts || [],
         isChild: true,
@@ -107,6 +105,7 @@ function getEventAttendees(eventData: APIEvent) {
           phoneNumbers: child.parent.phoneNumbers,
           address: child.parent.address,
         },
+        address: childData.address || { home: "", city: "", zipCode: "" }, // Use child's address
       });
     }
   });
@@ -126,7 +125,6 @@ function getEventAttendees(eventData: APIEvent) {
         doctorName: user.user.medicalInfo?.doctorName ?? "",
         doctorPhone: user.user.medicalInfo?.doctorPhone ?? "",
         behaviorNotes: user.user.medicalInfo?.behaviorNotes ?? "",
-        otherNotes: user.user.medicalInfo?.otherNotes ?? "",
       },
       emergencyContacts: user.user.emergencyContacts || [],
       isChild: false,
@@ -152,17 +150,16 @@ function formatAttendeesForCSV(attendees: any[]) {
     Birthday: attendee.birthday ? attendee.birthday.toLocaleDateString() : "Not provided",
     Gender: attendee.gender || "Not provided",
     Age: attendee.birthday ? calculateAge(attendee.birthday) : "Not provided",
-    "Street Address": attendee.parent
-      ? attendee.parent.address?.home || "Not provided"
+    "Street Address": attendee.isChild
+      ? attendee.address?.home || "Not provided"
       : attendee.address?.home || "Not provided",
-    City: attendee.parent ? attendee.parent.address?.city || "Not provided" : attendee.address?.city || "Not provided",
-    "Zip Code": attendee.parent
-      ? attendee.parent.address?.zipCode || "Not provided"
+    City: attendee.isChild ? attendee.address?.city || "Not provided" : attendee.address?.city || "Not provided",
+    "Zip Code": attendee.isChild
+      ? attendee.address?.zipCode || "Not provided"
       : attendee.address?.zipCode || "Not provided",
     Allergies: attendee.medicalInfo.allergies || "None",
     "Dietary Restrictions": attendee.medicalInfo.dietaryRestrictions || "None",
     "Behavior Notes": attendee.medicalInfo.behaviorNotes || "None",
-    "Other Notes": attendee.medicalInfo.otherNotes || "None",
     Insurance: attendee.medicalInfo.insurance || "None",
     "Doctor Name": attendee.medicalInfo.doctorName || "None",
     "Doctor Phone": attendee.medicalInfo.doctorPhone || "None",
@@ -227,7 +224,6 @@ export default function EventParticipantsPage() {
         doctorName: string;
         doctorPhone: string;
         behaviorNotes: string;
-        otherNotes: string;
       };
       emergencyContacts: {
         name: string;
@@ -465,7 +461,6 @@ function AttendeeRow({
       doctorName: string;
       doctorPhone: string;
       behaviorNotes: string;
-      otherNotes: string;
     };
     emergencyContacts: {
       name: string;
@@ -587,30 +582,9 @@ function AttendeeRow({
                     </InfoCard>
 
                     <InfoCard title="Address">
-                      <InfoItem
-                        label="Street"
-                        value={
-                          attendee.parent
-                            ? attendee.parent.address?.home || "Not provided"
-                            : attendee.address?.home || "Not provided"
-                        }
-                      />
-                      <InfoItem
-                        label="City"
-                        value={
-                          attendee.parent
-                            ? attendee.parent.address?.city || "Not provided"
-                            : attendee.address?.city || "Not provided"
-                        }
-                      />
-                      <InfoItem
-                        label="Zip Code"
-                        value={
-                          attendee.parent
-                            ? attendee.parent.address?.zipCode || "Not provided"
-                            : attendee.address?.zipCode || "Not provided"
-                        }
-                      />
+                      <InfoItem label="Street" value={attendee.address?.home || "Not provided"} />
+                      <InfoItem label="City" value={attendee.address?.city || "Not provided"} />
+                      <InfoItem label="Zip Code" value={attendee.address?.zipCode || "Not provided"} />
                     </InfoCard>
                   </div>
                 </TabsContent>
@@ -673,7 +647,6 @@ function AttendeeRow({
                           value={attendee.medicalInfo.dietaryRestrictions || "None"}
                         />
                         <InfoItem label="Behavior Notes" value={attendee.medicalInfo.behaviorNotes || "None"} />
-                        <InfoItem label="Other Notes" value={attendee.medicalInfo.otherNotes || "None"} />
                       </InfoCard>
                     </div>
                     <div className="space-y-4">
@@ -681,11 +654,6 @@ function AttendeeRow({
                         <InfoItem label="Insurance" value={attendee.medicalInfo.insurance || "None"} />
                         <InfoItem label="Doctor Name" value={attendee.medicalInfo.doctorName || "None"} />
                         <InfoItem label="Doctor Phone" value={attendee.medicalInfo.doctorPhone || "None"} />
-                        <InfoItem
-                          label="Photo Release"
-                          value={attendee.medicalInfo.photoRelease ? "Authorized" : "Not Authorized"}
-                          valueClassName={attendee.medicalInfo.photoRelease ? "text-green-600" : "text-red-600"}
-                        />
                       </InfoCard>
                     </div>
                   </div>

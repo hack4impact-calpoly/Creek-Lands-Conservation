@@ -82,7 +82,11 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
               doctorName: "",
               doctorPhone: "",
               behaviorNotes: "",
-              otherNotes: "",
+            },
+            address: child.address || {
+              home: "",
+              city: "",
+              zipCode: "",
             },
           })),
           medicalInfo: user.medicalInfo || {
@@ -93,7 +97,6 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
             doctorPhone: "",
             behaviorNotes: "",
             dietaryRestrictions: "",
-            otherNotes: "",
           },
           emergencyContacts: user.emergencyContacts || [],
         },
@@ -138,7 +141,11 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
               doctorName: "",
               doctorPhone: "",
               behaviorNotes: "",
-              otherNotes: "",
+            },
+            address: child.address || {
+              home: "",
+              city: "",
+              zipCode: "",
             },
           })),
           medicalInfo: parent.medicalInfo || {
@@ -149,7 +156,6 @@ export function formatEvents(doc: RawEvent): FormattedEvent {
             doctorPhone: "",
             behaviorNotes: "",
             dietaryRestrictions: "",
-            otherNotes: "",
           },
           emergencyContacts: parent.emergencyContacts || [],
         },

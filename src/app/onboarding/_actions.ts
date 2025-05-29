@@ -129,7 +129,6 @@ export const childrenOnboarding = async (
       doctorPhone: "",
       behaviorNotes: "",
       dietaryRestrictions: "",
-      otherNotes: "",
     },
   }));
 
