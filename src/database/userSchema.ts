@@ -27,6 +27,11 @@ export interface IChild {
   gender: "Male" | "Female" | "Non-binary" | "Prefer Not to Say" | "";
   imageUrl?: string;
   imageKey?: string;
+  address?: {
+    home?: string;
+    city?: string;
+    zipCode?: string;
+  };
   waiversSigned: mongoose.Types.ObjectId[];
   registeredEvents: mongoose.Types.ObjectId[];
   emergencyContacts: EmergencyContact[];
@@ -93,6 +98,18 @@ const childSchema = new Schema<IChild>(
     gender: {
       type: String,
       enum: ["Male", "Female", "Non-binary", "Prefer Not to Say"],
+    },
+    address: {
+      home: { type: String, trim: true, default: "" },
+      city: { type: String, trim: true, default: "" },
+      zipCode: {
+        type: String,
+        validate: {
+          validator: (val: string) => !val || /^\d{5}(-\d{4})?$/.test(val),
+          message: "Invalid zip code format",
+        },
+        default: "",
+      },
     },
     imageUrl: { type: String, default: "" },
     imageKey: { type: String, default: "" },

@@ -1,43 +1,85 @@
-// src/app/components/UserComponent/PersonalInfo.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
-import { LoadingSpinner } from "../ui/loading-spinner";
-import PrimaryAccountSection from "@/components/UserComponent/PrimaryAccount";
-import ChildSection from "@/components/UserComponent/ChildSection";
-import EmergencyContactsSection from "@/components/UserComponent/EmergencyContacts";
-import MedicalInfoSection from "@/components/UserComponent/MedicalInfo";
-import AddChildModal from "./AddChildModal";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { toast } from "@/hooks/use-toast"; // Assuming you have a toast hook
-import { Child, Gender, MedicalInfo } from "./UserInfo";
-import { EmergencyContact } from "@/database/userSchema";
+import { Card, CardContent } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { LoadingSpinner } from "@/components/ui/loading-spinner";
+import { PrimaryAccountSection } from "@/components/UserComponent/PrimaryAccountSection";
+import { FamilyMemberSection } from "@/components/UserComponent/FamilyMemberSection";
+import { EmergencyContactsSection } from "@/components/UserComponent/EmergencyContactsSection";
+import { MedicalInfoSection } from "@/components/UserComponent/MedicalInfoSection";
+import { AddFamilyMemberDialog } from "@/components/UserComponent/AddFamilyMemberDialog";
+import { useToast } from "@/hooks/use-toast";
+import { User, UserPlus, Edit3, Save, X } from "lucide-react";
+import { AddressSection } from "@/components/UserComponent/AddressSection";
+import { ConsentSection } from "@/components/UserComponent/ConsentSection";
+
+export type Gender = "" | "Male" | "Female" | "Non-binary" | "Prefer not to say";
+
+export interface Child {
+  localId: number;
+  _id?: string;
+  firstName: string;
+  lastName: string;
+  birthday: string;
+  gender: Gender;
+  address?: {
+    home: string;
+    city: string;
+    zipCode: string;
+  };
+  usePrimaryAddress: boolean;
+  emergencyContacts: EmergencyContact[];
+  usePrimaryEmergencyContacts: boolean;
+  medicalInfo: MedicalInfo;
+  photoRelease: boolean;
+}
+
+export interface EmergencyContact {
+  name: string;
+  phone: string;
+  work: string;
+  relationship: string;
+  canPickup: boolean;
+}
+
+export interface MedicalInfo {
+  allergies: string;
+  insurance: string;
+  doctorName: string;
+  doctorPhone: string;
+  behaviorNotes: string;
+  dietaryRestrictions: string;
+}
 
 const defaultMedicalInfo: MedicalInfo = {
-  photoRelease: false,
   allergies: "",
   insurance: "",
   doctorName: "",
   doctorPhone: "",
   behaviorNotes: "",
   dietaryRestrictions: "",
-  otherNotes: "",
 };
 
-export default function PersonalInfo() {
+export default function PersonalInfoPage() {
   const { isLoaded, user } = useUser();
+  const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editingMemberId, setEditingMemberId] = useState<string | null>(null);
-  const [activeMemberId, setActiveMemberId] = useState("primary");
+  const [activeTab, setActiveTab] = useState("primary");
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
+  // Primary account data
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
-  const [gender, setGender] = useState("");
+  const [gender, setGender] = useState<Gender>("");
   const [birthday, setBirthday] = useState("");
   const [phoneNumbers, setPhoneNumbers] = useState({ cell: "", work: "" });
   const [address, setAddress] = useState({ home: "", city: "", zipCode: "" });
@@ -48,15 +90,10 @@ export default function PersonalInfo() {
   ]);
 
   const [primaryMedicalInfo, setPrimaryMedicalInfo] = useState<MedicalInfo>(defaultMedicalInfo);
-
+  const [primaryPhotoRelease, setPrimaryPhotoRelease] = useState(false);
   const [children, setChildren] = useState<Child[]>([]);
-  const [showModal, setShowModal] = useState(false);
 
-  const selectedChild =
-    activeMemberId !== "primary"
-      ? children.find((c) => (c.localId?.toString?.() || c._id?.toString?.()) === activeMemberId)
-      : null;
-
+  // Load user data
   useEffect(() => {
     if (!isLoaded || !user?.id) {
       setLoading(false);
@@ -67,8 +104,12 @@ export default function PersonalInfo() {
       try {
         const res = await fetch(`/api/users/${user.id}`);
         const data = await res.json();
-        if (!data || !data._id) throw new Error("User not found in database.");
 
+        if (!data || !data._id) {
+          throw new Error("User not found in database.");
+        }
+
+        // Set primary account data
         setFirstName(data.firstName || "");
         setLastName(data.lastName || "");
         setEmail(data.email || "");
@@ -76,38 +117,51 @@ export default function PersonalInfo() {
         setBirthday(data.birthday?.split("T")[0] || "");
         setPhoneNumbers(data.phoneNumbers || { cell: "", work: "" });
         setAddress(data.address || { home: "", city: "", zipCode: "" });
-        setPrimaryEmergencyContacts(
-          (data.emergencyContacts || []).slice(0, 2).concat(
-            Array(2 - (data.emergencyContacts?.length || 0)).fill({
-              name: "",
-              phone: "",
-              work: "",
-              relationship: "",
-              canPickup: false,
-            }),
-          ),
-        );
-        setPrimaryMedicalInfo(data.medicalInfo || defaultMedicalInfo);
 
+        // Set emergency contacts
+        const contacts = data.emergencyContacts || [];
+        setPrimaryEmergencyContacts([
+          contacts[0] || { name: "", phone: "", work: "", relationship: "", canPickup: false },
+          contacts[1] || { name: "", phone: "", work: "", relationship: "", canPickup: false },
+        ]);
+
+        setPrimaryMedicalInfo({
+          allergies: data.medicalInfo?.allergies || "",
+          insurance: data.medicalInfo?.insurance || "",
+          doctorName: data.medicalInfo?.doctorName || "",
+          doctorPhone: data.medicalInfo?.doctorPhone || "",
+          behaviorNotes: data.medicalInfo?.behaviorNotes || "",
+          dietaryRestrictions: data.medicalInfo?.dietaryRestrictions || "",
+        });
+        setPrimaryPhotoRelease(data.medicalInfo?.photoRelease || false);
+
+        // Set children data
         const parsedChildren = (data.children || []).map((c: any, i: number) => ({
           ...c,
           localId: i + 1,
           birthday: c.birthday?.split("T")[0] || "",
-          emergencyContacts: (c.emergencyContacts || []).slice(0, 2).concat(
-            Array(2 - (c.emergencyContacts?.length || 0)).fill({
-              name: "",
-              phone: "",
-              work: "",
-              relationship: "",
-              canPickup: false,
-            }),
-          ),
-          medicalInfo: c.medicalInfo || defaultMedicalInfo,
+          address: c.address || { home: "", city: "", zipCode: "" },
+          usePrimaryAddress: !c.address?.home, // If no address, default to using primary
+          emergencyContacts: [
+            c.emergencyContacts?.[0] || { name: "", phone: "", work: "", relationship: "", canPickup: false },
+            c.emergencyContacts?.[1] || { name: "", phone: "", work: "", relationship: "", canPickup: false },
+          ],
+          usePrimaryEmergencyContacts: !c.emergencyContacts?.length, // If no contacts, default to using primary
+          medicalInfo: {
+            allergies: c.medicalInfo?.allergies || "",
+            insurance: c.medicalInfo?.insurance || "",
+            doctorName: c.medicalInfo?.doctorName || "",
+            doctorPhone: c.medicalInfo?.doctorPhone || "",
+            behaviorNotes: c.medicalInfo?.behaviorNotes || "",
+            dietaryRestrictions: c.medicalInfo?.dietaryRestrictions || "",
+          },
+          photoRelease: c.medicalInfo?.photoRelease || false,
         }));
 
         setChildren(parsedChildren);
       } catch (err) {
-        setError("Failed to load user data.");
+        console.error("Error fetching user data:", err);
+        setError("Failed to load user data. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -115,10 +169,6 @@ export default function PersonalInfo() {
 
     fetchUserData();
   }, [isLoaded, user]);
-
-  const handlePhoneChange = (field: "cell" | "work", value: string) => {
-    setPhoneNumbers((prev) => ({ ...prev, [field]: value }));
-  };
 
   const handleSaveChanges = async () => {
     try {
@@ -130,7 +180,7 @@ export default function PersonalInfo() {
         phoneNumbers,
         address,
         emergencyContacts: primaryEmergencyContacts,
-        medicalInfo: primaryMedicalInfo,
+        medicalInfo: { ...primaryMedicalInfo, photoRelease: primaryPhotoRelease },
         children,
       };
 
@@ -143,7 +193,7 @@ export default function PersonalInfo() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Update failed");
 
-      setEditingMemberId(null);
+      setIsEditing(false);
       toast({
         title: "Profile Updated",
         description: "Your changes have been saved successfully.",
@@ -158,255 +208,410 @@ export default function PersonalInfo() {
     }
   };
 
-  const handleAddChild = async (childData: {
+  const handleAddFamilyMember = async (memberData: {
     firstName: string;
     lastName: string;
     birthday: string;
     gender: Gender;
   }) => {
-    try {
-      const res = await fetch(`/api/users/${user?.id}/child`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...childData,
-          emergencyContacts: primaryEmergencyContacts,
-          medicalInfo: defaultMedicalInfo,
-        }),
-      });
-
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error || "Child creation failed");
-
-      setChildren((prev) => [...prev, { ...result.child, localId: prev.length + 1 }]);
-      toast({
-        title: "Child Added",
-        description: `${childData.firstName} ${childData.lastName} has been added successfully.`,
-      });
-      setShowModal(false);
-    } catch (err) {
-      console.error("Failed to add child:", err);
+    if (!user?.id) {
       toast({
         title: "Error",
-        description: "Failed to add child. Please try again.",
+        description: "User not authenticated.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      console.log("Adding new family member:", memberData);
+      const response = await fetch(`/api/users/${user.id}/child`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(memberData),
+      });
+
+      const result = await response.json();
+      if (!response.ok) {
+        console.log("Add child failed with error:", result.error);
+        throw new Error(result.error || "Failed to add family member");
+      }
+
+      console.log("Child added successfully:", result.child);
+      const newChild: Child = {
+        ...result.child,
+        localId: children.length + 1,
+        birthday: result.child.birthday?.split("T")[0] || memberData.birthday,
+        address: result.child.address || { home: "", city: "", zipCode: "" },
+        usePrimaryAddress: !result.child.address?.home,
+        emergencyContacts: result.child.emergencyContacts || [
+          { name: "", phone: "", work: "", relationship: "", canPickup: false },
+          { name: "", phone: "", work: "", relationship: "", canPickup: false },
+        ],
+        usePrimaryEmergencyContacts: !result.child.emergencyContacts?.length,
+        medicalInfo: {
+          allergies: result.child.medicalInfo?.allergies || "",
+          insurance: result.child.medicalInfo?.insurance || "",
+          doctorName: result.child.medicalInfo?.doctorName || "",
+          doctorPhone: result.child.medicalInfo?.doctorPhone || "",
+          behaviorNotes: result.child.medicalInfo?.behaviorNotes || "",
+          dietaryRestrictions: result.child.medicalInfo?.dietaryRestrictions || "",
+        },
+        photoRelease: result.child.medicalInfo?.photoRelease || false,
+      };
+
+      setChildren((prev) => [...prev, newChild]);
+      setShowAddDialog(false);
+
+      toast({
+        title: "Family Member Added",
+        description: `${memberData.firstName} ${memberData.lastName} has been added successfully.`,
+      });
+    } catch (err) {
+      console.error("Failed to add family member:", err);
+      toast({
+        title: "Error",
+        description: err instanceof Error ? err.message : "Failed to add family member. Please try again.",
         variant: "destructive",
       });
     }
   };
 
-  const handleDeleteChild = async (localId: number, childId?: string) => {
+  const handleDeleteFamilyMember = async (localId: number, childId?: string) => {
+    const child = children.find((c) => c.localId === localId);
+    if (!child) {
+      console.log(`Child with localId ${localId} not found`);
+      return;
+    }
+
+    if (!childId) {
+      console.log(`Child with localId ${localId} has no _id, removing locally only`);
+      if (confirm(`Are you sure you want to remove ${child.firstName} ${child.lastName}?`)) {
+        setChildren((prev) => prev.filter((c) => c.localId !== localId));
+        if (activeTab === `child-${localId}`) {
+          setActiveTab("primary");
+        }
+        toast({
+          title: "Family Member Removed",
+          description: `${child.firstName} ${child.lastName} has been removed successfully.`,
+        });
+      }
+      return;
+    }
+
+    if (!user?.id) {
+      toast({
+        title: "Error",
+        description: "User not authenticated.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      if (!childId) {
-        throw new Error("Child ID is missing");
-      }
-      if (!user?.id) {
-        throw new Error("User ID is missing");
-      }
-
-      const child = children.find((c) => c.localId === localId);
-      if (!confirm(`Are you sure you want to remove ${child?.firstName} ${child?.lastName}?`)) {
-        return;
-      }
-
-      console.log(`[FRONTEND] Deleting child with localId: ${localId}, childId: ${childId}, clerkID: ${user.id}`);
-
-      // Make API call to delete child
-      const res = await fetch(`/api/users/${user.id}/child/${childId}`, {
+      console.log(`Deleting child with ID: ${childId}`);
+      const response = await fetch(`/api/users/${user.id}/child/${childId}`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
       });
 
-      const result = await res.json();
-      if (!res.ok) {
-        console.error(`[FRONTEND] Delete failed: ${result.error}`);
-        throw new Error(result.error || "Failed to remove child");
+      const result = await response.json();
+      if (!response.ok) {
+        console.log("Delete child failed with error:", result.error);
+        throw new Error(result.error || "Failed to delete family member");
       }
 
-      // Refresh children from backend to ensure consistency
-      const userRes = await fetch(`/api/users/${user.id}`);
-      const userData = await userRes.json();
-      if (!userRes.ok) {
-        throw new Error(userData.error || "Failed to fetch updated user data");
-      }
-
-      setChildren(
-        userData.children.map((c: any, i: number) => ({
-          ...c,
-          localId: i + 1,
-          birthday: c.birthday?.split("T")[0] || "",
-          emergencyContacts: (c.emergencyContacts || []).slice(0, 2).concat(
-            Array(2 - (c.emergencyContacts?.length || 0)).fill({
-              name: "",
-              phone: "",
-              work: "",
-              relationship: "",
-              canPickup: false,
-            }),
-          ),
-          medicalInfo: c.medicalInfo || defaultMedicalInfo,
-        })),
-      );
-
-      // If the deleted child was the active profile, switch to primary
-      if (activeMemberId === localId.toString()) {
-        setActiveMemberId("primary");
-        setEditingMemberId(null);
+      console.log("Child deleted successfully:", result);
+      setChildren((prev) => prev.filter((c) => c.localId !== localId));
+      if (activeTab === `child-${localId}`) {
+        setActiveTab("primary");
       }
 
       toast({
-        title: "Child Removed",
-        description: `${child?.firstName} ${child?.lastName} has been removed successfully.`,
+        title: "Family Member Removed",
+        description: `${child.firstName} ${child.lastName} has been removed successfully.`,
       });
-    } catch (err: any) {
-      console.error(`[FRONTEND] Failed to remove child (localId: ${localId}, childId: ${childId}):`, err);
+    } catch (err) {
+      console.error("Failed to delete family member:", err);
       toast({
         title: "Error",
-        description: err.message || "Failed to remove child. Please try again.",
+        description: err instanceof Error ? err.message : "Failed to delete family member. Please try again.",
         variant: "destructive",
       });
     }
   };
 
-  if (loading) return <LoadingSpinner size="lg" />;
-  if (error) return <p className="text-red-500">{error}</p>;
+  if (loading) {
+    return (
+      <div className="flex min-h-[400px] items-center justify-center">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
-  const familyMembers = [
-    { id: "primary", name: `${firstName} ${lastName}`, type: "Primary" },
-    ...children.map((c) => ({ id: c.localId?.toString() || "", name: `${c.firstName} ${c.lastName}`, type: "Child" })),
-  ];
+  if (error) {
+    return (
+      <Card className="mx-auto mt-8 max-w-md">
+        <CardContent className="pt-6">
+          <p className="text-center text-red-600">{error}</p>
+        </CardContent>
+      </Card>
+    );
+  }
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-10">
-      <h2 className="mb-6 text-3xl font-bold text-gray-800">Account Information</h2>
-
-      <div className="mb-6">
-        <label htmlFor="profile-select" className="mb-1 block text-sm font-medium text-gray-700">
-          Select Profile
-        </label>
-        <Select value={activeMemberId} onValueChange={setActiveMemberId}>
-          <SelectTrigger id="profile-select" className="w-full">
-            <SelectValue placeholder="Select a profile" />
-          </SelectTrigger>
-          <SelectContent>
-            {familyMembers.map((member) => (
-              <SelectItem key={member.id} value={member.id}>
-                {member.name} {member.type === "Primary" ? "(Primary)" : ""}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      <div className="mb-4 mt-4 flex items-center justify-between">
-        <div className="flex gap-4">
-          {editingMemberId === activeMemberId ? (
-            <>
-              <button
-                onClick={handleSaveChanges}
-                className="rounded-md bg-green-600 px-4 py-2 text-white hover:bg-green-700"
-              >
-                Save
-              </button>
-              <button
-                onClick={() => setEditingMemberId(null)}
-                className="rounded-md bg-red-600 px-4 py-2 text-white hover:bg-red-700"
-              >
-                Cancel
-              </button>
-            </>
-          ) : (
-            <button
-              onClick={() => setEditingMemberId(activeMemberId)}
-              className="rounded-md bg-gray-600 px-4 py-2 text-white hover:bg-gray-700"
-            >
-              Edit {activeMemberId === "primary" ? "Primary Account" : "Member"}
-            </button>
-          )}
+    <div className="container mx-auto max-w-6xl px-4 py-8">
+      <div className="mb-8">
+        <div className="mb-4">
+          <h1 className="text-3xl font-bold text-gray-900">Account Information</h1>
+          <p className="mt-2 text-gray-600">Manage your personal and family information</p>
         </div>
 
-        <button
-          onClick={() => setShowModal(true)}
-          className="mt-6 rounded-md bg-navy-tertiary px-4 py-2 text-white hover:opacity-90"
-        >
-          Add New Family Member
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <Button onClick={() => setShowAddDialog(true)} variant="outline" className="gap-2">
+            <UserPlus className="h-4 w-4" />
+            <span className="hidden sm:inline">Add Family Member</span>
+            <span className="sm:hidden">Add Member</span>
+          </Button>
+
+          {isEditing ? (
+            <>
+              <Button onClick={handleSaveChanges} className="gap-2">
+                <Save className="h-4 w-4" />
+                <span className="hidden sm:inline">Save Changes</span>
+                <span className="sm:hidden">Save</span>
+              </Button>
+              <Button onClick={() => setIsEditing(false)} variant="outline" className="gap-2">
+                <X className="h-4 w-4" />
+                <span className="hidden sm:inline">Cancel</span>
+                <span className="sm:hidden">Cancel</span>
+              </Button>
+            </>
+          ) : (
+            <Button onClick={() => setIsEditing(true)} variant="outline" className="gap-2">
+              <Edit3 className="h-4 w-4" />
+              <span className="hidden sm:inline">Edit Information</span>
+              <span className="sm:hidden">Edit</span>
+            </Button>
+          )}
+        </div>
       </div>
 
-      <AddChildModal isOpen={showModal} onClose={() => setShowModal(false)} onSubmit={handleAddChild} />
+      <div className="mb-6">
+        <h3 className="mb-3 text-sm font-medium text-gray-500">Family Members</h3>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            variant={activeTab === "primary" ? "default" : "outline"}
+            size="sm"
+            className="flex items-center gap-2"
+            onClick={() => setActiveTab("primary")}
+          >
+            <User className="h-4 w-4" />
+            <span className="hidden sm:inline">
+              {firstName} {lastName}
+            </span>
+            <span className="sm:hidden">
+              {firstName.charAt(0)}
+              {lastName.charAt(0)}
+            </span>
+            <Badge variant="secondary" className="ml-1">
+              Primary
+            </Badge>
+          </Button>
 
-      {activeMemberId === "primary" ? (
-        <>
-          <PrimaryAccountSection
-            isEditing={editingMemberId === activeMemberId}
-            firstName={firstName}
-            lastName={lastName}
-            gender={gender}
-            birthday={birthday}
-            phoneNumbers={phoneNumbers}
-            onChange={(field, value) => {
-              if (field === "firstName") setFirstName(value);
-              if (field === "lastName") setLastName(value);
-              if (field === "gender") setGender(value);
-              if (field === "birthday") setBirthday(value);
-            }}
-            onPhoneChange={handlePhoneChange}
-          />
-          <EmergencyContactsSection
-            isEditing={editingMemberId === activeMemberId}
-            contacts={primaryEmergencyContacts}
-            onUpdate={(index, updatedContact) => {
-              const updated = [...primaryEmergencyContacts];
-              updated[index] = updatedContact;
-              setPrimaryEmergencyContacts(updated.slice(0, 2));
-            }}
-          />
-          <MedicalInfoSection
-            isEditing={editingMemberId === activeMemberId}
-            data={primaryMedicalInfo}
-            onUpdate={setPrimaryMedicalInfo}
-          />
-        </>
-      ) : (
-        selectedChild && (
-          <>
-            <ChildSection
-              child={selectedChild}
-              isEditing={editingMemberId === activeMemberId}
-              onEdit={(id, field, value) =>
-                setChildren((prev) => prev.map((c) => (c.localId === id ? { ...c, [field]: value } : c)))
-              }
-              onDelete={handleDeleteChild} // Use the new handler
+          {children.map((child) => (
+            <Button
+              key={child.localId}
+              variant={activeTab === `child-${child.localId}` ? "default" : "outline"}
+              size="sm"
+              className="flex items-center gap-2"
+              onClick={() => setActiveTab(`child-${child.localId}`)}
+            >
+              <User className="h-4 w-4" />
+              <span className="hidden sm:inline">
+                {child.firstName} {child.lastName}
+              </span>
+              <span className="sm:hidden">
+                {child.firstName.charAt(0)}
+                {child.lastName.charAt(0)}
+              </span>
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {activeTab === "primary" && (
+          <div className="space-y-6">
+            <PrimaryAccountSection
+              firstName={firstName}
+              lastName={lastName}
+              gender={gender}
+              birthday={birthday}
+              phoneNumbers={phoneNumbers}
+              address={address}
+              isEditing={isEditing}
+              onChange={(field, value) => {
+                if (field === "firstName") setFirstName(value);
+                if (field === "lastName") setLastName(value);
+                if (field === "gender") setGender(value as Gender);
+                if (field === "birthday") setBirthday(value);
+              }}
+              onPhoneChange={(field, value) => {
+                setPhoneNumbers((prev) => ({ ...prev, [field]: value }));
+              }}
+              onAddressChange={(field, value) => {
+                setAddress((prev) => ({ ...prev, [field]: value }));
+              }}
             />
+
+            <Separator />
+
+            <AddressSection
+              address={address}
+              usePrimaryAddress={false}
+              primaryAddress={address}
+              isEditing={isEditing}
+              onAddressChange={(field, value) => {
+                setAddress((prev) => ({ ...prev, [field]: value }));
+              }}
+              onUsePrimaryChange={() => {}}
+              showPrimaryOption={false}
+            />
+
+            <Separator />
+
             <EmergencyContactsSection
-              isEditing={editingMemberId === activeMemberId}
-              contacts={selectedChild.emergencyContacts}
-              onUpdate={(index, updatedContact) => {
-                setChildren((prev) =>
-                  prev.map((child) =>
-                    child.localId === selectedChild.localId
-                      ? {
-                          ...child,
-                          emergencyContacts: child.emergencyContacts
-                            .map((c, i) => (i === index ? updatedContact : c))
-                            .slice(0, 2),
-                        }
-                      : child,
-                  ),
-                );
+              contacts={primaryEmergencyContacts}
+              usePrimaryContacts={false}
+              primaryContacts={primaryEmergencyContacts}
+              isEditing={isEditing}
+              onUpdate={(index, contact) => {
+                const updated = [...primaryEmergencyContacts];
+                updated[index] = contact;
+                setPrimaryEmergencyContacts(updated);
               }}
+              onUsePrimaryChange={() => {}}
+              showPrimaryOption={false}
             />
-            <MedicalInfoSection
-              isEditing={editingMemberId === activeMemberId}
-              data={selectedChild.medicalInfo || defaultMedicalInfo}
-              onUpdate={(updated) => {
-                setChildren((prev) =>
-                  prev.map((c) => (c.localId === selectedChild.localId ? { ...c, medicalInfo: updated } : c)),
-                );
-              }}
+
+            <Separator />
+
+            <ConsentSection
+              photoRelease={primaryPhotoRelease}
+              isEditing={isEditing}
+              onUpdate={setPrimaryPhotoRelease}
             />
-          </>
-        )
-      )}
+
+            <Separator />
+
+            <MedicalInfoSection data={primaryMedicalInfo} isEditing={isEditing} onUpdate={setPrimaryMedicalInfo} />
+          </div>
+        )}
+
+        {children.map(
+          (child) =>
+            activeTab === `child-${child.localId}` && (
+              <div key={child.localId} className="space-y-6">
+                <FamilyMemberSection
+                  child={child}
+                  isEditing={isEditing}
+                  onEdit={(id, field, value) => {
+                    setChildren((prev) => prev.map((c) => (c.localId === id ? { ...c, [field]: value } : c)));
+                  }}
+                  onDelete={handleDeleteFamilyMember}
+                />
+
+                <Separator />
+
+                <AddressSection
+                  address={child.address || { home: "", city: "", zipCode: "" }}
+                  usePrimaryAddress={child.usePrimaryAddress}
+                  primaryAddress={address}
+                  isEditing={isEditing}
+                  onAddressChange={(field, value) => {
+                    setChildren((prev) =>
+                      prev.map((c) =>
+                        c.localId === child.localId
+                          ? {
+                              ...c,
+                              address: {
+                                ...(c.address || { home: "", city: "", zipCode: "" }),
+                                [field]: value,
+                              },
+                            }
+                          : c,
+                      ),
+                    );
+                  }}
+                  onUsePrimaryChange={(usePrimary) => {
+                    setChildren((prev) =>
+                      prev.map((c) => (c.localId === child.localId ? { ...c, usePrimaryAddress: usePrimary } : c)),
+                    );
+                  }}
+                  showPrimaryOption={true}
+                />
+
+                <Separator />
+
+                <EmergencyContactsSection
+                  contacts={child.emergencyContacts}
+                  usePrimaryContacts={child.usePrimaryEmergencyContacts}
+                  primaryContacts={primaryEmergencyContacts}
+                  isEditing={isEditing}
+                  onUpdate={(index, contact) => {
+                    setChildren((prev) =>
+                      prev.map((c) =>
+                        c.localId === child.localId
+                          ? {
+                              ...c,
+                              emergencyContacts: c.emergencyContacts.map((ec, i) => (i === index ? contact : ec)),
+                            }
+                          : c,
+                      ),
+                    );
+                  }}
+                  onUsePrimaryChange={(usePrimary) => {
+                    setChildren((prev) =>
+                      prev.map((c) =>
+                        c.localId === child.localId ? { ...c, usePrimaryEmergencyContacts: usePrimary } : c,
+                      ),
+                    );
+                  }}
+                  showPrimaryOption={true}
+                />
+
+                <Separator />
+
+                <ConsentSection
+                  photoRelease={child.photoRelease}
+                  isEditing={isEditing}
+                  onUpdate={(photoRelease) => {
+                    setChildren((prev) => prev.map((c) => (c.localId === child.localId ? { ...c, photoRelease } : c)));
+                  }}
+                />
+
+                <Separator />
+
+                <MedicalInfoSection
+                  data={child.medicalInfo}
+                  isEditing={isEditing}
+                  onUpdate={(updated) => {
+                    setChildren((prev) =>
+                      prev.map((c) => (c.localId === child.localId ? { ...c, medicalInfo: updated } : c)),
+                    );
+                  }}
+                />
+              </div>
+            ),
+        )}
+      </div>
+
+      <AddFamilyMemberDialog
+        isOpen={showAddDialog}
+        onClose={() => setShowAddDialog(false)}
+        onSubmit={handleAddFamilyMember}
+      />
     </div>
   );
 }

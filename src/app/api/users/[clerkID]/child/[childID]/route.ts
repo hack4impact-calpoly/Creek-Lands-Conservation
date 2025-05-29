@@ -1,77 +1,209 @@
-// src/app/api/users/[clerkID]/child/[childID]/route.ts
-import { NextRequest, NextResponse } from "next/server";
+import { type NextRequest, NextResponse } from "next/server";
 import connectDB from "@/database/db";
 import User from "@/database/userSchema";
-import Event from "@/database/eventSchema"; // Import the Event model
-import Waiver from "@/database/waiverSchema";
 import mongoose from "mongoose";
+import Waiver from "@/database/waiverSchema";
+import { deleteFileFromS3 } from "@/lib/s3";
+import Event from "@/database/eventSchema";
+
+async function unregisterChildFromEvent(
+  eventId: string,
+  parentId: string,
+  childId: string,
+  session?: mongoose.ClientSession,
+) {
+  const event = await Event.findById(eventId).session(session ?? null);
+  if (!event) {
+    throw new Error("Event not found");
+  }
+
+  const childRegIndex = event.registeredChildren.findIndex(
+    (rc: any) => rc.parent.toString() === parentId && rc.childId.toString() === childId,
+  );
+  if (childRegIndex === -1) {
+    return; // Child not registered for this event
+  }
+
+  event.registeredChildren.splice(childRegIndex, 1);
+
+  const waivers = await Waiver.find({
+    eventId,
+    type: "completed",
+    belongsToUser: parentId,
+    childSubdocId: childId,
+  }).session(session ?? null);
+
+  for (const waiver of waivers) {
+    try {
+      await deleteFileFromS3(waiver.fileKey);
+      console.log(`Deleted S3 file: ${waiver.fileKey}`);
+    } catch (s3Err) {
+      console.error(`Failed to delete S3 file ${waiver.fileKey}:`, s3Err);
+    }
+  }
+
+  await Waiver.deleteMany({ _id: { $in: waivers.map((w) => w._id) } }, { session });
+
+  await User.findByIdAndUpdate(
+    parentId,
+    {
+      $pull: {
+        "children.$[child].registeredEvents": eventId,
+        "children.$[child].waiversSigned": { $in: waivers.map((w) => w._id) },
+      },
+    },
+    {
+      arrayFilters: [{ "child._id": childId }],
+      session,
+    },
+  );
+
+  await event.save({ session });
+}
 
 export async function DELETE(req: NextRequest, { params }: { params: { clerkID: string; childID: string } }) {
-  console.log(`[DELETE] Received request for clerkID: ${params.clerkID}, childID: ${params.childID}`);
-
   try {
     await connectDB();
-    console.log("[DELETE] Database connected");
 
-    const { clerkID, childID } = params;
-    const normalizedClerkID = clerkID.trim();
-
-    // Validate childID
-    if (!mongoose.Types.ObjectId.isValid(childID)) {
-      console.error(`[DELETE] Invalid childID format: ${childID}`);
+    if (!mongoose.Types.ObjectId.isValid(params.childID)) {
       return NextResponse.json({ error: "Invalid child ID format" }, { status: 400 });
     }
 
-    // Find the user
-    console.log(`[DELETE] Querying user with clerkID: ${normalizedClerkID}`);
-    const user = await User.findOne({ clerkID: normalizedClerkID });
+    const user = await User.findOne({ clerkID: params.clerkID });
     if (!user) {
-      console.error(`[DELETE] User not found for clerkID: ${normalizedClerkID}`);
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
-    console.log(`[DELETE] Found user: ${user._id}, children count: ${user.children.length}`);
 
-    // Check if the child exists
-    const childExists = user.children.some((child: any) => child._id.toString() === childID);
-    if (!childExists) {
-      console.error(`[DELETE] Child with ID ${childID} not found in user ${normalizedClerkID}'s children`);
-      return NextResponse.json({ error: "Child not found in user's children" }, { status: 404 });
+    if (!Array.isArray(user.children) || user.children.length === 0) {
+      return NextResponse.json({ error: "No children found for this user" }, { status: 404 });
     }
 
-    // Remove the child from User's children array
+    const child = user.children.find((c: any) => c._id.toString() === params.childID);
+    if (!child) {
+      return NextResponse.json({ error: "Child not found" }, { status: 404 });
+    }
+
+    const events = await Event.find({
+      "registeredChildren.childId": params.childID,
+    });
+
+    const session = await mongoose.startSession();
+    session.startTransaction();
+
+    try {
+      for (const event of events) {
+        await unregisterChildFromEvent(event._id.toString(), user._id.toString(), params.childID, session);
+      }
+
+      // Remove the child using $pull
+      await User.updateOne(
+        { clerkID: params.clerkID },
+        { $pull: { children: { _id: new mongoose.Types.ObjectId(params.childID) } } },
+        { session },
+      );
+
+      await session.commitTransaction();
+    } catch (err) {
+      await session.abortTransaction();
+      console.error("Error in delete child transaction:", err);
+      return NextResponse.json({ error: "Failed to delete child due to server error" }, { status: 500 });
+    } finally {
+      session.endSession();
+    }
+
+    return NextResponse.json({ message: "Child deleted successfully" }, { status: 200 });
+  } catch (error) {
+    console.error("Delete child failed:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+// PUT /api/users/[clerkID]/child/[childID]
+export async function PUT(req: NextRequest, { params }: { params: { clerkID: string; childID: string } }) {
+  try {
+    await connectDB();
+    const data = await req.json();
+
+    // Validate childID format
+    if (!mongoose.Types.ObjectId.isValid(params.childID)) {
+      return NextResponse.json({ error: "Invalid child ID format" }, { status: 400 });
+    }
+
+    // Validate required fields
+    const errors: string[] = [];
+    if (!data.firstName?.trim()) errors.push("First Name is required.");
+    if (!data.lastName?.trim()) errors.push("Last Name is required.");
+    if (!data.gender?.trim()) errors.push("Gender is required.");
+    if (!data.birthday?.trim()) errors.push("Birthday is required.");
+
+    // Validate address if not using primary
+    if (!data.usePrimaryAddress && data.address?.zipCode && !/^\d{5}$/.test(data.address.zipCode)) {
+      errors.push("ZIP code must be exactly 5 digits.");
+    }
+
+    if (errors.length > 0) {
+      return NextResponse.json({ error: errors }, { status: 400 });
+    }
+
+    // Prepare update data
+    const updateData: any = {
+      "children.$.firstName": data.firstName,
+      "children.$.lastName": data.lastName,
+      "children.$.birthday": data.birthday,
+      "children.$.gender": data.gender,
+    };
+
+    // Handle address
+    if (!data.usePrimaryAddress && data.address) {
+      updateData["children.$.address"] = {
+        home: data.address.home || "",
+        city: data.address.city || "",
+        zipCode: data.address.zipCode || "",
+      };
+    } else {
+      updateData["children.$.address"] = {
+        home: "",
+        city: "",
+        zipCode: "",
+      };
+    }
+
+    // Handle emergency contacts
+    if (!data.usePrimaryEmergencyContacts && data.emergencyContacts) {
+      updateData["children.$.emergencyContacts"] = data.emergencyContacts;
+    } else {
+      updateData["children.$.emergencyContacts"] = [];
+    }
+
+    // Handle medical info
+    updateData["children.$.medicalInfo"] = {
+      photoRelease: data.photoRelease || false,
+      allergies: data.medicalInfo?.allergies || "",
+      insurance: data.medicalInfo?.insurance || "",
+      doctorName: data.medicalInfo?.doctorName || "",
+      doctorPhone: data.medicalInfo?.doctorPhone || "",
+      behaviorNotes: data.medicalInfo?.behaviorNotes || "",
+      dietaryRestrictions: data.medicalInfo?.dietaryRestrictions || "",
+    };
+
     const updatedUser = await User.findOneAndUpdate(
-      { clerkID: normalizedClerkID },
-      { $pull: { children: { _id: new mongoose.Types.ObjectId(childID) } } },
+      {
+        clerkID: params.clerkID,
+        "children._id": params.childID,
+      },
+      { $set: updateData },
       { new: true },
     );
 
     if (!updatedUser) {
-      console.error(`[DELETE] Failed to update user ${normalizedClerkID} after child removal`);
-      return NextResponse.json({ error: "Failed to update user" }, { status: 500 });
+      return NextResponse.json({ error: "User or child not found" }, { status: 404 });
     }
 
-    // Verify child removal
-    const childStillExists = updatedUser.children.some((child: any) => child._id.toString() === childID);
-    if (childStillExists) {
-      console.error(`[DELETE] Child ${childID} was not removed from user ${normalizedClerkID}`);
-      return NextResponse.json({ error: "Failed to remove child" }, { status: 500 });
-    }
-    console.log(`[DELETE] Child ${childID} successfully removed from user ${normalizedClerkID}`);
+    const updatedChild = updatedUser.children.find((child: any) => child._id.toString() === params.childID);
 
-    // Unregister the child from all events
-    const eventUpdateResult = await Event.updateMany(
-      { "registeredChildren.childId": new mongoose.Types.ObjectId(childID) },
-      { $pull: { registeredChildren: { childId: new mongoose.Types.ObjectId(childID) } } },
-    );
-    console.log(`[DELETE] Unregistered child ${childID} from ${eventUpdateResult.modifiedCount} events`);
-
-    // Clean up waivers
-    const waiverResult = await Waiver.deleteMany({ childSubdocId: childID, isForChild: true });
-    console.log(`[DELETE] Deleted ${waiverResult.deletedCount} waivers for child ${childID}`);
-
-    return NextResponse.json({ message: "Child removed successfully" }, { status: 200 });
+    return NextResponse.json({ child: updatedChild }, { status: 200 });
   } catch (error) {
-    console.error(`[DELETE] Error for clerkID ${params.clerkID}, childID ${params.childID}:`, error);
+    console.error("Update child failed:", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

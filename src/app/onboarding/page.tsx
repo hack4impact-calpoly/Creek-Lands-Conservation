@@ -55,7 +55,7 @@ export default function OnboardingPage() {
   const handleSkip = () => router.push("/");
 
   return (
-    <Card className="mx-auto max-w-lg rounded-lg bg-white p-2 shadow-md">
+    <Card className="mx-auto mt-6 max-w-lg rounded-lg bg-white p-2 shadow-md">
       <CardContent>
         <h1 className="mb-4 text-center text-xl font-bold">Complete Your Profile</h1>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 sm:space-y-6">

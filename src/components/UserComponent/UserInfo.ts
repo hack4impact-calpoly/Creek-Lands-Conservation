@@ -36,12 +36,10 @@ export interface EmergencyContact {
 }
 
 export interface MedicalInfo {
-  photoRelease: boolean;
   allergies: string;
   insurance: string;
   doctorName: string;
   doctorPhone: string;
   behaviorNotes: string;
   dietaryRestrictions: string;
-  otherNotes: string;
 }
