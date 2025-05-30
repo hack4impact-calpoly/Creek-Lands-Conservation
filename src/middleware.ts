@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 const isOnboardingRoute = createRouteMatcher(["/onboarding", "/onboarding/children"]);
 const isApiRoute = createRouteMatcher(["/api(.*)"]);
-const isPublicRoute = createRouteMatcher(["/", "/waiver", "/user", "/api/webhooks/clerk"]);
+const isPublicRoute = createRouteMatcher(["/", "/waivers", "/users", "/api/webhooks/clerk"]);
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 
 export default clerkMiddleware(async (auth, req: NextRequest) => {
