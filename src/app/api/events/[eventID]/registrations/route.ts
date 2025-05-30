@@ -137,8 +137,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { eventID: 
   }
 
   const isAdmin = await authenticateAdmin();
-  const user = await User.findOne({ clerkId: userId });
-  if (!user && !isAdmin) {
+  const user = await User.findOne({ clerkID: userId });
+  if (!user) {
     return NextResponse.json({ error: "User not found" }, { status: 404 });
   }
 
