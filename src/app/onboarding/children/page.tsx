@@ -54,6 +54,7 @@ export default function ChildrenOnboardingPage() {
         variant: "success",
       });
       router.push("/");
+      window.location.reload();
     } catch (err: any) {
       toast({
         title: "Error",
@@ -75,7 +76,7 @@ export default function ChildrenOnboardingPage() {
   };
 
   return (
-    <Card className="mx-auto max-w-lg rounded-lg bg-white p-2 shadow-md">
+    <Card className="mx-auto mt-6 max-w-lg rounded-lg bg-white p-2 shadow-md">
       <CardContent>
         <h1 className="mb-4 text-center text-xl font-bold">Add Your Children</h1>
         <p className="text-center text-sm text-gray-600">
