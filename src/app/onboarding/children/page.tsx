@@ -54,6 +54,7 @@ export default function ChildrenOnboardingPage() {
         variant: "success",
       });
       router.push("/");
+      window.location.reload();
     } catch (err: any) {
       toast({
         title: "Error",
