@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
-  Calendar,
-  Clock,
   MapPin,
   Mail,
   Text,
@@ -13,6 +11,8 @@ import {
   AlertCircle,
   ArrowLeft,
   DollarSign,
+  Clock1,
+  Clock5,
 } from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
@@ -563,12 +563,14 @@ export default function EventDetailsPage() {
       <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <Calendar className="h-5 w-5 text-gray-600" />
+            <Clock1 className="h-5 w-5 text-gray-600" />
             <div>
-              <p className="text-sm font-medium text-gray-500">Date</p>
+              <p className="text-sm font-medium text-gray-500">Start</p>
               <p className="font-semibold text-gray-900">
                 {event.startDate ? new Date(event.startDate).toLocaleDateString() : "TBD"} -{" "}
-                {event.endDate ? new Date(event.endDate).toLocaleDateString() : "TBD"}
+                {event.startDate
+                  ? new Date(event.startDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                  : "TBD"}{" "}
               </p>
             </div>
           </CardContent>
@@ -576,14 +578,11 @@ export default function EventDetailsPage() {
 
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <Clock className="h-5 w-5 text-gray-600" />
+            <Clock5 className="h-5 w-5 text-gray-600" />
             <div>
-              <p className="text-sm font-medium text-gray-500">Time</p>
+              <p className="text-sm font-medium text-gray-500">End</p>
               <p className="font-semibold text-gray-900">
-                {event.startDate
-                  ? new Date(event.startDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                  : "TBD"}{" "}
-                -{" "}
+                {event.endDate ? new Date(event.endDate).toLocaleDateString() : "TBD"} -{" "}
                 {event.endDate
                   ? new Date(event.endDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                   : "TBD"}
