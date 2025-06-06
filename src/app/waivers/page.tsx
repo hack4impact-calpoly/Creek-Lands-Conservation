@@ -525,7 +525,7 @@ export default function WaiversPage() {
 
       {/* Waiver Preview Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className={isMobile ? "max-w-[95vw] rounded-md" : "max-w-4xl rounded-md"}>
+        <DialogContent className={isMobile ? "max-w-[90vw] rounded-md" : "max-w-4xl rounded-md"}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5 text-primary" />
