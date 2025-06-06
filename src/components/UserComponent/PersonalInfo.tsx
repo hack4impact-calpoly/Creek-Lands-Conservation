@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { User, UserPlus } from "lucide-react";
 import { AddressSection } from "@/components/UserComponent/AddressSection";
 import { ConsentSection } from "@/components/UserComponent/ConsentSection";
+import PersonalInfoSkeleton from "@/components/UserComponent/PersonalInfoSkeleton";
 
 export type Gender = "" | "Male" | "Female" | "Non-binary" | "Prefer not to say";
 
@@ -857,12 +858,8 @@ export default function PersonalInfoPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex min-h-[400px] items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    );
+  if (loading || !isLoaded || !user) {
+    return <PersonalInfoSkeleton />;
   }
 
   if (error) {
