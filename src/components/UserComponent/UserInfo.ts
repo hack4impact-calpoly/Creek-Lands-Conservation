@@ -8,7 +8,7 @@ export interface Child {
   birthday: string; // YYYY-MM-DD format
   gender: "Male" | "Female" | "Non-binary" | "Prefer not to say" | "";
   medicalInfo: MedicalInfo;
-  emergencyContacts: EmergencyContact[]; // <-- Add this
+  emergencyContacts: EmergencyContact[];
 }
 
 export type NewChild = {

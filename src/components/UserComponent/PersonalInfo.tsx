@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { useUser } from "@clerk/nextjs";
 import { Card, CardContent } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -14,7 +13,7 @@ import { EmergencyContactsSection } from "@/components/UserComponent/EmergencyCo
 import { MedicalInfoSection } from "@/components/UserComponent/MedicalInfoSection";
 import { AddFamilyMemberDialog } from "@/components/UserComponent/AddFamilyMemberDialog";
 import { useToast } from "@/hooks/use-toast";
-import { User, UserPlus, Edit3, Save, X } from "lucide-react";
+import { User, UserPlus } from "lucide-react";
 import { AddressSection } from "@/components/UserComponent/AddressSection";
 import { ConsentSection } from "@/components/UserComponent/ConsentSection";
 
@@ -71,9 +70,11 @@ export default function PersonalInfoPage() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
   const [activeTab, setActiveTab] = useState("primary");
   const [showAddDialog, setShowAddDialog] = useState(false);
+
+  // Original data (what's saved in the database)
+  const [originalData, setOriginalData] = useState<any>(null);
 
   // Primary account data
   const [firstName, setFirstName] = useState("");
@@ -109,6 +110,9 @@ export default function PersonalInfoPage() {
           throw new Error("User not found in database.");
         }
 
+        // Store original data for reference
+        setOriginalData(data);
+
         // Set primary account data
         setFirstName(data.firstName || "");
         setLastName(data.lastName || "");
@@ -141,12 +145,12 @@ export default function PersonalInfoPage() {
           localId: i + 1,
           birthday: c.birthday?.split("T")[0] || "",
           address: c.address || { home: "", city: "", zipCode: "" },
-          usePrimaryAddress: !c.address?.home, // If no address, default to using primary
+          usePrimaryAddress: !c.address?.home,
           emergencyContacts: [
             c.emergencyContacts?.[0] || { name: "", phone: "", work: "", relationship: "", canPickup: false },
             c.emergencyContacts?.[1] || { name: "", phone: "", work: "", relationship: "", canPickup: false },
           ],
-          usePrimaryEmergencyContacts: !c.emergencyContacts?.length, // If no contacts, default to using primary
+          usePrimaryEmergencyContacts: !c.emergencyContacts?.length,
           medicalInfo: {
             allergies: c.medicalInfo?.allergies || "",
             insurance: c.medicalInfo?.insurance || "",
@@ -170,21 +174,33 @@ export default function PersonalInfoPage() {
     fetchUserData();
   }, [isLoaded, user]);
 
-  const handleSaveChanges = async () => {
+  // Save only primary account basic info (name, gender, birthday, phone)
+  const handleSavePrimaryAccount = async (): Promise<void> => {
+    if (!user?.id || !originalData) {
+      toast({
+        title: "Error",
+        description: "User not authenticated.",
+        variant: "destructive",
+      });
+      throw new Error("User not authenticated");
+    }
+
     try {
       const payload = {
+        // Only update the basic account fields
         firstName,
         lastName,
         gender,
         birthday,
         phoneNumbers,
-        address,
-        emergencyContacts: primaryEmergencyContacts,
-        medicalInfo: { ...primaryMedicalInfo, photoRelease: primaryPhotoRelease },
-        children,
+        // Keep original data for other fields
+        address: originalData.address,
+        emergencyContacts: originalData.emergencyContacts,
+        medicalInfo: originalData.medicalInfo,
+        children: originalData.children,
       };
 
-      const res = await fetch(`/api/users/${user?.id}`, {
+      const res = await fetch(`/api/users/${user.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -193,10 +209,12 @@ export default function PersonalInfoPage() {
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || "Update failed");
 
-      setIsEditing(false);
+      // Update original data with the saved changes
+      setOriginalData(result);
+
       toast({
-        title: "Profile Updated",
-        description: "Your changes have been saved successfully.",
+        title: "Account Information Updated",
+        description: "Your basic account information has been saved successfully.",
       });
     } catch (err) {
       console.error("Save failed:", err);
@@ -205,6 +223,504 @@ export default function PersonalInfoPage() {
         description: "Failed to save changes. Please try again.",
         variant: "destructive",
       });
+      throw err;
+    }
+  };
+
+  // Save only address information
+  const handleSaveAddress = async (): Promise<void> => {
+    if (!user?.id || !originalData) {
+      toast({
+        title: "Error",
+        description: "User not authenticated.",
+        variant: "destructive",
+      });
+      throw new Error("User not authenticated");
+    }
+
+    try {
+      const payload = {
+        // Keep original data for other fields
+        firstName: originalData.firstName,
+        lastName: originalData.lastName,
+        gender: originalData.gender,
+        birthday: originalData.birthday,
+        phoneNumbers: originalData.phoneNumbers,
+        // Only update address
+        address,
+        emergencyContacts: originalData.emergencyContacts,
+        medicalInfo: originalData.medicalInfo,
+        children: originalData.children,
+      };
+
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Update failed");
+
+      // Update original data with the saved changes
+      setOriginalData(result);
+
+      toast({
+        title: "Address Updated",
+        description: "Your address information has been saved successfully.",
+      });
+    } catch (err) {
+      console.error("Save failed:", err);
+      toast({
+        title: "Error",
+        description: "Failed to save changes. Please try again.",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  // Save only emergency contacts
+  const handleSaveEmergencyContacts = async (): Promise<void> => {
+    if (!user?.id || !originalData) {
+      toast({
+        title: "Error",
+        description: "User not authenticated.",
+        variant: "destructive",
+      });
+      throw new Error("User not authenticated");
+    }
+
+    try {
+      const payload = {
+        // Keep original data for other fields
+        firstName: originalData.firstName,
+        lastName: originalData.lastName,
+        gender: originalData.gender,
+        birthday: originalData.birthday,
+        phoneNumbers: originalData.phoneNumbers,
+        address: originalData.address,
+        // Only update emergency contacts
+        emergencyContacts: primaryEmergencyContacts,
+        medicalInfo: originalData.medicalInfo,
+        children: originalData.children,
+      };
+
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Update failed");
+
+      // Update original data with the saved changes
+      setOriginalData(result);
+
+      toast({
+        title: "Emergency Contacts Updated",
+        description: "Your emergency contacts have been saved successfully.",
+      });
+    } catch (err) {
+      console.error("Save failed:", err);
+      toast({
+        title: "Error",
+        description: "Failed to save changes. Please try again.",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  // Save only consent information
+  const handleSaveConsent = async (): Promise<void> => {
+    if (!user?.id || !originalData) {
+      toast({
+        title: "Error",
+        description: "User not authenticated.",
+        variant: "destructive",
+      });
+      throw new Error("User not authenticated");
+    }
+
+    try {
+      const payload = {
+        // Keep original data for other fields
+        firstName: originalData.firstName,
+        lastName: originalData.lastName,
+        gender: originalData.gender,
+        birthday: originalData.birthday,
+        phoneNumbers: originalData.phoneNumbers,
+        address: originalData.address,
+        emergencyContacts: originalData.emergencyContacts,
+        // Only update medical info with photo release
+        medicalInfo: { ...originalData.medicalInfo, photoRelease: primaryPhotoRelease },
+        children: originalData.children,
+      };
+
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Update failed");
+
+      // Update original data with the saved changes
+      setOriginalData(result);
+
+      toast({
+        title: "Consent Updated",
+        description: "Your photo release consent has been saved successfully.",
+      });
+    } catch (err) {
+      console.error("Save failed:", err);
+      toast({
+        title: "Error",
+        description: "Failed to save changes. Please try again.",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  // Save only medical information
+  const handleSaveMedicalInfo = async (): Promise<void> => {
+    if (!user?.id || !originalData) {
+      toast({
+        title: "Error",
+        description: "User not authenticated.",
+        variant: "destructive",
+      });
+      throw new Error("User not authenticated");
+    }
+
+    try {
+      const payload = {
+        // Keep original data for other fields
+        firstName: originalData.firstName,
+        lastName: originalData.lastName,
+        gender: originalData.gender,
+        birthday: originalData.birthday,
+        phoneNumbers: originalData.phoneNumbers,
+        address: originalData.address,
+        emergencyContacts: originalData.emergencyContacts,
+        // Only update medical info
+        medicalInfo: { ...primaryMedicalInfo, photoRelease: originalData.medicalInfo?.photoRelease || false },
+        children: originalData.children,
+      };
+
+      const res = await fetch(`/api/users/${user.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Update failed");
+
+      // Update original data with the saved changes
+      setOriginalData(result);
+
+      toast({
+        title: "Medical Information Updated",
+        description: "Your medical information has been saved successfully.",
+      });
+    } catch (err) {
+      console.error("Save failed:", err);
+      toast({
+        title: "Error",
+        description: "Failed to save changes. Please try again.",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  // Save only child's basic information (name, gender, birthday)
+  const handleSaveChildBasicInfo = async (child: Child): Promise<void> => {
+    if (!user?.id || !child._id) {
+      toast({
+        title: "Error",
+        description: "User not authenticated or child ID missing.",
+        variant: "destructive",
+      });
+      throw new Error("User not authenticated or child ID missing");
+    }
+
+    try {
+      // Find the original child data
+      const originalChild = originalData?.children?.find((c: any) => c._id === child._id);
+      if (!originalChild) {
+        throw new Error("Original child data not found");
+      }
+
+      const payload = {
+        // Only update basic info
+        firstName: child.firstName,
+        lastName: child.lastName,
+        birthday: child.birthday,
+        gender: child.gender,
+        // Keep original data for other fields
+        address: originalChild.address,
+        usePrimaryAddress: originalChild.usePrimaryAddress,
+        emergencyContacts: originalChild.emergencyContacts,
+        usePrimaryEmergencyContacts: originalChild.usePrimaryEmergencyContacts,
+        medicalInfo: originalChild.medicalInfo,
+        photoRelease: originalChild.photoRelease,
+      };
+
+      const res = await fetch(`/api/users/${user.id}/child/${child._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Update failed");
+
+      toast({
+        title: "Basic Information Updated",
+        description: `${child.firstName} ${child.lastName}'s basic information has been saved successfully.`,
+      });
+    } catch (err) {
+      console.error("Save child basic info failed:", err);
+      toast({
+        title: "Error",
+        description: "Failed to save basic information. Please try again.",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  // Save only child's address information
+  const handleSaveChildAddress = async (child: Child): Promise<void> => {
+    if (!user?.id || !child._id) {
+      toast({
+        title: "Error",
+        description: "User not authenticated or child ID missing.",
+        variant: "destructive",
+      });
+      throw new Error("User not authenticated or child ID missing");
+    }
+
+    try {
+      // Find the original child data
+      const originalChild = originalData?.children?.find((c: any) => c._id === child._id);
+      if (!originalChild) {
+        throw new Error("Original child data not found");
+      }
+
+      const payload = {
+        // Keep original data for other fields
+        firstName: originalChild.firstName,
+        lastName: originalChild.lastName,
+        birthday: originalChild.birthday,
+        gender: originalChild.gender,
+        // Only update address info
+        address: child.address,
+        usePrimaryAddress: child.usePrimaryAddress,
+        emergencyContacts: originalChild.emergencyContacts,
+        usePrimaryEmergencyContacts: originalChild.usePrimaryEmergencyContacts,
+        medicalInfo: originalChild.medicalInfo,
+        photoRelease: originalChild.photoRelease,
+      };
+
+      const res = await fetch(`/api/users/${user.id}/child/${child._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Update failed");
+
+      toast({
+        title: "Address Updated",
+        description: `${child.firstName} ${child.lastName}'s address information has been saved successfully.`,
+      });
+    } catch (err) {
+      console.error("Save child address failed:", err);
+      toast({
+        title: "Error",
+        description: "Failed to save address information. Please try again.",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  // Save only child's emergency contacts
+  const handleSaveChildEmergencyContacts = async (child: Child): Promise<void> => {
+    if (!user?.id || !child._id) {
+      toast({
+        title: "Error",
+        description: "User not authenticated or child ID missing.",
+        variant: "destructive",
+      });
+      throw new Error("User not authenticated or child ID missing");
+    }
+
+    try {
+      // Find the original child data
+      const originalChild = originalData?.children?.find((c: any) => c._id === child._id);
+      if (!originalChild) {
+        throw new Error("Original child data not found");
+      }
+
+      const payload = {
+        // Keep original data for other fields
+        firstName: originalChild.firstName,
+        lastName: originalChild.lastName,
+        birthday: originalChild.birthday,
+        gender: originalChild.gender,
+        address: originalChild.address,
+        usePrimaryAddress: originalChild.usePrimaryAddress,
+        // Only update emergency contacts
+        emergencyContacts: child.emergencyContacts,
+        usePrimaryEmergencyContacts: child.usePrimaryEmergencyContacts,
+        medicalInfo: originalChild.medicalInfo,
+        photoRelease: originalChild.photoRelease,
+      };
+
+      const res = await fetch(`/api/users/${user.id}/child/${child._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Update failed");
+
+      toast({
+        title: "Emergency Contacts Updated",
+        description: `${child.firstName} ${child.lastName}'s emergency contacts have been saved successfully.`,
+      });
+    } catch (err) {
+      console.error("Save child emergency contacts failed:", err);
+      toast({
+        title: "Error",
+        description: "Failed to save emergency contacts. Please try again.",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  // Save only child's consent information
+  const handleSaveChildConsent = async (child: Child): Promise<void> => {
+    if (!user?.id || !child._id) {
+      toast({
+        title: "Error",
+        description: "User not authenticated or child ID missing.",
+        variant: "destructive",
+      });
+      throw new Error("User not authenticated or child ID missing");
+    }
+
+    try {
+      // Find the original child data
+      const originalChild = originalData?.children?.find((c: any) => c._id === child._id);
+      if (!originalChild) {
+        throw new Error("Original child data not found");
+      }
+
+      const payload = {
+        // Keep original data for other fields
+        firstName: originalChild.firstName,
+        lastName: originalChild.lastName,
+        birthday: originalChild.birthday,
+        gender: originalChild.gender,
+        address: originalChild.address,
+        usePrimaryAddress: originalChild.usePrimaryAddress,
+        emergencyContacts: originalChild.emergencyContacts,
+        usePrimaryEmergencyContacts: originalChild.usePrimaryEmergencyContacts,
+        medicalInfo: originalChild.medicalInfo,
+        // Only update photo release
+        photoRelease: child.photoRelease,
+      };
+
+      const res = await fetch(`/api/users/${user.id}/child/${child._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Update failed");
+
+      toast({
+        title: "Consent Updated",
+        description: `${child.firstName} ${child.lastName}'s photo release consent has been saved successfully.`,
+      });
+    } catch (err) {
+      console.error("Save child consent failed:", err);
+      toast({
+        title: "Error",
+        description: "Failed to save consent information. Please try again.",
+        variant: "destructive",
+      });
+      throw err;
+    }
+  };
+
+  // Save only child's medical information
+  const handleSaveChildMedicalInfo = async (child: Child): Promise<void> => {
+    if (!user?.id || !child._id) {
+      toast({
+        title: "Error",
+        description: "User not authenticated or child ID missing.",
+        variant: "destructive",
+      });
+      throw new Error("User not authenticated or child ID missing");
+    }
+
+    try {
+      // Find the original child data
+      const originalChild = originalData?.children?.find((c: any) => c._id === child._id);
+      if (!originalChild) {
+        throw new Error("Original child data not found");
+      }
+
+      const payload = {
+        // Keep original data for other fields
+        firstName: originalChild.firstName,
+        lastName: originalChild.lastName,
+        birthday: originalChild.birthday,
+        gender: originalChild.gender,
+        address: originalChild.address,
+        usePrimaryAddress: originalChild.usePrimaryAddress,
+        emergencyContacts: originalChild.emergencyContacts,
+        usePrimaryEmergencyContacts: originalChild.usePrimaryEmergencyContacts,
+        // Only update medical info
+        medicalInfo: child.medicalInfo,
+        photoRelease: originalChild.photoRelease,
+      };
+
+      const res = await fetch(`/api/users/${user.id}/child/${child._id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || "Update failed");
+
+      toast({
+        title: "Medical Information Updated",
+        description: `${child.firstName} ${child.lastName}'s medical information has been saved successfully.`,
+      });
+    } catch (err) {
+      console.error("Save child medical info failed:", err);
+      toast({
+        title: "Error",
+        description: "Failed to save medical information. Please try again.",
+        variant: "destructive",
+      });
+      throw err;
     }
   };
 
@@ -262,7 +778,7 @@ export default function PersonalInfoPage() {
 
       setChildren((prev) => [...prev, newChild]);
       setShowAddDialog(false);
-
+      window.location.reload();
       toast({
         title: "Family Member Added",
         description: `${memberData.firstName} ${memberData.lastName} has been added successfully.`,
@@ -362,38 +878,16 @@ export default function PersonalInfoPage() {
   return (
     <div className="container mx-auto max-w-6xl px-4 py-8">
       <div className="mb-8">
-        <div className="mb-4">
-          <h1 className="text-3xl font-bold text-gray-900">Account Information</h1>
-          <p className="mt-2 text-gray-600">Manage your personal and family information</p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-3">
-          <Button onClick={() => setShowAddDialog(true)} variant="outline" className="gap-2">
+        <div className="mb-4 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Account Information</h1>
+            <p className="mt-2 text-gray-600">Manage your personal and family information</p>
+          </div>
+          <Button onClick={() => setShowAddDialog(true)} className="gap-2">
             <UserPlus className="h-4 w-4" />
             <span className="hidden sm:inline">Add Family Member</span>
-            <span className="sm:hidden">Add Member</span>
+            <span className="sm:hidden">Add</span>
           </Button>
-
-          {isEditing ? (
-            <>
-              <Button onClick={handleSaveChanges} className="gap-2">
-                <Save className="h-4 w-4" />
-                <span className="hidden sm:inline">Save Changes</span>
-                <span className="sm:hidden">Save</span>
-              </Button>
-              <Button onClick={() => setIsEditing(false)} variant="outline" className="gap-2">
-                <X className="h-4 w-4" />
-                <span className="hidden sm:inline">Cancel</span>
-                <span className="sm:hidden">Cancel</span>
-              </Button>
-            </>
-          ) : (
-            <Button onClick={() => setIsEditing(true)} variant="outline" className="gap-2">
-              <Edit3 className="h-4 w-4" />
-              <span className="hidden sm:inline">Edit Information</span>
-              <span className="sm:hidden">Edit</span>
-            </Button>
-          )}
         </div>
       </div>
 
@@ -450,7 +944,7 @@ export default function PersonalInfoPage() {
               birthday={birthday}
               phoneNumbers={phoneNumbers}
               address={address}
-              isEditing={isEditing}
+              isEditing={false}
               onChange={(field, value) => {
                 if (field === "firstName") setFirstName(value);
                 if (field === "lastName") setLastName(value);
@@ -463,6 +957,7 @@ export default function PersonalInfoPage() {
               onAddressChange={(field, value) => {
                 setAddress((prev) => ({ ...prev, [field]: value }));
               }}
+              onSave={handleSavePrimaryAccount}
             />
 
             <Separator />
@@ -471,12 +966,13 @@ export default function PersonalInfoPage() {
               address={address}
               usePrimaryAddress={false}
               primaryAddress={address}
-              isEditing={isEditing}
+              isEditing={false}
               onAddressChange={(field, value) => {
                 setAddress((prev) => ({ ...prev, [field]: value }));
               }}
               onUsePrimaryChange={() => {}}
               showPrimaryOption={false}
+              onSave={handleSaveAddress}
             />
 
             <Separator />
@@ -485,7 +981,7 @@ export default function PersonalInfoPage() {
               contacts={primaryEmergencyContacts}
               usePrimaryContacts={false}
               primaryContacts={primaryEmergencyContacts}
-              isEditing={isEditing}
+              isEditing={false}
               onUpdate={(index, contact) => {
                 const updated = [...primaryEmergencyContacts];
                 updated[index] = contact;
@@ -493,19 +989,26 @@ export default function PersonalInfoPage() {
               }}
               onUsePrimaryChange={() => {}}
               showPrimaryOption={false}
+              onSave={handleSaveEmergencyContacts}
             />
 
             <Separator />
 
             <ConsentSection
               photoRelease={primaryPhotoRelease}
-              isEditing={isEditing}
+              isEditing={false}
               onUpdate={setPrimaryPhotoRelease}
+              onSave={handleSaveConsent}
             />
 
             <Separator />
 
-            <MedicalInfoSection data={primaryMedicalInfo} isEditing={isEditing} onUpdate={setPrimaryMedicalInfo} />
+            <MedicalInfoSection
+              data={primaryMedicalInfo}
+              isEditing={false}
+              onUpdate={setPrimaryMedicalInfo}
+              onSave={handleSaveMedicalInfo}
+            />
           </div>
         )}
 
@@ -515,11 +1018,12 @@ export default function PersonalInfoPage() {
               <div key={child.localId} className="space-y-6">
                 <FamilyMemberSection
                   child={child}
-                  isEditing={isEditing}
+                  isEditing={false}
                   onEdit={(id, field, value) => {
                     setChildren((prev) => prev.map((c) => (c.localId === id ? { ...c, [field]: value } : c)));
                   }}
                   onDelete={handleDeleteFamilyMember}
+                  onSave={() => handleSaveChildBasicInfo(child)}
                 />
 
                 <Separator />
@@ -528,7 +1032,7 @@ export default function PersonalInfoPage() {
                   address={child.address || { home: "", city: "", zipCode: "" }}
                   usePrimaryAddress={child.usePrimaryAddress}
                   primaryAddress={address}
-                  isEditing={isEditing}
+                  isEditing={false}
                   onAddressChange={(field, value) => {
                     setChildren((prev) =>
                       prev.map((c) =>
@@ -550,6 +1054,7 @@ export default function PersonalInfoPage() {
                     );
                   }}
                   showPrimaryOption={true}
+                  onSave={() => handleSaveChildAddress(child)}
                 />
 
                 <Separator />
@@ -558,7 +1063,7 @@ export default function PersonalInfoPage() {
                   contacts={child.emergencyContacts}
                   usePrimaryContacts={child.usePrimaryEmergencyContacts}
                   primaryContacts={primaryEmergencyContacts}
-                  isEditing={isEditing}
+                  isEditing={false}
                   onUpdate={(index, contact) => {
                     setChildren((prev) =>
                       prev.map((c) =>
@@ -579,28 +1084,31 @@ export default function PersonalInfoPage() {
                     );
                   }}
                   showPrimaryOption={true}
+                  onSave={() => handleSaveChildEmergencyContacts(child)}
                 />
 
                 <Separator />
 
                 <ConsentSection
                   photoRelease={child.photoRelease}
-                  isEditing={isEditing}
+                  isEditing={false}
                   onUpdate={(photoRelease) => {
                     setChildren((prev) => prev.map((c) => (c.localId === child.localId ? { ...c, photoRelease } : c)));
                   }}
+                  onSave={() => handleSaveChildConsent(child)}
                 />
 
                 <Separator />
 
                 <MedicalInfoSection
                   data={child.medicalInfo}
-                  isEditing={isEditing}
+                  isEditing={false}
                   onUpdate={(updated) => {
                     setChildren((prev) =>
                       prev.map((c) => (c.localId === child.localId ? { ...c, medicalInfo: updated } : c)),
                     );
                   }}
+                  onSave={() => handleSaveChildMedicalInfo(child)}
                 />
               </div>
             ),

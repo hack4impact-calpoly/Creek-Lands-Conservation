@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { MapPin } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { MapPin, Edit3, Save, X } from "lucide-react";
 
 interface AddressSectionProps {
   address: { home: string; city: string; zipCode: string };
@@ -14,27 +16,79 @@ interface AddressSectionProps {
   onAddressChange: (field: "home" | "city" | "zipCode", value: string) => void;
   onUsePrimaryChange: (usePrimary: boolean) => void;
   showPrimaryOption?: boolean;
+  onSave?: () => Promise<void>;
 }
 
 export function AddressSection({
   address,
   usePrimaryAddress,
   primaryAddress,
-  isEditing,
+  isEditing: globalIsEditing,
   onAddressChange,
   onUsePrimaryChange,
   showPrimaryOption = false,
+  onSave,
 }: AddressSectionProps) {
+  const [localIsEditing, setLocalIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const isEditing = globalIsEditing || localIsEditing;
   const effectiveAddress = usePrimaryAddress ? primaryAddress : address;
+
+  const handleSave = async () => {
+    if (onSave) {
+      setIsSaving(true);
+      try {
+        await onSave();
+        setLocalIsEditing(false);
+      } catch (error) {
+        console.error("Save failed:", error);
+      } finally {
+        setIsSaving(false);
+      }
+    } else {
+      setLocalIsEditing(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setLocalIsEditing(false);
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <MapPin className="h-5 w-5" />
-          Address Information
-        </CardTitle>
-        <CardDescription>Residential address information</CardDescription>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MapPin className="h-5 w-5" />
+            <div>
+              <CardTitle>Address Information</CardTitle>
+              <CardDescription>Residential address information</CardDescription>
+            </div>
+          </div>
+
+          {!globalIsEditing && (
+            <div className="flex gap-2">
+              {localIsEditing ? (
+                <>
+                  <Button onClick={handleSave} size="sm" disabled={isSaving} className="gap-1">
+                    <Save className="h-3 w-3" />
+                    {isSaving ? "Saving..." : "Save"}
+                  </Button>
+                  <Button onClick={handleCancel} variant="outline" size="sm" className="gap-1">
+                    <X className="h-3 w-3" />
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => setLocalIsEditing(true)} variant="outline" size="sm" className="gap-1">
+                  <Edit3 className="h-3 w-3" />
+                  Edit
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {showPrimaryOption && (
