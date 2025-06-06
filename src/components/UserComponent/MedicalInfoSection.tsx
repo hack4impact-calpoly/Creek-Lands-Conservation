@@ -1,29 +1,81 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Heart, Info } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Heart, Edit3, Save, X } from "lucide-react";
 import type { MedicalInfo } from "@/components/UserComponent/UserInfo";
 
 interface MedicalInfoSectionProps {
   data: MedicalInfo;
   isEditing: boolean;
   onUpdate: (updated: MedicalInfo) => void;
+  onSave?: () => Promise<void>;
 }
 
-export function MedicalInfoSection({ data, isEditing, onUpdate }: MedicalInfoSectionProps) {
+export function MedicalInfoSection({ data, isEditing: globalIsEditing, onUpdate, onSave }: MedicalInfoSectionProps) {
+  const [localIsEditing, setLocalIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const isEditing = globalIsEditing || localIsEditing;
+
+  const handleSave = async () => {
+    if (onSave) {
+      setIsSaving(true);
+      try {
+        await onSave();
+        setLocalIsEditing(false);
+      } catch (error) {
+        console.error("Save failed:", error);
+      } finally {
+        setIsSaving(false);
+      }
+    } else {
+      setLocalIsEditing(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setLocalIsEditing(false);
+  };
+
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Heart className="h-5 w-5" />
-          Medical Information
-        </CardTitle>
-        <CardDescription>Medical details and emergency health information</CardDescription>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Heart className="h-5 w-5" />
+            <div>
+              <CardTitle>Medical Information</CardTitle>
+              <CardDescription>Medical details and emergency health information</CardDescription>
+            </div>
+          </div>
+
+          {!globalIsEditing && (
+            <div className="flex gap-2">
+              {localIsEditing ? (
+                <>
+                  <Button onClick={handleSave} size="sm" disabled={isSaving} className="gap-1">
+                    <Save className="h-3 w-3" />
+                    {isSaving ? "Saving..." : "Save"}
+                  </Button>
+                  <Button onClick={handleCancel} variant="outline" size="sm" className="gap-1">
+                    <X className="h-3 w-3" />
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => setLocalIsEditing(true)} variant="outline" size="sm" className="gap-1">
+                  <Edit3 className="h-3 w-3" />
+                  Edit
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

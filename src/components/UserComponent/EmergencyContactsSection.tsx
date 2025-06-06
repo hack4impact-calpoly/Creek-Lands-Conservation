@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Phone } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Phone, Edit3, Save, X } from "lucide-react";
 import type { EmergencyContact } from "@/components/UserComponent/UserInfo";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -16,29 +18,81 @@ interface EmergencyContactsSectionProps {
   onUpdate: (index: number, contact: EmergencyContact) => void;
   onUsePrimaryChange: (usePrimary: boolean) => void;
   showPrimaryOption?: boolean;
+  onSave?: () => Promise<void>;
 }
 
 export function EmergencyContactsSection({
   contacts,
   usePrimaryContacts,
   primaryContacts,
-  isEditing,
+  isEditing: globalIsEditing,
   onUpdate,
   onUsePrimaryChange,
   showPrimaryOption = false,
+  onSave,
 }: EmergencyContactsSectionProps) {
+  const [localIsEditing, setLocalIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const isEditing = globalIsEditing || localIsEditing;
   const effectiveContacts = usePrimaryContacts ? primaryContacts : contacts;
+
+  const handleSave = async () => {
+    if (onSave) {
+      setIsSaving(true);
+      try {
+        await onSave();
+        setLocalIsEditing(false);
+      } catch (error) {
+        console.error("Save failed:", error);
+      } finally {
+        setIsSaving(false);
+      }
+    } else {
+      setLocalIsEditing(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setLocalIsEditing(false);
+  };
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Phone className="h-5 w-5" />
-          Emergency Contacts
-        </CardTitle>
-        <CardDescription>
-          Provide up to two emergency contacts who can be reached in case of an emergency
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Phone className="h-5 w-5" />
+            <div>
+              <CardTitle>Emergency Contacts</CardTitle>
+              <CardDescription>
+                Provide up to two emergency contacts who can be reached in case of an emergency
+              </CardDescription>
+            </div>
+          </div>
+
+          {!globalIsEditing && (
+            <div className="flex gap-2">
+              {localIsEditing ? (
+                <>
+                  <Button onClick={handleSave} size="sm" disabled={isSaving} className="gap-1">
+                    <Save className="h-3 w-3" />
+                    {isSaving ? "Saving..." : "Save"}
+                  </Button>
+                  <Button onClick={handleCancel} variant="outline" size="sm" className="gap-1">
+                    <X className="h-3 w-3" />
+                    Cancel
+                  </Button>
+                </>
+              ) : (
+                <Button onClick={() => setLocalIsEditing(true)} variant="outline" size="sm" className="gap-1">
+                  <Edit3 className="h-3 w-3" />
+                  Edit
+                </Button>
+              )}
+            </div>
+          )}
+        </div>
       </CardHeader>
       <CardContent className="space-y-8">
         {showPrimaryOption && (
