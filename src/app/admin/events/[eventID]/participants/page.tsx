@@ -461,7 +461,7 @@ export default function EventParticipantsPage() {
             onClick={() => {
               const mailto = createMailtoLink(emailList, event.name);
               if (mailto) {
-                window.open(mailto, "_self");
+                window.open(mailto, "_blank");
                 toast({
                   title: "Opening email client",
                   description: "Your email client should open with the recipient list pre-filled.",
