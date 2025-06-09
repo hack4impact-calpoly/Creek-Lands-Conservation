@@ -3,7 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 
 const isOnboardingRoute = createRouteMatcher(["/onboarding", "/onboarding/children"]);
 const isApiRoute = createRouteMatcher(["/api(.*)"]);
-const isPublicRoute = createRouteMatcher(["/", "/api/webhooks/clerk"]);
+const isPublicRoute = createRouteMatcher([
+  "/",
+  "/api/webhooks/clerk",
+  "/api/webhooks/stripe",
+  "/api/events/:eventId/registrations/stripe",
+]);
 const isProtectedRoute = createRouteMatcher(["/waivers", "/user"]); // Fixed: /users not /user
 const isAdminRoute = createRouteMatcher(["/admin(.*)"]);
 

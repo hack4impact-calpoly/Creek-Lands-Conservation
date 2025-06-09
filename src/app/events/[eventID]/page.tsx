@@ -2,7 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { Calendar, Clock, MapPin, Mail, Text, Users, CalendarClock, AlertCircle, ArrowLeft } from "lucide-react";
+import {
+  MapPin,
+  Mail,
+  Text,
+  Users,
+  CalendarClock,
+  AlertCircle,
+  ArrowLeft,
+  DollarSign,
+  Clock1,
+  Clock5,
+} from "lucide-react";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -46,9 +57,9 @@ export default function EventDetailsPage() {
         if (!id || typeof id !== "string") {
           throw new Error("Invalid or missing event ID");
         }
-        console.log("Fetching event for ID:", id);
+        // console.log("Fetching event for ID:", id);
         const eventData = await getEventById(id);
-        console.log("Fetched event data:", eventData);
+        // console.log("Fetched event data:", eventData);
         if (!eventData) {
           throw new Error("Event not found");
         }
@@ -73,7 +84,7 @@ export default function EventDetailsPage() {
         if (!response.ok) throw new Error("Failed to fetch user data");
 
         const userData = await response.json();
-        console.log("Fetched user data:", userData);
+        // ("Fetched user data:", userData);
         setFullUserData(userData);
         setUserInfo({
           id: userData._id,
@@ -98,11 +109,17 @@ export default function EventDetailsPage() {
       }
     };
 
+    if (event && event.fee > 0) {
+      localStorage.setItem("eventFee", event.fee.toString());
+      localStorage.setItem("eventTitle", event.title);
+      localStorage.setItem("userId", userInfo.id);
+    }
+
     fetchUserFamily();
   }, [user?.id, event, toast]);
 
   const validateAttendee = (fullUserData: any, attendeeId: string) => {
-    console.log(`Validating attendee with ID: ${attendeeId}`);
+    // console.log(`Validating attendee with ID: ${attendeeId}`);
 
     let attendeeData;
     let isChild = false;
@@ -110,31 +127,31 @@ export default function EventDetailsPage() {
     // Determine if the attendee is the user or a child
     if (attendeeId === fullUserData._id) {
       attendeeData = fullUserData;
-      console.log("Checking primary user:", {
-        id: attendeeData._id,
-        firstName: attendeeData.firstName,
-        lastName: attendeeData.lastName,
-      });
+      // console.log("Checking primary user:", {
+      //   id: attendeeData._id,
+      //   firstName: attendeeData.firstName,
+      //   lastName: attendeeData.lastName,
+      // });
     } else {
       attendeeData = fullUserData.children.find((c: any) => c._id === attendeeId);
       isChild = true;
       if (!attendeeData) {
-        console.log(`Child with ID ${attendeeId} not found in fullUserData.children`);
+        // console.log(`Child with ID ${attendeeId} not found in fullUserData.children`);
         return false;
       }
-      console.log("Checking child:", {
-        id: attendeeData._id,
-        firstName: attendeeData.firstName,
-        lastName: attendeeData.lastName,
-      });
+      // console.log("Checking child:", {
+      //   id: attendeeData._id,
+      //   firstName: attendeeData.firstName,
+      //   lastName: attendeeData.lastName,
+      // });
     }
 
     // Validate basic required fields
     const requiredFields = ["firstName", "lastName", "birthday", "gender"];
     for (const field of requiredFields) {
-      console.log(`Checking ${field}:`, attendeeData[field]);
+      // console.log(`Checking ${field}:`, attendeeData[field]);
       if (!attendeeData[field]) {
-        console.log(`Validation failed: ${field} is missing or empty`);
+        // console.log(`Validation failed: ${field} is missing or empty`);
         return false;
       }
     }
@@ -150,24 +167,24 @@ export default function EventDetailsPage() {
         attendeeData.address.zipCode
       ) {
         addressToCheck = attendeeData.address;
-        console.log("Using child's own address:", addressToCheck);
+        // console.log("Using child's own address:", addressToCheck);
       } else {
         addressToCheck = fullUserData.address;
-        console.log("Child uses parent's address:", addressToCheck);
+        // console.log("Child uses parent's address:", addressToCheck);
       }
     } else {
       addressToCheck = attendeeData.address;
-      console.log("Using adult's own address:", addressToCheck);
+      // console.log("Using adult's own address:", addressToCheck);
     }
 
-    console.log("Address details:", {
-      home: addressToCheck?.home,
-      city: addressToCheck?.city,
-      zipCode: addressToCheck?.zipCode,
-    });
+    // console.log("Address details:", {
+    //   home: addressToCheck?.home,
+    //   city: addressToCheck?.city,
+    //   zipCode: addressToCheck?.zipCode,
+    // });
 
     if (!addressToCheck || !addressToCheck.home || !addressToCheck.city || !addressToCheck.zipCode) {
-      console.log("Validation failed: Address or its subfields are missing/empty");
+      // console.log("Validation failed: Address or its subfields are missing/empty");
       return false;
     }
 
@@ -177,33 +194,33 @@ export default function EventDetailsPage() {
       // For children, check if they have their own emergency contacts, otherwise use parent's
       if (attendeeData.emergencyContacts && attendeeData.emergencyContacts.length > 0) {
         contactsToCheck = attendeeData.emergencyContacts;
-        console.log("Using child's own emergency contacts:", contactsToCheck);
+        // console.log("Using child's own emergency contacts:", contactsToCheck);
       } else {
         contactsToCheck = fullUserData.emergencyContacts;
-        console.log("Child uses parent's emergency contacts:", contactsToCheck);
+        // console.log("Child uses parent's emergency contacts:", contactsToCheck);
       }
     } else {
       contactsToCheck = attendeeData.emergencyContacts;
-      console.log("Using adult's own emergency contacts:", contactsToCheck);
+      // console.log("Using adult's own emergency contacts:", contactsToCheck);
     }
 
-    console.log("Emergency contacts count:", contactsToCheck?.length || 0);
+    // console.log("Emergency contacts count:", contactsToCheck?.length || 0);
     if (!contactsToCheck || contactsToCheck.length === 0) {
-      console.log("Validation failed: No emergency contacts provided");
+      // console.log("Validation failed: No emergency contacts provided");
       return false;
     }
 
     const hasValidContact = contactsToCheck.some((contact: any) => contact.name && contact.phone);
-    console.log("Has valid contact (name and phone):", hasValidContact);
+    // console.log("Has valid contact (name and phone):", hasValidContact);
     if (!hasValidContact) {
-      console.log("Validation failed: No valid emergency contact with name and phone");
+      // console.log("Validation failed: No valid emergency contact with name and phone");
       return false;
     }
 
     // Validate medical info - this should be on the individual (child or adult)
-    console.log("Medical info:", attendeeData.medicalInfo);
+    // console.log("Medical info:", attendeeData.medicalInfo);
     if (!attendeeData.medicalInfo) {
-      console.log("Validation failed: Medical info is missing");
+      // console.log("Validation failed: Medical info is missing");
       return false;
     }
 
@@ -215,11 +232,11 @@ export default function EventDetailsPage() {
       attendeeData.medicalInfo.doctorName === "" ||
       attendeeData.medicalInfo.doctorPhone === ""
     ) {
-      console.log("Validation failed: Medical info allergies or dietary restrictions are undefined");
+      // console.log("Validation failed: Medical info allergies or dietary restrictions are undefined");
       return false;
     }
 
-    console.log(`Validation passed for attendee ID: ${attendeeId}`);
+    // console.log(`Validation passed for attendee ID: ${attendeeId}`);
     return true;
   };
 
@@ -229,6 +246,27 @@ export default function EventDetailsPage() {
   const spotsLeft = event?.capacity ? event.capacity - (event?.currentRegistrations ?? 0) : 0;
   const isAlmostFull = spotsLeft <= 5 && spotsLeft > 0;
   const registerDisabled = hasRegistrationClosed || isFull;
+
+  const participants = selectedAttendeesToRegister.map((id) => {
+    if (id === userInfo.id) {
+      return {
+        userID: id,
+        firstName: userInfo.firstName,
+        lastName: userInfo.lastName,
+        isChild: false,
+      };
+    }
+    const familyMember = userInfo.family.find((m) => m.id === id);
+    if (!familyMember) {
+      throw new Error(`Family member with ID ${id} not found`);
+    }
+    return {
+      userID: id,
+      firstName: familyMember.firstName,
+      lastName: familyMember.lastName,
+      isChild: true,
+    };
+  });
 
   const handleRegister = async () => {
     if (!selectedAttendeesToRegister.length) {
@@ -264,27 +302,6 @@ export default function EventDetailsPage() {
 
       // Proceed if all validations pass
       if (event.eventWaiverTemplates.length > 0) {
-        const participants = selectedAttendeesToRegister.map((id) => {
-          if (id === userInfo.id) {
-            return {
-              userID: id,
-              firstName: userInfo.firstName,
-              lastName: userInfo.lastName,
-              isChild: false,
-            };
-          }
-          const familyMember = userInfo.family.find((m) => m.id === id);
-          if (!familyMember) {
-            throw new Error(`Family member with ID ${id} not found`);
-          }
-          return {
-            userID: id,
-            firstName: familyMember.firstName,
-            lastName: familyMember.lastName,
-            isChild: true,
-          };
-        });
-
         console.log("Participants for waiver:", participants);
         localStorage.setItem("waiverParticipants", JSON.stringify(participants));
         router.push(`/events/${eventId}/sign`);
@@ -331,6 +348,67 @@ export default function EventDetailsPage() {
         description: error instanceof Error ? error.message : "Failed to register for the event.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handlePayment = async () => {
+    if (!selectedAttendeesToRegister.length) {
+      toast({
+        title: "No Attendees Selected",
+        description: "Please select at least one attendee to register.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      if (!eventId) throw new Error("Invalid event ID");
+      if (!event) throw new Error("Event data not loaded");
+      if (!fullUserData) throw new Error("User data not loaded");
+
+      // Validate all selected attendees
+      const invalidAttendees = selectedAttendeesToRegister.filter((id) => !validateAttendee(fullUserData, id));
+
+      if (invalidAttendees.length > 0) {
+        toast({
+          title: "Incomplete Profile",
+          description: "Please complete all required information for the selected attendees in your profile.",
+          variant: "destructive",
+        });
+        router.push("/user");
+        return;
+      }
+
+      const parsedFee = Math.round(event.fee * 100); // Convert to cents
+      const eventData = {
+        title: event.title,
+        fee: parsedFee, // Fee in cents
+        quantity: participants?.length,
+        eventId: eventId,
+        attendees: participants?.map((participants) => participants.userID), // only pass userID
+        userId: userInfo.id,
+      };
+
+      const res = await fetch("/api/stripe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(eventData),
+      });
+
+      const data = await res.json();
+      if (data.sessionUrl) {
+        window.location.href = data.sessionUrl;
+      } else {
+        console.error("Stripe error:", data.error);
+      }
+    } catch (error) {
+      console.error("Validation error:", error);
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to validate attendees.",
+        variant: "destructive",
+      });
+      return;
     }
   };
 
@@ -442,7 +520,7 @@ export default function EventDetailsPage() {
 
   return (
     <div className="container mx-auto max-w-4xl px-4 py-8">
-      <Button variant="ghost" onClick={() => router.back()} className="mb-6">
+      <Button variant="ghost" onClick={() => router.push("/")} className="mb-6">
         <ArrowLeft className="mr-2 h-4 w-4" />
         Back to Events
       </Button>
@@ -485,12 +563,14 @@ export default function EventDetailsPage() {
       <div className="mb-8 grid grid-cols-1 gap-6 sm:grid-cols-2">
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <Calendar className="h-5 w-5 text-gray-600" />
+            <Clock1 className="h-5 w-5 text-gray-600" />
             <div>
-              <p className="text-sm font-medium text-gray-500">Date</p>
+              <p className="text-sm font-medium text-gray-500">Start</p>
               <p className="font-semibold text-gray-900">
                 {event.startDate ? new Date(event.startDate).toLocaleDateString() : "TBD"} -{" "}
-                {event.endDate ? new Date(event.endDate).toLocaleDateString() : "TBD"}
+                {event.startDate
+                  ? new Date(event.startDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                  : "TBD"}{" "}
               </p>
             </div>
           </CardContent>
@@ -498,14 +578,11 @@ export default function EventDetailsPage() {
 
         <Card>
           <CardContent className="flex items-center gap-3 p-4">
-            <Clock className="h-5 w-5 text-gray-600" />
+            <Clock5 className="h-5 w-5 text-gray-600" />
             <div>
-              <p className="text-sm font-medium text-gray-500">Time</p>
+              <p className="text-sm font-medium text-gray-500">End</p>
               <p className="font-semibold text-gray-900">
-                {event.startDate
-                  ? new Date(event.startDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                  : "TBD"}{" "}
-                -{" "}
+                {event.endDate ? new Date(event.endDate).toLocaleDateString() : "TBD"} -{" "}
                 {event.endDate
                   ? new Date(event.endDate).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                   : "TBD"}
@@ -568,6 +645,16 @@ export default function EventDetailsPage() {
                   </div>
                 )}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="flex items-center gap-3 p-4">
+            <DollarSign className="h-5 w-5 text-gray-600" />
+            <div>
+              <p className="text-sm font-medium text-gray-500">Fee</p>
+              <p className="font-semibold text-gray-900">{event.fee}</p>
             </div>
           </CardContent>
         </Card>
@@ -829,14 +916,25 @@ export default function EventDetailsPage() {
                     ))}
                   </div>
                   <div className="mt-6 text-center">
-                    <Button
-                      size="lg"
-                      className="bg-green-700 px-8 py-3 text-white hover:bg-green-800"
-                      onClick={handleRegister}
-                      disabled={registerDisabled || selectedAttendeesToRegister.length === 0}
-                    >
-                      Register for Event
-                    </Button>
+                    {event.eventWaiverTemplates.length === 0 && event.fee > 0 ? (
+                      <Button
+                        size="lg"
+                        className="bg-green-700 px-8 py-3 text-white hover:bg-green-800"
+                        onClick={handlePayment}
+                        disabled={registerDisabled || selectedAttendeesToRegister.length === 0}
+                      >
+                        Pay for Event
+                      </Button>
+                    ) : (
+                      <Button
+                        size="lg"
+                        className="bg-green-700 px-8 py-3 text-white hover:bg-green-800"
+                        onClick={handleRegister}
+                        disabled={registerDisabled || selectedAttendeesToRegister.length === 0}
+                      >
+                        Register for Event
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>
