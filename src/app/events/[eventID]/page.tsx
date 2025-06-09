@@ -379,12 +379,12 @@ export default function EventDetailsPage() {
         return;
       }
 
-      const parsedFee = Math.round(event.fee * 100); // Convert to cents
+      const parsedFee = Math.round(event.fee ? event.fee * 100 : 0); // Convert to cents
       const eventData = {
         title: event.title,
         fee: parsedFee, // Fee in cents
         quantity: participants?.length,
-        eventId: eventId,
+        eventId: params.eventID,
         attendees: participants?.map((participants) => participants.userID), // only pass userID
         userId: userInfo.id,
       };
@@ -846,13 +846,24 @@ export default function EventDetailsPage() {
                           ))}
                       </div>
 
-                      <Button
-                        className="w-full bg-green-700 text-white hover:bg-green-800"
-                        onClick={handleRegister}
-                        disabled={selectedAttendeesToRegister.length === 0}
-                      >
-                        Register Additional Members
-                      </Button>
+                      {event.eventWaiverTemplates.length === 0 && event.fee > 0 ? (
+                        <Button
+                          size="lg"
+                          className="bg-green-700 px-8 py-3 text-white hover:bg-green-800"
+                          onClick={handlePayment}
+                          disabled={registerDisabled || selectedAttendeesToRegister.length === 0}
+                        >
+                          Pay for Event
+                        </Button>
+                      ) : (
+                        <Button
+                          className="w-full bg-green-700 text-white hover:bg-green-800"
+                          onClick={handleRegister}
+                          disabled={selectedAttendeesToRegister.length === 0}
+                        >
+                          Register Additional Members
+                        </Button>
+                      )}
                     </CardContent>
                   </Card>
                 </div>
