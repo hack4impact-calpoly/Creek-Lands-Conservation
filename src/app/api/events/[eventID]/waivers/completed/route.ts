@@ -1,20 +1,15 @@
 import connectDB from "@/database/db";
-import Event, { IEvent } from "@/database/eventSchema";
-import Waiver, { IWaiver } from "@/database/waiverSchema";
-import mongoose from "mongoose";
+import Event from "@/database/eventSchema";
+import Waiver from "@/database/waiverSchema";
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@clerk/nextjs/server";
-import User from "@/database/userSchema";
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
-import { PdfReader } from "pdfreader";
-import { s3 } from "@/lib/s3";
-import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
-import fs from "fs";
-import path from "path";
+import { authenticateAdmin } from "@/lib/auth";
 
 export async function GET(request: NextRequest, { params }: { params: { eventID: string } }) {
   try {
     await connectDB();
+
+    const authError = await authenticateAdmin();
+    if (authError !== true) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
     const { searchParams } = new URL(request.url);
     const userId = searchParams.get("userId");
