@@ -847,24 +847,26 @@ export default function EventDetailsPage() {
                           ))}
                       </div>
 
-                      {event.eventWaiverTemplates.length === 0 && event.fee > 0 ? (
-                        <Button
-                          size="lg"
-                          className="bg-green-700 px-8 py-3 text-white hover:bg-green-800"
-                          onClick={handlePayment}
-                          disabled={registerDisabled || selectedAttendeesToRegister.length === 0}
-                        >
-                          Pay for Event
-                        </Button>
-                      ) : (
-                        <Button
-                          className="w-full bg-green-700 text-white hover:bg-green-800"
-                          onClick={handleRegister}
-                          disabled={selectedAttendeesToRegister.length === 0}
-                        >
-                          Register Additional Members
-                        </Button>
-                      )}
+                      <div className="mt-6 text-center">
+                        {event.eventWaiverTemplates.length === 0 && event.fee > 0 ? (
+                          <Button
+                            size="lg"
+                            className="bg-green-700 px-8 py-3 text-white hover:bg-green-800"
+                            onClick={handlePayment}
+                            disabled={registerDisabled || selectedAttendeesToRegister.length === 0}
+                          >
+                            Pay for Event
+                          </Button>
+                        ) : (
+                          <Button
+                            className="bg-green-700 px-8 py-3 text-white hover:bg-green-800"
+                            onClick={handleRegister}
+                            disabled={selectedAttendeesToRegister.length === 0}
+                          >
+                            Register Additional Members
+                          </Button>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
