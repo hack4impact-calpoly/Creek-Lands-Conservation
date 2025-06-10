@@ -304,6 +304,7 @@ export default function EventDetailsPage() {
       if (event.eventWaiverTemplates.length > 0) {
         console.log("Participants for waiver:", participants);
         localStorage.setItem("waiverParticipants", JSON.stringify(participants));
+        localStorage.setItem("eventFee", "0");
         router.push(`/events/${eventId}/sign`);
         return;
       }
@@ -352,6 +353,7 @@ export default function EventDetailsPage() {
   };
 
   const handlePayment = async () => {
+    console.log("Handling payment for registration...");
     if (!selectedAttendeesToRegister.length) {
       toast({
         title: "No Attendees Selected",
