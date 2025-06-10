@@ -104,6 +104,7 @@ export default function WaiverSignPage({ params }: { params: { eventID: string }
     <WaiverSignatureForm
       eventId={params.eventID}
       participants={participants}
+      fee={fee || 0}
       onAllSigned={fee === 0 ? handleAllSigned : handlePayment}
     />
   ) : (
