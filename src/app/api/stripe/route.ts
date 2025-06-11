@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
 export async function POST(req: Request) {
-  console.log("POST request to /api/stripe");
   try {
     const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
 

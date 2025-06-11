@@ -53,6 +53,7 @@ export default function WaiverSignPage({ params }: { params: { eventID: string }
 
   const handleAllSigned = () => {
     localStorage.removeItem("waiverParticipants");
+    localStorage.removeItem("eventFee");
     toast({
       title: "Registration Complete",
       description: "You have successfully signed all waivers and registered.",
@@ -103,6 +104,7 @@ export default function WaiverSignPage({ params }: { params: { eventID: string }
     <WaiverSignatureForm
       eventId={params.eventID}
       participants={participants}
+      fee={fee || 0}
       onAllSigned={fee === 0 ? handleAllSigned : handlePayment}
     />
   ) : (
