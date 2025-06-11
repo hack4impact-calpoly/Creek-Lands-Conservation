@@ -2,7 +2,18 @@
 
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
-import { Calendar, Clock, MapPin, Mail, Text, ImageIcon, Users, CalendarClock, AlertCircle } from "lucide-react";
+import {
+  MapPin,
+  Mail,
+  Text,
+  ImageIcon,
+  Users,
+  CalendarClock,
+  AlertCircle,
+  Clock1,
+  Clock5,
+  DollarSign,
+} from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import {
@@ -34,6 +45,7 @@ interface EventInfoProps {
   registrationDeadline: Date | null;
   email?: string;
   capacity?: number;
+  fee?: number;
   currentRegistrations?: number;
   eventWaiverTemplates: { waiverId: string; required: boolean }[];
   onDelete?: (eventId: string) => void;
@@ -52,6 +64,7 @@ export function EventInfoPreview({
   registrationDeadline,
   email = "marysia@creeklands.org",
   capacity,
+  fee,
   currentRegistrations,
   eventWaiverTemplates,
   onDelete,
@@ -150,25 +163,24 @@ export function EventInfoPreview({
           <div className="max-h-[60vh] space-y-6 overflow-y-auto px-6 py-4">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div className="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
-                <Calendar className="h-4 w-4 text-gray-600" />
+                <Clock1 className="h-4 w-4 text-gray-600" />
                 <div>
-                  <p className="text-xs font-medium text-gray-500">Date</p>
+                  <p className="text-xs font-medium text-gray-500">Start</p>
                   <p className="text-sm font-semibold text-gray-900">
                     {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
-                    {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"}
+                    {startDateTime
+                      ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                      : "TBD"}
                   </p>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
-                <Clock className="h-4 w-4 text-gray-600" />
+                <Clock5 className="h-4 w-4 text-gray-600" />
                 <div>
-                  <p className="text-xs font-medium text-gray-500">Time</p>
+                  <p className="text-xs font-medium text-gray-500">End</p>
                   <p className="text-sm font-semibold text-gray-900">
-                    {startDateTime
-                      ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                      : "TBD"}{" "}
-                    -{" "}
+                    {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"}-{" "}
                     {endDateTime
                       ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                       : "TBD"}
@@ -221,6 +233,14 @@ export function EventInfoPreview({
                       />
                     </div>
                   </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 rounded-lg border border-gray-200 p-3">
+                <DollarSign className="h-4 w-4 text-gray-600" />
+                <div>
+                  <p className="text-xs font-medium text-gray-500">Fee</p>
+                  <p className="text-sm font-semibold text-gray-900">{fee}</p>
                 </div>
               </div>
             </div>

@@ -3,9 +3,10 @@
 import type React from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AlertTriangle, CalendarRange, CircleCheck, Clock, Eye } from "lucide-react";
+import { AlertTriangle, CalendarRange, CircleCheck, Clock, Eye, FileSignature } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Badge } from "@/components/ui/badge";
 
 interface WaiverSignatureProps {
   eventName: string;
@@ -44,7 +45,7 @@ const WaiverSignatureComponent: React.FC<WaiverSignatureProps> = ({
   signByDate,
   onViewWaiver,
   onSignWaiver,
-  childName, // Destructure childName
+  childName,
 }) => {
   // Format dates for display
   const startDate = formatDate(startDateTime);
@@ -62,28 +63,44 @@ const WaiverSignatureComponent: React.FC<WaiverSignatureProps> = ({
   // Format sign by date
   const signByDateString = signByDate && formatDate(signByDate);
 
+  // Calculate if the waiver is urgent (needs to be signed within 48 hours)
+  const isUrgent = signByDate && !signed && signByDate.getTime() - new Date().getTime() < 48 * 60 * 60 * 1000;
+
   return (
     <Card
       className={cn(
         "flex w-full flex-col gap-3 rounded-lg p-4 shadow-sm transition-all duration-200 hover:shadow-md sm:flex-row sm:items-center sm:justify-between",
-        signed ? "bg-gray-50 hover:bg-gray-100" : "bg-amber-50 hover:bg-amber-100",
+        signed
+          ? "bg-gray-50 hover:bg-gray-100"
+          : isUrgent
+            ? "bg-red-50 hover:bg-red-100"
+            : "bg-amber-50 hover:bg-amber-100",
+        "border-l-4",
+        signed ? "border-l-emerald-500" : isUrgent ? "border-l-red-500" : "border-l-amber-500",
       )}
     >
       <div className="flex flex-col gap-2">
         <div className="flex items-center gap-2">
           <h3 className="truncate text-base font-semibold sm:text-lg">
             {eventName}
-            {childName && <span className="text-sm font-normal text-muted-foreground"> (for {childName})</span>}
+            {childName && (
+              <Badge variant="outline" className="ml-2 font-normal">
+                for {childName}
+              </Badge>
+            )}
           </h3>
-          {signed && (
-            <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700">
-              <CircleCheck className="h-3 w-3" /> Signed
-            </span>
-          )}
-          {!signed && (
-            <span className="flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-700">
-              <AlertTriangle className="h-3 w-3" /> Needs Signature
-            </span>
+          {signed ? (
+            <Badge variant="success" className="ml-auto sm:ml-0">
+              <CircleCheck className="mr-1 h-3 w-3" /> Signed
+            </Badge>
+          ) : isUrgent ? (
+            <Badge variant="destructive" className="ml-auto sm:ml-0">
+              <AlertTriangle className="mr-1 h-3 w-3" /> Urgent
+            </Badge>
+          ) : (
+            <Badge variant="warning" className="ml-auto sm:ml-0">
+              <AlertTriangle className="mr-1 h-3 w-3" /> Needs Signature
+            </Badge>
           )}
         </div>
 
@@ -129,7 +146,12 @@ const WaiverSignatureComponent: React.FC<WaiverSignatureProps> = ({
           )}
 
           {!signed && signByDate && (
-            <div className="flex items-center gap-1 text-xs font-medium text-amber-600">
+            <div
+              className={cn(
+                "flex items-center gap-1 text-xs font-medium",
+                isUrgent ? "text-red-600" : "text-amber-600",
+              )}
+            >
               <AlertTriangle className="h-3.5 w-3.5" />
               <span>Sign by {signByDateString}</span>
             </div>
@@ -140,7 +162,7 @@ const WaiverSignatureComponent: React.FC<WaiverSignatureProps> = ({
       <div className="mt-2 flex items-center gap-2 sm:mt-0">
         <Button
           onClick={signed ? onViewWaiver : onSignWaiver}
-          variant={signed ? "outline" : "default"}
+          variant={signed ? "outline" : isUrgent ? "destructive" : "default"}
           className={cn(
             "gap-2 text-sm",
             signed
@@ -154,7 +176,7 @@ const WaiverSignatureComponent: React.FC<WaiverSignatureProps> = ({
             </>
           ) : (
             <>
-              <AlertTriangle className="h-4 w-4" /> Sign Waiver
+              <FileSignature className="h-4 w-4" /> Sign Waiver
             </>
           )}
         </Button>

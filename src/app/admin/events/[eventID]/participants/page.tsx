@@ -1,7 +1,21 @@
 "use client";
 
+import type React from "react";
+
 import { useState, useEffect } from "react";
-import { Search, UserCircle, ChevronDown, ChevronRight, Check, X, User, Trash2 } from "lucide-react";
+import {
+  Search,
+  UserCircle,
+  ChevronDown,
+  ChevronRight,
+  Check,
+  X,
+  User,
+  Trash2,
+  FileText,
+  Eye,
+  MoreHorizontal,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -18,11 +32,29 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { APIEvent, UserInfo, RegisteredUserInfo, RegisteredChildInfo } from "@/types/events";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import type { APIEvent, RegisteredUserInfo, RegisteredChildInfo } from "@/types/events";
 import { useParams, useRouter } from "next/navigation";
 import { toast } from "@/hooks/use-toast";
 import BackButton from "@/components/ui/back-button";
 import Link from "next/link";
+import useMobileDetection from "@/hooks/useMobileDetection";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+
+// Interface for waiver data
+interface WaiverInfo {
+  _id: string;
+  fileKey: string;
+  fileName: string;
+  uploadedAt: Date;
+  eventTitle: string;
+}
 
 // Helper functions (unchanged)
 function getEventEmails(eventData: APIEvent): string[] {
@@ -75,6 +107,7 @@ function getEventAttendees(eventData: APIEvent) {
     email?: string;
     phoneNumbers?: { cell: string; work?: string };
     address?: { home: string; city: string; zipCode: string };
+    parentUserId?: string; // Add this for waiver lookup
   }[] = [];
 
   eventData.registeredChildren.forEach((child: RegisteredChildInfo) => {
@@ -105,7 +138,8 @@ function getEventAttendees(eventData: APIEvent) {
           phoneNumbers: child.parent.phoneNumbers,
           address: child.parent.address,
         },
-        address: childData.address || { home: "", city: "", zipCode: "" }, // Use child's address
+        address: childData.address || { home: "", city: "", zipCode: "" },
+        parentUserId: child.parent._id,
       });
     }
   });
@@ -244,13 +278,20 @@ export default function EventParticipantsPage() {
       email?: string;
       phoneNumbers?: { cell: string; work?: string };
       address?: { home: string; city: string; zipCode: string };
+      parentUserId?: string;
     }[]
   >([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [emailList, setEmailList] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [removingAttendee, setRemovingAttendee] = useState<string | null>(null);
+  const [waiverDialogOpen, setWaiverDialogOpen] = useState(false);
+  const [selectedWaivers, setSelectedWaivers] = useState<WaiverInfo[]>([]);
+  const [currentWaiverUrl, setCurrentWaiverUrl] = useState<string | null>(null);
+  const [currentWaiverTitle, setCurrentWaiverTitle] = useState<string>("");
+  const [loadingWaivers, setLoadingWaivers] = useState(false);
   const router = useRouter();
+  const isMobile = useMobileDetection();
 
   useEffect(() => {
     const fetchEventData = async () => {
@@ -321,6 +362,64 @@ export default function EventParticipantsPage() {
     }
   };
 
+  const handleViewWaivers = async (attendee: any) => {
+    setLoadingWaivers(true);
+    try {
+      // Determine the user ID to query for waivers
+      const userId = attendee.isChild ? attendee.parentUserId : attendee.id;
+
+      // Fetch waivers for this attendee and event
+      const response = await fetch(
+        `/api/events/${eventID}/waivers/completed?userId=${userId}&childId=${attendee.isChild ? attendee.id : ""}`,
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch waivers");
+      }
+
+      const waivers: WaiverInfo[] = await response.json();
+      setSelectedWaivers(waivers);
+      setWaiverDialogOpen(true);
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load waivers.",
+        variant: "destructive",
+      });
+    } finally {
+      setLoadingWaivers(false);
+    }
+  };
+
+  const handleViewWaiverDocument = async (waiver: WaiverInfo) => {
+    try {
+      setCurrentWaiverTitle(`${waiver.fileName} - ${waiver.eventTitle}`);
+
+      // Fetch the presigned URL using the fileKey
+      const presignedResponse = await fetch(
+        `/api/s3/presigned-download?fileKey=${encodeURIComponent(waiver.fileKey)}`,
+        {
+          method: "GET",
+        },
+      );
+
+      if (!presignedResponse.ok) {
+        const errorData = await presignedResponse.json();
+        throw new Error(errorData.error || "Failed to fetch presigned URL");
+      }
+
+      const presignedData = await presignedResponse.json();
+      setCurrentWaiverUrl(presignedData.url);
+    } catch (error: any) {
+      console.error("Failed to view waiver:", error);
+      toast({
+        title: "Error",
+        description: error.message || "Failed to load waiver document.",
+        variant: "destructive",
+      });
+    }
+  };
+
   // Define filteredAttendees
   const filteredAttendees = attendees.filter(
     (attendee) =>
@@ -362,7 +461,7 @@ export default function EventParticipantsPage() {
             onClick={() => {
               const mailto = createMailtoLink(emailList, event.name);
               if (mailto) {
-                window.open(mailto, "_self");
+                window.open(mailto, "_blank");
                 toast({
                   title: "Opening email client",
                   description: "Your email client should open with the recipient list pre-filled.",
@@ -417,7 +516,7 @@ export default function EventParticipantsPage() {
                 <TableHead>Contact Email</TableHead>
                 <TableHead>Contact Phone</TableHead>
                 <TableHead>Photo Release</TableHead>
-                <TableHead className="w-[100px]">Actions</TableHead>
+                <TableHead className="w-[70px]">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -426,7 +525,9 @@ export default function EventParticipantsPage() {
                   key={attendee.id}
                   attendee={attendee}
                   onRemove={() => handleRemoveAttendee(attendee.id)}
+                  onViewWaivers={() => handleViewWaivers(attendee)}
                   isRemoving={removingAttendee === attendee.id}
+                  isLoadingWaivers={loadingWaivers}
                 />
               ))}
             </TableBody>
@@ -437,15 +538,120 @@ export default function EventParticipantsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Waivers List Dialog */}
+      <Dialog open={waiverDialogOpen} onOpenChange={setWaiverDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Signed Waivers
+            </DialogTitle>
+            <DialogDescription>View all signed waivers for this participant</DialogDescription>
+          </DialogHeader>
+          <div className="mt-4">
+            {selectedWaivers.length === 0 ? (
+              <div className="py-8 text-center text-muted-foreground">
+                <FileText className="mx-auto mb-4 h-12 w-12 text-muted-foreground/60" />
+                <p>No signed waivers found for this participant.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {selectedWaivers.map((waiver) => (
+                  <div
+                    key={waiver._id}
+                    className="flex items-center justify-between rounded-lg border p-4 hover:bg-muted/50"
+                  >
+                    <div className="flex items-center gap-3">
+                      <FileText className="h-5 w-5 text-primary" />
+                      <div>
+                        <p className="font-medium">{waiver.fileName}</p>
+                        <p className="text-sm text-muted-foreground">
+                          Signed on {new Date(waiver.uploadedAt).toLocaleDateString()}
+                        </p>
+                        <Badge variant="outline" className="mt-1">
+                          {waiver.eventTitle}
+                        </Badge>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewWaiverDocument(waiver)}
+                      className="gap-2"
+                    >
+                      <Eye className="h-4 w-4" />
+                      View
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Waiver Document Preview Dialog */}
+      <Dialog open={!!currentWaiverUrl} onOpenChange={() => setCurrentWaiverUrl(null)}>
+        <DialogContent className={isMobile ? "max-w-[95vw] rounded-md" : "max-w-4xl rounded-md"}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              {currentWaiverTitle}
+            </DialogTitle>
+            <DialogDescription>Signed waiver document</DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 overflow-hidden rounded-md border">
+            {isMobile ? (
+              currentWaiverUrl ? (
+                <div className="flex flex-col items-center justify-center space-y-4 rounded-md bg-muted/20 p-6">
+                  <p className="text-center text-sm text-muted-foreground">
+                    For the best viewing experience on mobile, please open the waiver document in a new tab.
+                  </p>
+                  <Button
+                    onClick={() => window.open(currentWaiverUrl, "_blank", "noopener,noreferrer")}
+                    className="flex items-center gap-2"
+                  >
+                    <Eye className="h-4 w-4" />
+                    Open Waiver in New Tab
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex h-[30vh] items-center justify-center bg-muted/10">
+                  <div className="flex flex-col items-center gap-2">
+                    <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+                    <p className="text-sm text-muted-foreground">Loading document...</p>
+                  </div>
+                </div>
+              )
+            ) : currentWaiverUrl ? (
+              <iframe
+                src={currentWaiverUrl}
+                title="Waiver Preview"
+                className="h-[70vh] w-full rounded-md border-none"
+              />
+            ) : (
+              <div className="flex h-[70vh] items-center justify-center bg-muted/10">
+                <div className="flex flex-col items-center gap-2">
+                  <div className="h-8 w-8 animate-spin rounded-full border-4 border-muted border-t-primary"></div>
+                  <p className="text-sm text-muted-foreground">Loading document...</p>
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
-// AttendeeRow, InfoCard, InfoItem, calculateAge, ParticipantPageSkeleton (unchanged)
+// Updated AttendeeRow component with View Waivers button
 function AttendeeRow({
   attendee,
   onRemove,
+  onViewWaivers,
   isRemoving,
+  isLoadingWaivers,
 }: {
   attendee: {
     id: string;
@@ -483,7 +689,9 @@ function AttendeeRow({
     address?: { home: string; city: string; zipCode: string };
   };
   onRemove: () => void;
+  onViewWaivers: () => void;
   isRemoving: boolean;
+  isLoadingWaivers: boolean;
 }) {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -526,31 +734,54 @@ function AttendeeRow({
           )}
         </TableCell>
         <TableCell>
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button variant="destructive" size="sm" disabled={isRemoving} className="flex items-center gap-1">
-                {isRemoving ? (
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-t-2 border-white" />
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0"
+                onClick={(e) => e.stopPropagation()}
+                disabled={isRemoving || isLoadingWaivers}
+              >
+                {isRemoving || isLoadingWaivers ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-t-2 border-muted-foreground" />
                 ) : (
-                  <Trash2 className="h-4 w-4" />
+                  <MoreHorizontal className="h-4 w-4" />
                 )}
-                Remove
+                <span className="sr-only">Open menu</span>
               </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Remove Participant</AlertDialogTitle>
-                <AlertDialogDescription>
-                  Are you sure you want to remove {attendee.firstName} {attendee.lastName} from the event? This will
-                  also remove their registration and associated waivers.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={onRemove}>Remove</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onViewWaivers();
+                }}
+              >
+                View Waivers
+              </DropdownMenuItem>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="text-red-600 focus:text-red-600">
+                    Remove Participant
+                  </DropdownMenuItem>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Remove Participant</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to remove {attendee.firstName} {attendee.lastName} from the event? This will
+                      also remove their registration and associated waivers.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={onRemove}>Remove</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </TableCell>
       </TableRow>
 
@@ -751,7 +982,7 @@ function ParticipantPageSkeleton() {
                   <div className="h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
                 </TableHead>
                 <TableHead>
-                  <div className="h-4 w-24 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                  <div className="h-4 w-16 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -783,7 +1014,7 @@ function ParticipantPageSkeleton() {
                     </div>
                   </TableCell>
                   <TableCell>
-                    <div className="h-8 w-20 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
+                    <div className="h-8 w-8 animate-pulse rounded bg-gray-200 dark:bg-gray-700" />
                   </TableCell>
                 </TableRow>
               ))}

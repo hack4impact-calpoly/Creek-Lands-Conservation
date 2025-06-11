@@ -26,10 +26,11 @@ type Waiver = {
 type WaiverSignatureFormProps = {
   eventId: string;
   participants: Participant[];
+  fee: number; // Optional fee for the event
   onAllSigned: () => void;
 };
 
-export default function WaiverSignatureForm({ eventId, participants, onAllSigned }: WaiverSignatureFormProps) {
+export default function WaiverSignatureForm({ eventId, participants, fee, onAllSigned }: WaiverSignatureFormProps) {
   const [waivers, setWaivers] = useState<Waiver[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [waiverUrl, setWaiverUrl] = useState("");
@@ -106,6 +107,9 @@ export default function WaiverSignatureForm({ eventId, participants, onAllSigned
 
     if (currentIndex < waivers.length - 1) {
       setCurrentIndex((prev) => prev + 1);
+    } else if (fee > 0) {
+      // If this is the last waiver and there's a fee, redirect to payment
+      onAllSigned();
     } else {
       try {
         await fetch(`/api/events/${eventId}/registrations`, {

@@ -1,7 +1,7 @@
 "use client";
 import { Card, CardContent } from "@/components/ui/card";
 import { EventInfoPreview } from "./EventInfoPreview";
-import { Calendar, Clock, Users, CalendarClock, MapPin } from "lucide-react";
+import { Users, CalendarClock, MapPin, Clock1, Clock5 } from "lucide-react";
 import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 
@@ -15,6 +15,7 @@ export interface EventCardProps {
   images: string[];
   registrationDeadline: Date | null;
   capacity: number;
+  fee: number;
   currentRegistrations: number;
   eventWaiverTemplates: { waiverId: string; required: boolean }[];
   onDelete?: (eventId: string) => void;
@@ -33,6 +34,7 @@ export default function EventCard(props: EventCardProps) {
     images,
     registrationDeadline,
     capacity,
+    fee,
     currentRegistrations,
     eventWaiverTemplates,
     onDelete,
@@ -88,20 +90,19 @@ export default function EventCard(props: EventCardProps) {
         {/* Compact Event Details */}
         <div className="mb-4 space-y-2 text-xs text-gray-600">
           <div className="flex items-center gap-2">
-            <Calendar className="h-3 w-3" />
+            <Clock1 className="h-3 w-3" />
             <span>
               {startDateTime ? new Date(startDateTime).toLocaleDateString() : "TBD"} -{" "}
-              {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"}
+              {startDateTime
+                ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+                : "TBD"}
             </span>
           </div>
 
           <div className="flex items-center gap-2">
-            <Clock className="h-3 w-3" />
+            <Clock5 className="h-3 w-3" />
             <span>
-              {startDateTime
-                ? new Date(startDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
-                : "TBD"}{" "}
-              -{" "}
+              {endDateTime ? new Date(endDateTime).toLocaleDateString() : "TBD"} -{" "}
               {endDateTime
                 ? new Date(endDateTime).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
                 : "TBD"}
@@ -141,6 +142,7 @@ export default function EventCard(props: EventCardProps) {
             images,
             registrationDeadline,
             capacity,
+            fee,
             currentRegistrations,
             eventWaiverTemplates,
             onDelete,
