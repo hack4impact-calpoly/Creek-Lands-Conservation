@@ -109,14 +109,16 @@ export default function EventDetailsPage() {
       }
     };
 
-    if (event && event.fee > 0) {
+    fetchUserFamily();
+  }, [user?.id, event, toast]);
+
+  useEffect(() => {
+    if (event && event.fee > 0 && userInfo.id) {
       localStorage.setItem("eventFee", event.fee.toString());
       localStorage.setItem("eventTitle", event.title);
       localStorage.setItem("userId", userInfo.id);
     }
-
-    fetchUserFamily();
-  }, [user?.id, event, toast]);
+  }, [event, userInfo]);
 
   const validateAttendee = (fullUserData: any, attendeeId: string) => {
     // console.log(`Validating attendee with ID: ${attendeeId}`);
