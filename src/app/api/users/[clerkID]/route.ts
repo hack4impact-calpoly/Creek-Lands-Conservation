@@ -3,6 +3,7 @@ import User from "@/database/userSchema";
 import connectDB from "@/database/db";
 
 // GET /api/users/[clerkID]
+// Fetches user details by clerkID
 export async function GET(req: NextRequest, { params }: { params: { clerkID: string } }) {
   try {
     await connectDB();

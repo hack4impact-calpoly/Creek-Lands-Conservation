@@ -61,6 +61,8 @@ async function unregisterChildFromEvent(
   await event.save({ session });
 }
 
+// DELETE /api/users/[clerkID]/child/[childID]
+// Ungregisters a child from all events and deletes them
 export async function DELETE(req: NextRequest, { params }: { params: { clerkID: string; childID: string } }) {
   try {
     await connectDB();
@@ -119,6 +121,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { clerkID: 
 }
 
 // PUT /api/users/[clerkID]/child/[childID]
+// Updates a child's information
 export async function PUT(req: NextRequest, { params }: { params: { clerkID: string; childID: string } }) {
   try {
     await connectDB();
