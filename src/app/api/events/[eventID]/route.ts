@@ -20,6 +20,9 @@ export async function GET(req: NextRequest, { params }: { params: { eventID: str
     return NextResponse.json({ error: "Invalid event ID" }, { status: 400 });
   }
 
+  const authError = await authenticateAdmin();
+  if (authError !== true) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
   try {
     const event = (await Event.findById(eventID)
       .populate("registeredUsers.user") // Populate user details for registeredUsers
