@@ -2,6 +2,10 @@ import { type NextRequest, NextResponse } from "next/server";
 import connectDB from "@/database/db";
 import User from "@/database/userSchema";
 
+/**
+ * POST /api/users/[clerkID]/child
+ * Adds a new child to the user's profile.
+ */
 export async function POST(req: NextRequest, { params }: { params: { clerkID: string } }) {
   try {
     await connectDB();
