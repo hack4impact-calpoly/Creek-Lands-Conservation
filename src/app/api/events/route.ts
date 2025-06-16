@@ -8,6 +8,8 @@ import User from "@/database/userSchema";
 import { formatLimitedEvents } from "@/lib/utils";
 import { EventPayload } from "@/types/events";
 
+// src/app/api/events/route.ts
+// This route handles creating new events
 export async function POST(request: Request) {
   const { userId } = await auth();
   if (!userId) {
