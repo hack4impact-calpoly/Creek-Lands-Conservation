@@ -54,7 +54,9 @@ export default function ChildrenOnboardingPage() {
         variant: "success",
       });
       router.push("/");
-      router.refresh();
+      setTimeout(() => {
+        window.location.reload();
+      }, 1500); // Delay to ensure the user reloads after the onboarding is complete
     } catch (err: any) {
       toast({
         title: "Error",
