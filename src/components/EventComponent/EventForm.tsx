@@ -40,9 +40,10 @@ export default function CreateEventForm() {
   const fileUploadRef = useRef<EnhancedImageSelectorHandle>(null);
   const pdfUploadRef = useRef<EnhancedPDFSelectorHandle>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isDraftSubmitting, setIsDraftSubmitting] = useState(false); // Separate state for draft
+  const [isDraftSubmitting, setIsDraftSubmitting] = useState(false);
   const [resetUploader, setResetUploader] = useState(false);
   const [isPublishDialogOpen, setIsPublishDialogOpen] = useState(false);
+  const [editorKey, setEditorKey] = useState(0);
   const { toast } = useToast();
 
   const {
@@ -131,8 +132,8 @@ export default function CreateEventForm() {
         throw new Error(errorData.message || "Failed to update event with files");
       }
 
-      // On success
-      reset({
+      // On success - Clear all form fields including description
+      const defaultValues = {
         title: "",
         description: "",
         startDate: "",
@@ -144,17 +145,27 @@ export default function CreateEventForm() {
         registrationDeadline: "",
         fee: 0,
         images: [],
-      }); // Explicitly reset all fields
-      setValue("description", ""); // Force clear Tiptap editor
+      };
+
+      reset(defaultValues);
+
+      // Force reset the Tiptap editor by changing its key
+      setEditorKey((prev) => prev + 1);
+
       fileUploadRef.current?.clear();
       pdfUploadRef.current?.clear();
       setResetUploader(true);
+
       toast({
         title: "Success",
         description: isDraft ? "Event saved as draft." : "Event published successfully!",
         variant: "success",
       });
-      if (!isDraft) setIsPublishDialogOpen(false);
+
+      // Close the publish dialog if it was a publish action
+      if (!isDraft) {
+        setIsPublishDialogOpen(false);
+      }
     } catch (error: any) {
       toast({
         title: "Error",
@@ -163,6 +174,7 @@ export default function CreateEventForm() {
       });
     } finally {
       setSubmitting(false);
+      setIsDraftSubmitting(false);
       setResetUploader(false);
     }
   };
@@ -277,6 +289,7 @@ export default function CreateEventForm() {
             render={({ field }) => (
               <TooltipProvider>
                 <MinimalTiptapEditor
+                  key={editorKey}
                   className="w-full"
                   editorContentClassName="p-5"
                   output="html"
@@ -344,7 +357,7 @@ export default function CreateEventForm() {
             disabled={isSubmitting || isDraftSubmitting}
             className="rounded border bg-[#2b6cb0] px-4 py-2 text-white hover:bg-[#2b6cb0]/80 disabled:bg-gray-400"
           >
-            Save Draft
+            {isDraftSubmitting ? "Saving..." : "Save Draft"}
           </button>
           <AlertDialog open={isPublishDialogOpen} onOpenChange={setIsPublishDialogOpen}>
             <AlertDialogTrigger asChild>
@@ -353,7 +366,7 @@ export default function CreateEventForm() {
                 disabled={isSubmitting || isDraftSubmitting}
                 className="rounded border bg-[#558552] px-4 py-2 text-white hover:bg-[#6FAF68] disabled:bg-gray-400"
               >
-                Publish Event
+                {isSubmitting ? "Publishing..." : "Publish Event"}
               </button>
             </AlertDialogTrigger>
             <AlertDialogContent>
@@ -364,17 +377,20 @@ export default function CreateEventForm() {
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleSubmit((data) => onSubmit(data, false))}>Publish</AlertDialogAction>
+                <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+                <AlertDialogAction onClick={handleSubmit((data) => onSubmit(data, false))} disabled={isSubmitting}>
+                  {isSubmitting ? "Publishing..." : "Publish"}
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
         </div>
 
-        {isSubmitting && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-transparent">
+        {(isSubmitting || isDraftSubmitting) && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
             <div className="flex items-center space-x-4 rounded-lg bg-white p-6 shadow-lg">
               <div className="h-12 w-12 animate-spin rounded-full border-4 border-t-4 border-solid border-blue-500"></div>
+              <span className="text-lg font-medium">{isSubmitting ? "Publishing event..." : "Saving draft..."}</span>
             </div>
           </div>
         )}
