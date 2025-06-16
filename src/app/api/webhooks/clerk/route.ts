@@ -9,12 +9,17 @@ import Waiver from "@/database/waiverSchema";
 import User from "@/database/userSchema";
 import Event from "@/database/eventSchema";
 
-export async function deleteUserComprehensive(clerkUserId: string) {
+async function deleteUserComprehensive(clerkUserId: string) {
   const session = await mongoose.startSession();
 
   // Arrays to store S3 files for cleanup after database transaction
   let userS3Files: string[] = [];
   let waiverS3Files: string[] = [];
+
+  // Declare variables outside try block so they're accessible in return statement
+  let userId: any = null;
+  let userWaivers: any[] = [];
+  let childIds: any[] = [];
 
   try {
     session.startTransaction();
@@ -27,7 +32,7 @@ export async function deleteUserComprehensive(clerkUserId: string) {
       return { success: true, message: "User not found" };
     }
 
-    const userId = user._id;
+    userId = user._id;
     console.log(`Found user ${userId} with Clerk ID ${clerkUserId}`);
     console.log(`Starting comprehensive deletion for user ${userId} (Clerk ID: ${clerkUserId})`);
 
@@ -44,16 +49,16 @@ export async function deleteUserComprehensive(clerkUserId: string) {
     });
 
     // Get all waivers belonging to this user (both user and children waivers)
-    const userWaivers = await Waiver.find({
+    userWaivers = await Waiver.find({
       belongsToUser: userId,
     }).session(session);
 
     // Collect waiver S3 files
-    waiverS3Files = userWaivers.map((waiver) => waiver.fileKey);
+    waiverS3Files = userWaivers.map((waiver: any) => waiver.fileKey).filter(Boolean);
     console.log(`Found ${userWaivers.length} waivers for user ${userId}`);
 
     // Get child IDs for cleanup operations
-    const childIds = user.children.map((child: any) => child._id);
+    childIds = user.children.map((child: any) => child._id).filter(Boolean);
     console.log(`Found ${childIds.length} children for user ${userId}:`, childIds);
 
     // 1. Remove user from event registrations
@@ -74,87 +79,87 @@ export async function deleteUserComprehensive(clerkUserId: string) {
       console.log(`Removed ${childIds.length} children from ${childEventUpdate.matchedCount} events`);
     }
 
-    // 3. Handle events created by this user (if you have a createdBy field)
-    // Uncomment and modify if you track event creators:
-    /*
-    const userCreatedEvents = await Event.find({
-      createdBy: userId
-    }).session(session);
+    // 3. Get waiver IDs for reference cleanup
+    const waiverIds = userWaivers.map((w) => w._id).filter(Boolean);
 
-    if (userCreatedEvents.length > 0) {
-      console.log(`User ${userId} has ${userCreatedEvents.length} created events. Consider handling these separately.`);
-      // Option 1: Delete events created by user
-      // await Event.deleteMany({ createdBy: userId }, { session });
-      
-      // Option 2: Remove creator reference
-      // await Event.updateMany({ createdBy: userId }, { $unset: { createdBy: 1 } }, { session });
-    }
-    */
-
-    // 4. Delete all waivers belonging to this user
-    if (userWaivers.length > 0) {
-      const waiversDeleted = await Waiver.deleteMany({ belongsToUser: userId }, { session });
-      console.log(`Deleted ${waiversDeleted.deletedCount} waivers for user ${userId}`);
-    }
-
-    // 5. Remove waiver references from other users/events
-    const waiverIds = userWaivers.map((w) => w._id);
     if (waiverIds.length > 0) {
-      // Remove from other users' waiversSigned arrays
+      // 4. Remove waiver references from other users' waiversSigned arrays
       const userWaiverUpdate = await User.updateMany(
-        { waiversSigned: { $in: waiverIds } },
+        {
+          _id: { $ne: userId }, // Don't update the user being deleted
+          waiversSigned: { $in: waiverIds },
+        },
         { $pull: { waiversSigned: { $in: waiverIds } } },
         { session },
       );
       console.log(`Removed waiver references from ${userWaiverUpdate.matchedCount} other users`);
 
-      // Remove from events' waiver tracking - MORE SPECIFIC APPROACH
-      const eventWaiverUpdate = await Event.updateMany(
-        {},
-        {
-          $pull: {
-            "registeredUsers.$[].waiversSigned": { waiverId: { $in: waiverIds } },
-            "registeredChildren.$[].waiversSigned": { waiverId: { $in: waiverIds } },
-          },
-        },
-        { session },
-      );
-      console.log(`Cleaned waiver references from ${eventWaiverUpdate.matchedCount} events`);
+      // 5. Remove waiver references from events - more targeted approach
+      // First, find all events that have these waiver references
+      const eventsWithWaivers = await Event.find({
+        $or: [
+          { "registeredUsers.waiversSigned.waiverId": { $in: waiverIds } },
+          { "registeredChildren.waiversSigned.waiverId": { $in: waiverIds } },
+          { "eventWaiverTemplates.waiverId": { $in: waiverIds } },
+        ],
+      }).session(session);
 
-      // Also remove from event waiver templates if the user created any template waivers
-      const templateWaiverUpdate = await Event.updateMany(
-        { "eventWaiverTemplates.waiverId": { $in: waiverIds } },
-        { $pull: { eventWaiverTemplates: { waiverId: { $in: waiverIds } } } },
-        { session },
-      );
-      console.log(`Removed ${templateWaiverUpdate.matchedCount} waiver templates from events`);
+      // Clean up each event individually for better control
+      for (const event of eventsWithWaivers) {
+        // Remove from registered users' waiver signatures
+        const updatedRegisteredUsers = event.registeredUsers.map((regUser: any) => ({
+          ...regUser,
+          waiversSigned: regUser.waiversSigned.filter((ws: any) => !waiverIds.some((wId) => wId.equals(ws.waiverId))),
+        }));
+
+        // Remove from registered children's waiver signatures
+        const updatedRegisteredChildren = event.registeredChildren.map((regChild: any) => ({
+          ...regChild,
+          waiversSigned: regChild.waiversSigned.filter((ws: any) => !waiverIds.some((wId) => wId.equals(ws.waiverId))),
+        }));
+
+        // Remove from event waiver templates
+        const updatedWaiverTemplates = event.eventWaiverTemplates.filter(
+          (template: any) => !waiverIds.some((wId) => wId.equals(template.waiverId)),
+        );
+
+        // Update the event
+        await Event.findByIdAndUpdate(
+          event._id,
+          {
+            $set: {
+              registeredUsers: updatedRegisteredUsers,
+              registeredChildren: updatedRegisteredChildren,
+              eventWaiverTemplates: updatedWaiverTemplates,
+            },
+          },
+          { session },
+        );
+      }
+
+      console.log(`Cleaned waiver references from ${eventsWithWaivers.length} events`);
     }
 
-    // 6. Remove user's waiver signatures from their own profile
-    const userWaiverCleanup = await User.findByIdAndUpdate(
+    // 6. Delete all waivers belonging to this user
+    if (userWaivers.length > 0) {
+      const waiversDeleted = await Waiver.deleteMany({ belongsToUser: userId }, { session });
+      console.log(`Deleted ${waiversDeleted.deletedCount} waivers for user ${userId}`);
+    }
+
+    // 7. Clean up any remaining references to this user's waivers in their own profile
+    // (This step is technically redundant since we're deleting the user, but good for completeness)
+    await User.findByIdAndUpdate(
       userId,
       {
         $set: {
           waiversSigned: [],
           registeredEvents: [],
+          "children.$[].waiversSigned": [],
+          "children.$[].registeredEvents": [],
         },
       },
       { session },
     );
-
-    // 7. Clean up children's waiver signatures
-    if (childIds.length > 0) {
-      await User.updateOne(
-        { _id: userId },
-        {
-          $set: {
-            "children.$[].waiversSigned": [],
-            "children.$[].registeredEvents": [],
-          },
-        },
-        { session },
-      );
-    }
 
     // 8. Finally, delete the user document
     const deletedUser = await User.findByIdAndDelete(userId, { session });
@@ -177,37 +182,63 @@ export async function deleteUserComprehensive(clerkUserId: string) {
   console.log(`Starting S3 cleanup for user ${clerkUserId}`);
 
   // Delete user and children image files
-  const imageCleanupPromises = userS3Files.map(async (fileKey) => {
-    try {
-      await deleteFileFromS3(fileKey);
-      console.log(`Deleted S3 user/child image: ${fileKey}`);
-      return { success: true, fileKey };
-    } catch (s3Err) {
-      console.error(`Failed to delete S3 image ${fileKey}:`, s3Err);
-      return { success: false, fileKey, error: s3Err };
-    }
-  });
+  const imageCleanupResults = await Promise.allSettled(
+    userS3Files.map(async (fileKey) => {
+      try {
+        await deleteFileFromS3(fileKey);
+        console.log(`Deleted S3 user/child image: ${fileKey}`);
+        return { success: true, fileKey, type: "image" };
+      } catch (s3Err) {
+        console.error(`Failed to delete S3 image ${fileKey}:`, s3Err);
+        return { success: false, fileKey, type: "image", error: s3Err };
+      }
+    }),
+  );
 
   // Delete waiver files
-  const waiverCleanupPromises = waiverS3Files.map(async (fileKey) => {
-    try {
-      await deleteFileFromS3(fileKey);
-      console.log(`Deleted S3 waiver file: ${fileKey}`);
-      return { success: true, fileKey };
-    } catch (s3Err) {
-      console.error(`Failed to delete S3 waiver file ${fileKey}:`, s3Err);
-      return { success: false, fileKey, error: s3Err };
-    }
-  });
+  const waiverCleanupResults = await Promise.allSettled(
+    waiverS3Files.map(async (fileKey) => {
+      try {
+        await deleteFileFromS3(fileKey);
+        console.log(`Deleted S3 waiver file: ${fileKey}`);
+        return { success: true, fileKey, type: "waiver" };
+      } catch (s3Err) {
+        console.error(`Failed to delete S3 waiver file ${fileKey}:`, s3Err);
+        return { success: false, fileKey, type: "waiver", error: s3Err };
+      }
+    }),
+  );
 
-  // Execute all S3 cleanup operations
-  const s3Results = await Promise.allSettled([...imageCleanupPromises, ...waiverCleanupPromises]);
+  // Combine and analyze results
+  const allS3Results = [...imageCleanupResults, ...waiverCleanupResults];
 
   const s3Stats = {
-    totalAttempted: s3Results.length,
-    successful: s3Results.filter((r) => r.status === "fulfilled").length,
-    failed: s3Results.filter((r) => r.status === "rejected").length,
+    totalAttempted: allS3Results.length,
+    successful: allS3Results.filter((r) => r.status === "fulfilled").length,
+    failed: allS3Results.filter((r) => r.status === "rejected").length,
+    imageFiles: {
+      attempted: imageCleanupResults.length,
+      successful: imageCleanupResults.filter((r) => r.status === "fulfilled").length,
+      failed: imageCleanupResults.filter((r) => r.status === "rejected").length,
+    },
+    waiverFiles: {
+      attempted: waiverCleanupResults.length,
+      successful: waiverCleanupResults.filter((r) => r.status === "fulfilled").length,
+      failed: waiverCleanupResults.filter((r) => r.status === "rejected").length,
+    },
   };
+
+  // Log any failed S3 operations for monitoring
+  const failedOperations = allS3Results
+    .filter((r) => r.status === "rejected")
+    .map((r) => ({
+      reason: r.reason,
+      // Note: r.value is not available for rejected promises, but the error info is in r.reason
+    }));
+
+  if (failedOperations.length > 0) {
+    console.error("Some S3 cleanup operations failed:", failedOperations);
+  }
 
   console.log("S3 cleanup completed:", s3Stats);
   console.log(`Comprehensive user deletion completed for ${clerkUserId}`);
@@ -216,9 +247,11 @@ export async function deleteUserComprehensive(clerkUserId: string) {
     success: true,
     message: "User and all related data deleted successfully",
     stats: {
-      s3ImagesAttempted: userS3Files.length,
-      s3WaiversAttempted: waiverS3Files.length,
+      userId: userId ? userId.toString() : "unknown",
+      waiversDeleted: userWaivers.length,
+      childrenCount: childIds.length,
       s3CleanupStats: s3Stats,
+      failedS3Operations: failedOperations.length,
     },
   };
 }
