@@ -13,6 +13,18 @@ import { FormActions } from "@/components/Forms/FormActions";
 import { useToast } from "@/hooks/use-toast";
 import { ChildFormData } from "@/types/onboarding";
 
+const waitForMetadataUpdate = async (user: any, maxAttempts = 10, interval = 500) => {
+  for (let i = 0; i < maxAttempts; i++) {
+    await user.reload();
+    // Assuming metadata field like `onboardingComplete` is set to true
+    if (user.publicMetadata?.onboardingComplete === true) {
+      return true;
+    }
+    await new Promise((resolve) => setTimeout(resolve, interval));
+  }
+  throw new Error("Metadata update timed out");
+};
+
 export default function ChildrenOnboardingPage() {
   const { user } = useUser();
   const router = useRouter();
@@ -47,16 +59,13 @@ export default function ChildrenOnboardingPage() {
         const res = await childrenOnboarding(children);
         if (res?.error) throw new Error(res.error);
       }
-      await user?.reload();
+      await waitForMetadataUpdate(user);
       toast({
         title: "Success",
         description: "Onboarding Complete!",
         variant: "success",
       });
-      router.push("/");
-      setTimeout(() => {
-        window.location.reload();
-      }, 1500); // Delay to ensure the user reloads after the onboarding is complete
+      window.location.href = "/";
     } catch (err: any) {
       toast({
         title: "Error",
@@ -71,7 +80,7 @@ export default function ChildrenOnboardingPage() {
     try {
       const res = await completeOnboarding();
       if (res?.error) throw new Error(res.error);
-      router.push("/");
+      window.location.href = "/";
     } catch (err: any) {
       console.error("Skip failed:", err.message);
     }
