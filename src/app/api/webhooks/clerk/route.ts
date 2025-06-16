@@ -6,8 +6,8 @@ import { clerkClient } from "@clerk/nextjs/server";
 import mongoose from "mongoose";
 import { deleteFileFromS3 } from "@/lib/s3";
 import Waiver from "@/database/waiverSchema";
-import User from "@/database/userSchema"; // Missing import
-import Event from "@/database/eventSchema"; // Missing import
+import User from "@/database/userSchema";
+import Event from "@/database/eventSchema";
 
 export async function deleteUserComprehensive(clerkUserId: string) {
   const session = await mongoose.startSession();
@@ -19,14 +19,16 @@ export async function deleteUserComprehensive(clerkUserId: string) {
   try {
     session.startTransaction();
 
-    // Find the user to be deleted
-    const user = await mongoose.model("User").findOne({ clerkID: clerkUserId }).session(session);
+    // Find the user to be deleted - USE IMPORTED MODEL
+    const user = await User.findOne({ clerkID: clerkUserId }).session(session);
     if (!user) {
       console.log(`User with Clerk ID ${clerkUserId} not found`);
+      await session.abortTransaction();
       return { success: true, message: "User not found" };
     }
 
     const userId = user._id;
+    console.log(`Found user ${userId} with Clerk ID ${clerkUserId}`);
     console.log(`Starting comprehensive deletion for user ${userId} (Clerk ID: ${clerkUserId})`);
 
     // Collect user's S3 files
@@ -48,62 +50,67 @@ export async function deleteUserComprehensive(clerkUserId: string) {
 
     // Collect waiver S3 files
     waiverS3Files = userWaivers.map((waiver) => waiver.fileKey);
+    console.log(`Found ${userWaivers.length} waivers for user ${userId}`);
 
     // Get child IDs for cleanup operations
     const childIds = user.children.map((child: any) => child._id);
+    console.log(`Found ${childIds.length} children for user ${userId}:`, childIds);
 
-    // 1. Remove user and children from all event registrations
-    await Event.updateMany(
+    // 1. Remove user from event registrations
+    const userEventUpdate = await Event.updateMany(
       { "registeredUsers.user": userId },
       { $pull: { registeredUsers: { user: userId } } },
       { session },
     );
+    console.log(`Removed user ${userId} from ${userEventUpdate.matchedCount} events`);
 
-    await Event.updateMany(
-      { "registeredChildren.childId": { $in: childIds } },
-      { $pull: { registeredChildren: { childId: { $in: childIds } } } },
-      { session },
-    );
-
-    // 2. Remove user's events from their registeredEvents if they were event creators
-    // This assumes events have a creator/owner field - adjust if different
-    const userCreatedEvents = await Event.find({
-      // Add your event creator field here, e.g.:
-      // createdBy: userId
-    }).session(session);
-
-    // Optional: Delete events created by this user or just remove the creator reference
-    // For now, we'll just log them - you can decide the appropriate action
-    if (userCreatedEvents.length > 0) {
-      console.log(`User ${userId} has ${userCreatedEvents.length} created events. Consider handling these separately.`);
+    // 2. Remove children from event registrations
+    if (childIds.length > 0) {
+      const childEventUpdate = await Event.updateMany(
+        { "registeredChildren.childId": { $in: childIds } },
+        { $pull: { registeredChildren: { childId: { $in: childIds } } } },
+        { session },
+      );
+      console.log(`Removed ${childIds.length} children from ${childEventUpdate.matchedCount} events`);
     }
 
-    // 3. Delete all waivers belonging to this user
-    await Waiver.deleteMany(
-      {
-        belongsToUser: userId,
-      },
-      { session },
-    );
+    // 3. Handle events created by this user (if you have a createdBy field)
+    // Uncomment and modify if you track event creators:
+    /*
+    const userCreatedEvents = await Event.find({
+      createdBy: userId
+    }).session(session);
 
-    // 4. Remove waiver references from other users/events (in case of shared waivers)
+    if (userCreatedEvents.length > 0) {
+      console.log(`User ${userId} has ${userCreatedEvents.length} created events. Consider handling these separately.`);
+      // Option 1: Delete events created by user
+      // await Event.deleteMany({ createdBy: userId }, { session });
+      
+      // Option 2: Remove creator reference
+      // await Event.updateMany({ createdBy: userId }, { $unset: { createdBy: 1 } }, { session });
+    }
+    */
+
+    // 4. Delete all waivers belonging to this user
+    if (userWaivers.length > 0) {
+      const waiversDeleted = await Waiver.deleteMany({ belongsToUser: userId }, { session });
+      console.log(`Deleted ${waiversDeleted.deletedCount} waivers for user ${userId}`);
+    }
+
+    // 5. Remove waiver references from other users/events
     const waiverIds = userWaivers.map((w) => w._id);
     if (waiverIds.length > 0) {
-      // Remove from other users' waiversSigned arrays (if any cross-references exist)
-      await User.updateMany(
+      // Remove from other users' waiversSigned arrays
+      const userWaiverUpdate = await User.updateMany(
         { waiversSigned: { $in: waiverIds } },
         { $pull: { waiversSigned: { $in: waiverIds } } },
         { session },
       );
+      console.log(`Removed waiver references from ${userWaiverUpdate.matchedCount} other users`);
 
-      // Remove from events' waiver tracking
-      await Event.updateMany(
-        {
-          $or: [
-            { "registeredUsers.waiversSigned.waiverId": { $in: waiverIds } },
-            { "registeredChildren.waiversSigned.waiverId": { $in: waiverIds } },
-          ],
-        },
+      // Remove from events' waiver tracking - MORE SPECIFIC APPROACH
+      const eventWaiverUpdate = await Event.updateMany(
+        {},
         {
           $pull: {
             "registeredUsers.$[].waiversSigned": { waiverId: { $in: waiverIds } },
@@ -112,13 +119,52 @@ export async function deleteUserComprehensive(clerkUserId: string) {
         },
         { session },
       );
+      console.log(`Cleaned waiver references from ${eventWaiverUpdate.matchedCount} events`);
+
+      // Also remove from event waiver templates if the user created any template waivers
+      const templateWaiverUpdate = await Event.updateMany(
+        { "eventWaiverTemplates.waiverId": { $in: waiverIds } },
+        { $pull: { eventWaiverTemplates: { waiverId: { $in: waiverIds } } } },
+        { session },
+      );
+      console.log(`Removed ${templateWaiverUpdate.matchedCount} waiver templates from events`);
     }
 
-    // 5. Finally, delete the user document
-    await User.findByIdAndDelete(userId, { session });
+    // 6. Remove user's waiver signatures from their own profile
+    const userWaiverCleanup = await User.findByIdAndUpdate(
+      userId,
+      {
+        $set: {
+          waiversSigned: [],
+          registeredEvents: [],
+        },
+      },
+      { session },
+    );
+
+    // 7. Clean up children's waiver signatures
+    if (childIds.length > 0) {
+      await User.updateOne(
+        { _id: userId },
+        {
+          $set: {
+            "children.$[].waiversSigned": [],
+            "children.$[].registeredEvents": [],
+          },
+        },
+        { session },
+      );
+    }
+
+    // 8. Finally, delete the user document
+    const deletedUser = await User.findByIdAndDelete(userId, { session });
+    if (!deletedUser) {
+      throw new Error(`Failed to delete user ${userId}`);
+    }
+    console.log(`Successfully deleted user document ${userId}`);
 
     await session.commitTransaction();
-    console.log(`Successfully deleted user ${userId} from database`);
+    console.log(`Successfully completed database transaction for user ${userId}`);
   } catch (error) {
     await session.abortTransaction();
     console.error("Error during user deletion transaction:", error);
@@ -135,8 +181,10 @@ export async function deleteUserComprehensive(clerkUserId: string) {
     try {
       await deleteFileFromS3(fileKey);
       console.log(`Deleted S3 user/child image: ${fileKey}`);
+      return { success: true, fileKey };
     } catch (s3Err) {
       console.error(`Failed to delete S3 image ${fileKey}:`, s3Err);
+      return { success: false, fileKey, error: s3Err };
     }
   });
 
@@ -145,21 +193,32 @@ export async function deleteUserComprehensive(clerkUserId: string) {
     try {
       await deleteFileFromS3(fileKey);
       console.log(`Deleted S3 waiver file: ${fileKey}`);
+      return { success: true, fileKey };
     } catch (s3Err) {
       console.error(`Failed to delete S3 waiver file ${fileKey}:`, s3Err);
+      return { success: false, fileKey, error: s3Err };
     }
   });
 
   // Execute all S3 cleanup operations
-  await Promise.allSettled([...imageCleanupPromises, ...waiverCleanupPromises]);
+  const s3Results = await Promise.allSettled([...imageCleanupPromises, ...waiverCleanupPromises]);
 
+  const s3Stats = {
+    totalAttempted: s3Results.length,
+    successful: s3Results.filter((r) => r.status === "fulfilled").length,
+    failed: s3Results.filter((r) => r.status === "rejected").length,
+  };
+
+  console.log("S3 cleanup completed:", s3Stats);
   console.log(`Comprehensive user deletion completed for ${clerkUserId}`);
+
   return {
     success: true,
     message: "User and all related data deleted successfully",
     stats: {
-      s3ImagesDeleted: userS3Files.length,
-      s3WaiversDeleted: waiverS3Files.length,
+      s3ImagesAttempted: userS3Files.length,
+      s3WaiversAttempted: waiverS3Files.length,
+      s3CleanupStats: s3Stats,
     },
   };
 }
@@ -217,7 +276,7 @@ export async function POST(req: Request) {
       firstName: first_name || "",
       lastName: last_name || "",
       imageUrl: image_url || "",
-      userRole: role, // Add the role here
+      userRole: role,
     };
 
     const client = await clerkClient();
